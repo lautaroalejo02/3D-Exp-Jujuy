@@ -10,7 +10,8 @@
     "build:data": "tsx scripts/build-data.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
-    "check:wgsl": "node scripts/check-wgsl.mjs"
+    "check:wgsl": "node scripts/check-wgsl.mjs",
+    "snapshot": "tsx scripts/render-snapshot.ts"
   },
   "dependencies": {
     "vgpu": "0.5.0"

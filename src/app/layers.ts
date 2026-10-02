@@ -1,20 +1,23 @@
-import type { FramePass, Gpu, Surface } from "vgpu";
+import type { FramePass, Gpu } from "vgpu";
+
+import type { OrbitCamera } from "../camera/camera";
 
 /**
  * Extension point for map features. Future features — regions, places,
  * elevation profile and rain — plug in as `Layer` implementations under
  * `src/features/<name>/`. The app owns the vgpu frame; layers only encode
  * draws into the pass they are given and never create GPU resources inside
- * `update`/`draw` (create them once in `init`). This interface is the
- * minimal seam and will be refined by the terrain/render task.
+ * `update`/`draw` (create them once in `init`).
+ *
+ * Layers must not touch the DOM inside `init`/`update`/`draw` — the same
+ * code runs headless under `vgpu/node` (scripts/render-snapshot.ts). DOM
+ * contributions go through the optional `ui` object, which the app mounts
+ * into the overlay root.
  */
 
 /** Everything a layer needs at setup time. */
 export interface LayerContext {
   readonly gpu: Gpu;
-  readonly surface: Surface;
-  /** Overlay root for DOM-based layer UI (labels, panels). */
-  readonly overlayRoot: HTMLElement;
 }
 
 /** Per-frame shared state handed to `update`. */
@@ -23,6 +26,8 @@ export interface LayerState {
   readonly time: number;
   /** Physical canvas size in pixels: [width, height]. */
   readonly viewport: readonly [number, number];
+  /** Shared orbit camera; layers read matrices from it, never mutate it. */
+  readonly camera: OrbitCamera;
 }
 
 /** A resolved terrain pick, handed to layers that opt into picking. */

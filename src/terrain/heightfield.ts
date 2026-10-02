@@ -92,6 +92,16 @@ export class Heightfield {
     return this.spec.height;
   }
 
+  /**
+   * Row-major height samples in meters. This is the internal storage
+   * (already Float32 — the Int16 payload is converted once in the
+   * constructor); treat it as read-only. Used to fill the GPU height
+   * buffer for the terrain layer.
+   */
+  get data(): Float32Array {
+    return this.heights;
+  }
+
   /** Bilinear sample at fractional grid coords, clamped to the borders. */
   heightAtGrid(i: number, j: number): number {
     return bilinearSample(

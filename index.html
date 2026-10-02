@@ -86,6 +86,48 @@
       .attributions a {
         color: #8fc1ff;
       }
+      .loading-message {
+        position: absolute;
+        top: 40%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        margin: 0;
+        padding: 0.6rem 1.1rem;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.85);
+        font-size: 0.95rem;
+        color: #d7dae0;
+      }
+      .terrain-controls {
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        padding: 0.6rem 0.75rem;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.8);
+        font-size: 0.78rem;
+        color: #d7dae0;
+      }
+      .terrain-controls .exaggeration {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .terrain-controls .exaggeration input[type="range"] {
+        width: 7rem;
+      }
+      .terrain-controls .exaggeration-value {
+        min-width: 2.2rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .terrain-controls .quality-toggle {
+        align-self: flex-start;
+        color: #8fc1ff;
+      }
       @media (max-width: 640px) {
         .attributions {
           font-size: 0.66rem;
