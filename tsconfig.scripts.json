@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // Node globals (process, Buffer, import.meta) plus the app's ambient
+    // types, since scripts/ imports from src/.
+    "types": ["vite/client", "@webgpu/types", "node"]
+  },
+  "include": ["scripts/**/*.ts"]
+}

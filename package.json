@@ -6,16 +6,22 @@
   "description": "Maqueta 3D del relieve de Jujuy (WebGPU + vgpu)",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run build:data && tsc --noEmit && vite build && node scripts/prune-dist.mjs",
+    "build:data": "tsx scripts/build-data.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
-    "check:wgsl": "node -e \"const{readdirSync}=require('node:fs'),{join}=require('node:path'),{execFileSync}=require('node:child_process');const files=[];const walk=(d)=>{for(const e of readdirSync(d,{withFileTypes:true})){const p=join(d,e.name);if(e.isDirectory())walk(p);else if(e.name.endsWith('.wgsl'))files.push(p)}};walk('src');if(files.length===0)console.log('check:wgsl: no .wgsl files under src/');for(const f of files){console.log('vgpu check '+f);execFileSync(process.execPath,['node_modules/vgpu/bin/vgpu.js','check',f],{stdio:'inherit'})}\""
+    "check:wgsl": "node scripts/check-wgsl.mjs"
   },
   "dependencies": {
     "vgpu": "0.5.0"
   },
   "devDependencies": {
+    "@types/node": "22.20.4",
+    "@types/pngjs": "6.0.5",
     "@vgpu/wgsl": "0.5.0",
+    "jpeg-js": "0.4.4",
+    "pngjs": "7.0.0",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vite": "7.3.6",
     "vitest": "4.1.11"

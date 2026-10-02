@@ -7,8 +7,29 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 ## Comandos
 
 - `npm install` — instalar dependencias
-- `npm run dev` — servidor de desarrollo
-- `npm run build` — typecheck + build a `dist/`
-- `npm run typecheck` — `tsc --noEmit`
+- `npm run build:data` — genera `data/build/` (alturas Int16, satélite, `terrain.json`) desde `data/raw/`; idempotente, `--force` reconstruye
+- `npm run dev` — servidor de desarrollo (sirve `data/build/` en la raíz del sitio)
+- `npm run build` — `build:data` + typecheck + build a `dist/` (sin `debug-alignment.png`)
+- `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
+
+## Datos generados (`data/build/`)
+
+`npm run build:data` produce, desde `data/raw/`:
+
+- `heights-full.bin` — DEM 2432x2560 Int16-LE, metros. Elevación: min 26 m,
+  max 6131 m, media 2966.6 m; percentiles p0.1% = 285 m y p99.9% = 5524 m.
+  (El mínimo de 26 m es un pozo de ~7 píxeles en el dato fuente, rodeado de
+  terreno ~300 m — no es un error de decodificación.)
+- `heights-half.bin` — 1216x1280, box-filter 2x2 del full-res. Elevación:
+  min 100.5 m, max 6122.75 m, media 2966.6 m; p0.1% = 284.75 m,
+  p99.9% = 5523.25 m. Error de reconstrucción vs full-res (bilineal en cada
+  celda full-res): max 501.3 m, media 7.45 m, p99 40.9 m; 10.03% de las
+  celdas superan 20 m — esperable en terreno montañoso abrupto.
+- `satellite-full.jpg` (4864x5120, copia del original) y
+  `satellite-half.jpg` (2432x2560, jpeg q85).
+- `terrain.json` — manifiesto con grillas, hashes sha256, estadísticas de
+  elevación y el error de reconstrucción.
+- `debug-alignment.png` — hillshade sobre satélite para verificar la
+  registración DEM/imagen (no se publica en `dist/`).
