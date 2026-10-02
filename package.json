@@ -1,0 +1,23 @@
+{
+  "name": "maqueta-jujuy",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "description": "Maqueta 3D del relieve de Jujuy (WebGPU + vgpu)",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "check:wgsl": "node -e \"const{readdirSync}=require('node:fs'),{join}=require('node:path'),{execFileSync}=require('node:child_process');const files=[];const walk=(d)=>{for(const e of readdirSync(d,{withFileTypes:true})){const p=join(d,e.name);if(e.isDirectory())walk(p);else if(e.name.endsWith('.wgsl'))files.push(p)}};walk('src');if(files.length===0)console.log('check:wgsl: no .wgsl files under src/');for(const f of files){console.log('vgpu check '+f);execFileSync(process.execPath,['node_modules/vgpu/bin/vgpu.js','check',f],{stdio:'inherit'})}\""
+  },
+  "dependencies": {
+    "vgpu": "0.5.0"
+  },
+  "devDependencies": {
+    "@vgpu/wgsl": "0.5.0",
+    "typescript": "5.9.3",
+    "vite": "7.3.6",
+    "vitest": "4.1.11"
+  }
+}
