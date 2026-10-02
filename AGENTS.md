@@ -3,7 +3,7 @@
 Web educativa para secundaria: maqueta 3D del relieve real de Jujuy con imagen satelital, regiones (Puna, Quebrada, Valles, Yungas), lugares con ficha, perfil de altura y lluvia simplificada. Sitio estático, sin backend.
 
 ## Cómo se trabaja
-- La fuente de verdad son los specs SDD en `openspec/`. No implementar nada que no esté en una tarea del spec.
+- La fuente de verdad son los specs SDD en `openspec/` o, para tareas ODD, el documento de la tarea en `odd/tasks/`. No implementar nada que no esté en una tarea de alguno de los dos.
 - Si el spec es ambiguo, contradice al código o parece estar mal: frenar y avisar. No adivinar.
 - Una tarea por rama y por PR. Commits chicos con Conventional Commits.
 - No usar `--no-verify` salvo que Lautaro lo pida.
