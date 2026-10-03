@@ -53,6 +53,12 @@ export interface TerrainLevel {
 
 export interface TerrainManifest {
   readonly schemaVersion: number;
+  /**
+   * Version of the data pipeline that produced these outputs
+   * (PIPELINE_VERSION in scripts/build-data.ts). Part of the build cache
+   * key so stale outputs are rebuilt; not used at runtime.
+   */
+  readonly pipelineVersion: number;
   readonly levels: {
     readonly default: TerrainLevel;
     readonly high: TerrainLevel;

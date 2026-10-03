@@ -14,6 +14,7 @@ import {
 } from "./heightfield";
 import type { TerrainManifest } from "./manifest";
 import { TERRAIN_SCHEMA_VERSION } from "./manifest";
+import { GridExtentMismatchError } from "./validate";
 
 // 3x3 synthetic grid inside the DEM extent so lon/lat math stays realistic.
 // heights[j*3+i] = i*100 + j*1000.
@@ -148,6 +149,7 @@ function fakeResponse(body: unknown, status = 200): FetchResponseLike {
 function stubManifest(heightsFile = "heights.bin"): TerrainManifest {
   return {
     schemaVersion: TERRAIN_SCHEMA_VERSION,
+    pipelineVersion: 1,
     levels: {
       default: {
         heights: {
@@ -282,6 +284,32 @@ describe("loadHeightfield", () => {
     await expect(
       loadHeightfield(stubManifest(), "default", fetchFn),
     ).rejects.toThrow();
+  });
+
+  it("rejects a manifest whose height and satellite extents differ", async () => {
+    const manifest = stubManifest();
+    const shifted: GridSpec = {
+      ...manifest.levels.default.satellite.grid,
+      originPx: [
+        manifest.levels.default.satellite.grid.originPx[0] + 1,
+        manifest.levels.default.satellite.grid.originPx[1],
+      ],
+    };
+    const mismatched: TerrainManifest = {
+      ...manifest,
+      levels: {
+        ...manifest.levels,
+        default: {
+          ...manifest.levels.default,
+          satellite: { ...manifest.levels.default.satellite, grid: shifted },
+        },
+      },
+    };
+    await expect(
+      loadHeightfield(mismatched, "default", () =>
+        Promise.resolve(fakeResponse(encodeHeightsLE(HEIGHTS))),
+      ),
+    ).rejects.toBeInstanceOf(GridExtentMismatchError);
   });
 });
 

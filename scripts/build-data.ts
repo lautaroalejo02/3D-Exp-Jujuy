@@ -9,8 +9,10 @@
  *   satellite, for humans to check DEM/imagery registration; not shipped).
  *
  * Re-runnable and deterministic: no timestamps, stable encoders. When
- * data/build/terrain.json already records the current input hashes and every
- * output exists, prints "up to date" and does nothing. `--force` rebuilds.
+ * data/build/terrain.json already records the current input hashes, the
+ * current PIPELINE_VERSION, and every manifest-listed output exists with
+ * the recorded size and sha256, prints "up to date" and does nothing.
+ * `--force` rebuilds.
  */
 import { createHash } from "node:crypto";
 import {
@@ -30,6 +32,11 @@ import { PNG } from "pngjs";
 import { downsampleGrid, type GridSpec } from "../src/geo/grid";
 import { DEM_GRID, DEM_MOSAIC_GRID, SATELLITE_GRID } from "../src/geo/jujuy";
 import { metersPerGridCell } from "../src/geo/world";
+import {
+  checkBuildCache,
+  type BuildCacheVerdict,
+  type CacheFileState,
+} from "../src/terrain/build-cache";
 import {
   decodeHeightsLE,
   encodeHeightsLE,
@@ -61,6 +68,13 @@ const SAT_PATH = join(
 );
 const OUT_DIR = join(ROOT, "data/build");
 
+/**
+ * Output format version, written to terrain.json and part of the cache
+ * key. Bump whenever decoding, cropping, downsampling or encoding changes
+ * so outputs produced by an older pipeline are rebuilt instead of kept.
+ */
+const PIPELINE_VERSION = 2;
+
 const OUTPUT_FILES = [
   "heights-full.bin",
   "heights-half.bin",
@@ -89,25 +103,32 @@ function fileEntry(name: string): {
   return { file: name, bytes: bytes.length, sha256: sha256(bytes) };
 }
 
-function isUpToDate(demSha: string, satSha: string): boolean {
+function readPreviousManifest(): unknown {
   const manifestPath = join(OUT_DIR, "terrain.json");
-  if (!existsSync(manifestPath)) return false;
-  let prev: unknown;
+  if (!existsSync(manifestPath)) return undefined;
   try {
-    prev = JSON.parse(readFileSync(manifestPath, "utf8"));
-  } catch (error) {
-    console.warn(
-      `terrain.json is unreadable (${(error as Error).message}); rebuilding`,
-    );
-    return false;
+    return JSON.parse(readFileSync(manifestPath, "utf8")) as unknown;
+  } catch {
+    return undefined;
   }
-  const sources = (prev as TerrainManifest).sources;
-  const inputsMatch =
-    sources?.dem?.sha256 === demSha && sources?.satellite?.sha256 === satSha;
-  const outputsPresent = OUTPUT_FILES.every((f) =>
-    existsSync(join(OUT_DIR, f)),
+}
+
+function checkPreviousBuild(demSha: string, satSha: string): BuildCacheVerdict {
+  const fileState = (name: string): CacheFileState | undefined => {
+    const path = join(OUT_DIR, name);
+    if (!existsSync(path)) return undefined;
+    const bytes = readFileSync(path);
+    return { bytes: bytes.length, sha256: sha256(bytes) };
+  };
+  return checkBuildCache(
+    readPreviousManifest(),
+    {
+      pipelineVersion: PIPELINE_VERSION,
+      demSha256: demSha,
+      satelliteSha256: satSha,
+    },
+    fileState,
   );
-  return Boolean(inputsMatch && outputsPresent);
 }
 
 function main(): void {
@@ -117,9 +138,13 @@ function main(): void {
   const demSha = sha256(demBytes);
   const satSha = sha256(satBytes);
 
-  if (!force && isUpToDate(demSha, satSha)) {
-    console.log("up to date");
-    return;
+  if (!force) {
+    const verdict = checkPreviousBuild(demSha, satSha);
+    if (verdict.upToDate) {
+      console.log("up to date");
+      return;
+    }
+    console.log(`${verdict.reason}; rebuilding`);
   }
 
   mkdirSync(OUT_DIR, { recursive: true });
@@ -255,6 +280,7 @@ function main(): void {
 
   const manifest: TerrainManifest = {
     schemaVersion: TERRAIN_SCHEMA_VERSION,
+    pipelineVersion: PIPELINE_VERSION,
     levels: {
       default: {
         heights: heightsEntry(

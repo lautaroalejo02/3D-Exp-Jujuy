@@ -12,6 +12,7 @@ import {
 import { decodeHeightsLE } from "./encoding";
 import { TERRAIN_SCHEMA_VERSION, type TerrainManifest } from "./manifest";
 import { bilinearSample } from "./raster";
+import { assertSameGroundExtent } from "./validate";
 
 /** Quality levels offered by the terrain manifest. */
 export type TerrainQuality = "default" | "high";
@@ -213,6 +214,10 @@ export async function loadHeightfield(
   baseUrl = "",
 ): Promise<Heightfield> {
   const level = manifest.levels[quality];
+  // The satellite image is draped over this grid; equal pixel dimensions
+  // alone would still render a wrong-but-plausible map if origins or zooms
+  // differed.
+  assertSameGroundExtent(level.heights.grid, level.satellite.grid);
   const url = `${baseUrl}${level.heights.file}`;
   const res = await fetchFn(url);
   if (!res.ok) throw new TerrainHttpError(url, res.status);
