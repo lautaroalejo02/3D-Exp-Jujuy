@@ -30,6 +30,7 @@
 
 struct Params {
   viewProjection: mat4x4f,
+  cameraPos: vec3f,  // camera eye in world km, drives the distance haze
   originPx: vec2f,   // global px of the grid's north-west corner
   centerPx: vec2f,   // global px of the grid center (= world origin)
   gridSize: vec2f,   // height grid size in cells
@@ -47,6 +48,8 @@ struct Params {
   outlinePx: f32,      // province outline width in physical pixels
   deptBorders: f32,    // 1 = thin department borders; 0 = off
   regionBorders: f32,  // 1 = thin region borders; 0 = off
+  hazeStart: f32,      // km: distance where the atmospheric haze starts
+  hazeEnd: f32,        // km: distance where the haze saturates
   // Full outer extent [i0, j0, i1, j1] of each live detail patch, in grid
   // coords; only the first patchRectCount slots are valid. Fixed literal
   // size — vgpu rejects symbolic array lengths.
@@ -72,6 +75,12 @@ const SUN_DIR = vec3f(-0.5, 0.70710678, -0.5);
 const OUTSIDE_DESATURATION = 0.6;
 const OUTSIDE_DARKEN = 0.78;
 
+// Atmospheric perspective: a subtle far-edge softening toward the sky's
+// horizon color (the hazeStart/hazeEnd uniforms keep it off the block at
+// the default framing). Keep in sync with SKY_HORIZON in diorama.wgsl.
+const HAZE_COLOR = vec3f(0.91, 0.87, 0.78);
+const HAZE_MAX = 0.25;
+
 // Bilinear sample of the row-major heights buffer at fractional grid
 // coords, clamped to the borders (same convention as raster.bilinearSample).
 fn heightAt(i: f32, j: f32) -> f32 {
@@ -94,6 +103,7 @@ struct VertexOut {
   @builtin(position) position: vec4f,
   @location(0) uv: vec2f,
   @location(1) grid: vec2f,
+  @location(2) world: vec3f,
 }
 
 @vertex fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOut {
@@ -120,6 +130,7 @@ struct VertexOut {
 
   var out: VertexOut;
   out.position = params.viewProjection * vec4f(world, 1.0);
+  out.world = world;
   out.grid = vec2f(gi, gj);
   // The satellite image covers exactly the grid extent, so normalized UV
   // follows straight from grid coords (cell centers at +0.5).
@@ -232,5 +243,11 @@ struct VertexOut {
     abs(sdf),
   );
   rgb = mix(rgb, vec3f(0.95, 0.95, 0.9), outline);
+
+  // Atmospheric haze last: near terrain stays untouched, the far edge
+  // softens into the sky's horizon color.
+  let dist = distance(in.world, params.cameraPos);
+  let haze = smoothstep(params.hazeStart, params.hazeEnd, dist) * HAZE_MAX;
+  rgb = mix(rgb, HAZE_COLOR, haze);
   return vec4f(rgb, 1.0);
 }

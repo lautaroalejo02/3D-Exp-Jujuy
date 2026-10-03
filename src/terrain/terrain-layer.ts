@@ -27,6 +27,7 @@ import type { Heightfield, TerrainQuality } from "./heightfield";
 import type { SatelliteImage } from "./satellite";
 import {
   buildTerrainGridUniforms,
+  hazeRangeKm,
   type TerrainGridUniforms,
 } from "./terrain-uniforms";
 
@@ -164,6 +165,7 @@ export interface TerrainLayer extends Layer {
 // rewritten every frame; the rest changes only through the setters below.
 interface TerrainParamsValue {
   viewProjection: number[];
+  cameraPos: number[];
   originPx: readonly [number, number];
   centerPx: readonly [number, number];
   gridSize: readonly [number, number];
@@ -181,6 +183,9 @@ interface TerrainParamsValue {
   outlinePx: number;
   deptBorders: number;
   regionBorders: number;
+  /** Haze ramp in km from the camera (hazeRangeKm of the orbit distance). */
+  hazeStart: number;
+  hazeEnd: number;
   /**
    * Live detail-patch discard rects [i0, j0, i1, j1] in grid coords;
    * only the first patchRectCount slots are read by the shader. Mirrors
@@ -245,6 +250,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
   const params: TerrainParamsValue = {
     ...gridUniforms,
     viewProjection: [...IDENTITY_MAT4],
+    cameraPos: [0, 0, 0],
     deptGridSize: opts.provinceMask
       ? [opts.provinceMask.grid.width, opts.provinceMask.grid.height]
       : [1, 1],
@@ -256,6 +262,8 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     outlinePx: opts.outlineCssPx ?? 2,
     deptBorders: opts.showDepartmentBorders ? 1 : 0,
     regionBorders: opts.showRegions ? 1 : 0,
+    hazeStart: 0,
+    hazeEnd: 1,
     // No patch is live until the app calls setDetailPatchMask: a site
     // that is merely in range but still loading keeps the base surface.
     patchRects: emptyPatchRects(),
@@ -275,7 +283,8 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     meshSize: mesh,
 
     // Exaggeration slider + quality toggle, mounted by the app into the
-    // overlay root. DOM lives behind `ui` so init/update/draw stay headless.
+    // overlay's control column (#hud). DOM lives behind `ui` so
+    // init/update/draw stay headless.
     ui: {
       mount(root: HTMLElement): () => void {
         const panel = createTerrainControls({
@@ -284,7 +293,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           onExaggeration: (v) => layer.setVerticalExaggeration(v),
           warnHighQualityOnMobile: opts.warnHighQualityOnMobile,
         });
-        root.appendChild(panel);
+        (root.querySelector("#hud") ?? root).appendChild(panel);
         return () => panel.remove();
       },
     },
@@ -417,8 +426,15 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     update(state: LayerState): void {
       if (!terrainDraw) return;
       params.viewProjection = state.camera.viewProjectionMatrix();
+      params.cameraPos = [...state.camera.eye()];
       params.outlinePx =
         (opts.outlineCssPx ?? 2) * (opts.pixelRatio?.() ?? 1);
+      // The haze ramp scales with the orbit distance so the default
+      // framing keeps full satellite color: the start sits beyond the
+      // block's far corner and only grazing views pick up a soft fade.
+      [params.hazeStart, params.hazeEnd] = hazeRangeKm(
+        state.camera.distanceKm,
+      );
       terrainDraw.set({ params });
     },
 
@@ -505,10 +521,11 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         {
           label: "terrain uniforms (approx)",
           // Params (terrain.wgsl) at natural WGSL alignment: mat4x4f
-          // (64 B) + 6 vec2f (48 B) + 11 f32 (44 B) = 156 B of scalars,
-          // the patch rect array aligned at 160 B (MAX_DETAIL_PATCHES x
-          // vec4f = 128 B), then patchRectCount + tail pad → 304 B.
-          bytes: 304,
+          // (64 B) + cameraPos vec3f (12 B + 4 B pad) + 6 vec2f (48 B)
+          // + 13 f32 (52 B) = 180 B of scalars, the patch rect array
+          // aligned at 192 B (MAX_DETAIL_PATCHES x vec4f = 128 B), then
+          // patchRectCount + tail pad → 336 B.
+          bytes: 336,
           estimate: true,
         },
       ]);

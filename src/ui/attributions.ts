@@ -2,6 +2,7 @@
  * Data attribution panel. The texts come verbatim from ATTRIBUTIONS.md; add
  * new sources there first, then extend ATTRIBUTIONS below.
  */
+import type { DropdownGroup } from "./dropdowns";
 
 export interface AttributionLink {
   readonly label: string;
@@ -132,9 +133,14 @@ const COLLAPSED_BELOW_PX = 640;
 
 /**
  * Builds the attribution panel. Always visible — also on the no-WebGPU
- * fallback notice — and collapsed by default on small screens.
+ * fallback notice — and collapsed by default on small screens. With a
+ * DropdownGroup it joins the one-open-at-a-time / tap-outside-closes
+ * coordination the other overlay dropdowns use.
  */
-export function createAttributionPanel(doc: Document = document): HTMLElement {
+export function createAttributionPanel(
+  doc: Document = document,
+  dropdowns?: DropdownGroup,
+): HTMLElement {
   const details = doc.createElement("details");
   details.className = "attributions";
 
@@ -165,6 +171,19 @@ export function createAttributionPanel(doc: Document = document): HTMLElement {
 
   const media = doc.defaultView?.matchMedia?.(`(min-width: ${COLLAPSED_BELOW_PX}px)`);
   details.open = media?.matches ?? true;
+
+  if (dropdowns) {
+    const entry = {
+      container: details,
+      close: () => {
+        details.open = false;
+      },
+    };
+    details.addEventListener("toggle", () => {
+      if (details.open) dropdowns.opened(entry);
+      else dropdowns.closed(entry);
+    });
+  }
 
   return details;
 }

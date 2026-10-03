@@ -72,6 +72,7 @@ import {
 } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
 import { loadPlaces, type PlacesDoc } from "../src/terrain/places-manifest";
+import { createDioramaLayer } from "../src/terrain/diorama";
 import {
   buildDepartmentToRegion,
   buildRegionOverlay,
@@ -213,13 +214,14 @@ async function main(): Promise<void> {
     rgba: buildRegionOverlay(provinceMask.index, deptToRegion, regionsData),
   };
 
-  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl] =
+  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl, dioramaWgsl] =
     await Promise.all([
       resolveWgsl(join("terrain", "terrain.wgsl")),
       resolveWgsl(join("render", "mipmap.wgsl")),
       resolveWgsl(join("render", "present.wgsl")),
       resolveWgsl(join("features", "pick-marker", "pick-marker.wgsl")),
       resolveWgsl(join("features", "detail", "detail.wgsl")),
+      resolveWgsl(join("terrain", "diorama.wgsl")),
     ]);
 
   const gpu = await init();
@@ -388,6 +390,22 @@ async function main(): Promise<void> {
   regionsTerrain.init({ gpu });
   regionsTerrain.setRegionsVisible(true);
 
+  // Diorama surroundings: sky + walls + slab, drawn first so its backdrop
+  // sits behind the terrain. One per mesh variant — the walls follow the
+  // mesh edge resolution.
+  const makeDiorama = (t: ReturnType<typeof makeTerrain>) =>
+    createDioramaLayer({
+      grid: t.gridUniforms,
+      heights: () => t.baseHeightsStorage(),
+      minElevationMeters: heightfield.min,
+      verticalExaggeration: () => EXAGGERATION,
+      shader: dioramaWgsl,
+    });
+  const diorama = makeDiorama(terrain);
+  diorama.init({ gpu });
+  const mobileDiorama = makeDiorama(mobileTerrain);
+  mobileDiorama.init({ gpu });
+
   // Pick marker at Humahuaca for the third snapshot: the hit is built like
   // the app's tap path produces it (grid coords + DEM elevation), then the
   // layer's onPick consumes it through the Layer extension point.
@@ -455,7 +473,7 @@ async function main(): Promise<void> {
 
   /**
    * Filled disc into the PNG pixels — the stand-in for the DOM marker
-   * dot (outer ring + inner fill, same amber as .place-marker-dot).
+   * dot (white ring + soft blue fill, same look as .place-marker-dot).
    */
   const stampDisc = (
     png: PNG,
@@ -511,8 +529,8 @@ async function main(): Promise<void> {
       ) {
         continue;
       }
-      stampDisc(png, p.x, p.y, 5, [60, 32, 0]);
-      stampDisc(png, p.x, p.y, 3.2, [255, 183, 77]);
+      stampDisc(png, p.x, p.y, 6, [248, 249, 251]);
+      stampDisc(png, p.x, p.y, 4, [123, 167, 222]);
     }
   };
 
@@ -530,7 +548,7 @@ async function main(): Promise<void> {
       camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
         region: provinceRegion,
       }),
-      layers: [terrain],
+      layers: [diorama, terrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
@@ -543,7 +561,7 @@ async function main(): Promise<void> {
         relief,
         { region: provinceRegion },
       ),
-      layers: [mobileTerrain],
+      layers: [mobileDiorama, mobileTerrain],
       scene: portraitRenderer,
       output: portraitOutput,
       size: portraitSize,
@@ -551,7 +569,7 @@ async function main(): Promise<void> {
     {
       name: "quebrada",
       camera: quebradaCamera(),
-      layers: [terrain],
+      layers: [diorama, terrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
@@ -559,7 +577,7 @@ async function main(): Promise<void> {
     {
       name: "quebrada-marker",
       camera: quebradaCamera(),
-      layers: [terrain, pickMarker],
+      layers: [diorama, terrain, pickMarker],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
@@ -569,7 +587,7 @@ async function main(): Promise<void> {
       camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
         region: provinceRegion,
       }),
-      layers: [regionsTerrain],
+      layers: [diorama, regionsTerrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
@@ -601,7 +619,7 @@ async function main(): Promise<void> {
           minDistanceKm: 5,
         });
       })(),
-      layers: [terrain],
+      layers: [diorama, terrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
@@ -613,7 +631,7 @@ async function main(): Promise<void> {
           {
             name: "hornocal",
             camera: detailCamera("hornocal", 20, 45),
-            layers: [terrain, detailLayer],
+            layers: [diorama, terrain, detailLayer],
             scene: renderer,
             output,
             size: [WIDTH, HEIGHT] as const,
@@ -621,7 +639,7 @@ async function main(): Promise<void> {
           {
             name: "hornocal-base",
             camera: detailCamera("hornocal", 20, 45),
-            layers: [terrain],
+            layers: [diorama, terrain],
             scene: renderer,
             output,
             size: [WIDTH, HEIGHT] as const,
@@ -629,7 +647,7 @@ async function main(): Promise<void> {
           {
             name: "salinas-detail",
             camera: detailCamera("salinas-grandes", 300, 50),
-            layers: [terrain, detailLayer],
+            layers: [diorama, terrain, detailLayer],
             scene: renderer,
             output,
             size: [WIDTH, HEIGHT] as const,
@@ -648,7 +666,7 @@ async function main(): Promise<void> {
       camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
         region: provinceRegion,
       }),
-      layers: [terrain],
+      layers: [diorama, terrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],

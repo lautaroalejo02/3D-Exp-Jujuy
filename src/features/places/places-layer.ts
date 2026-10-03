@@ -4,6 +4,8 @@ import { gridToWorld, lonLatToGrid } from "../../geo";
 import type { Heightfield } from "../../terrain/heightfield";
 import type { Place } from "../../terrain/places-manifest";
 import { createPlaceCard, type PlaceCard } from "./place-card";
+import type { DropdownGroup } from "../../ui/dropdowns";
+import { syncSheetState } from "../../ui/layout";
 import {
   createPhotoLightbox,
   type PhotoLightbox,
@@ -93,6 +95,11 @@ export interface PlacesLayerOptions {
    * the row.
    */
   readonly regions?: PlaceRegionLookup;
+  /**
+   * Shared dropdown coordination (one open at a time, tap outside to
+   * close). Optional so headless/test callers don't need a Document.
+   */
+  readonly dropdowns?: DropdownGroup;
 }
 
 interface MarkerState {
@@ -147,17 +154,20 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
   let card: PlaceCard | undefined;
   let lightbox: PhotoLightbox | undefined;
   let visibleCheckbox: HTMLInputElement | undefined;
+  let overlayRoot: HTMLElement | undefined;
 
   const closeCard = (): void => {
     card?.close();
     lightbox?.close();
     selected = undefined;
+    if (overlayRoot) syncSheetState(overlayRoot);
   };
 
   const openCard = (marker: MarkerState): void => {
     if (!card) return;
     card.open(marker.place);
     selected = marker;
+    if (overlayRoot) syncSheetState(overlayRoot);
   };
 
   /** One occlusion check per rendered frame for a rotating batch. */
@@ -265,6 +275,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           visible && marker.screen !== undefined && !marker.occluded;
         if (el.hidden === onScreen) el.hidden = !onScreen;
         if (!onScreen || !marker.screen) continue;
+        el.classList.toggle("place-marker--selected", marker === selected);
         el.style.transform =
           `translate(${marker.screen.x.toFixed(1)}px, ` +
           `${marker.screen.y.toFixed(1)}px) translate(-50%, -50%)`;
@@ -333,9 +344,11 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         }
 
         // Card ("ficha") + photo lightbox: DOM components built by
-        // place-card.ts / photo-lightbox.ts. The card lives inside the
-        // click-through places layer (it opts pointer-events back in);
-        // the lightbox mounts on the overlay root, above everything.
+        // place-card.ts / photo-lightbox.ts. The card mounts on the
+        // overlay root, not inside the click-through marker layer: it is
+        // a bottom sheet on the --z-* scale (above panels) while the
+        // markers stay below every panel. The lightbox mounts above
+        // everything.
         const lightboxEl = createPhotoLightbox(doc);
         const cardComponent = createPlaceCard(doc, {
           ...(opts.regions !== undefined
@@ -346,15 +359,15 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           },
           onDismiss: closeCard,
         });
-        layer.appendChild(cardComponent.el);
+        root.appendChild(cardComponent.el);
         root.appendChild(layer);
         root.appendChild(lightboxEl.el);
 
-        // "Lugares" control: a button that expands a list with one button
-        // per place (sorted by name) — the keyboard path to the same card
-        // pickAt() opens — plus a checkbox that keeps the show/hide-
-        // markers toggle. Inside the existing controls panel when it is
-        // there (it mounts first), floating top-left as a fallback.
+        // "Lugares" control: a panel in the #hud column with a button
+        // that expands a list with one button per place (sorted by
+        // name) — the keyboard path to the same card pickAt() opens —
+        // plus a checkbox that keeps the show/hide-markers toggle. The
+        // list joins the shared dropdown coordination when present.
         const control = doc.createElement("div");
         control.className = "places-control";
 
@@ -382,6 +395,15 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           doc.createTextNode("Mostrar en el mapa"),
         );
 
+        const setListOpen = (open: boolean): void => {
+          listPanel.hidden = !open;
+          listToggle.setAttribute("aria-expanded", String(open));
+        };
+        const listDropdown = {
+          container: control,
+          close: () => setListOpen(false),
+        };
+
         const items = doc.createElement("ul");
         items.className = "places-list-items";
         const sorted = [...markers].sort((a, b) =>
@@ -395,6 +417,8 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           item.textContent = marker.place.name;
           item.addEventListener("click", () => {
             openCard(marker);
+            setListOpen(false);
+            opts.dropdowns?.closed(listDropdown);
           });
           li.appendChild(item);
           items.appendChild(li);
@@ -404,8 +428,9 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
 
         listToggle.addEventListener("click", () => {
           const open = listPanel.hidden;
-          listPanel.hidden = !open;
-          listToggle.setAttribute("aria-expanded", String(open));
+          if (open) opts.dropdowns?.opened(listDropdown);
+          else opts.dropdowns?.closed(listDropdown);
+          setListOpen(open);
         });
 
         const applyVisible = (v: boolean): void => {
@@ -418,15 +443,10 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           applyVisible(checkbox.checked);
         });
 
-        const panel = root.querySelector(".terrain-controls");
-        if (panel) {
-          panel.appendChild(control);
-        } else {
-          control.classList.add("places-control--floating");
-          root.appendChild(control);
-        }
+        (root.querySelector("#hud") ?? root).appendChild(control);
         visibleCheckbox = checkbox;
         layer.hidden = !visible;
+        overlayRoot = root;
 
         container = layer;
         card = cardComponent;
@@ -437,8 +457,10 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           card = undefined;
           lightbox = undefined;
           visibleCheckbox = undefined;
+          overlayRoot = undefined;
           lightboxEl.el.remove();
           layer.remove();
+          cardComponent.el.remove();
           control.remove();
         };
       },

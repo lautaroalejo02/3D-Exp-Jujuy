@@ -34,6 +34,28 @@ export interface TerrainGridUniforms {
   readonly cellKm: number;
 }
 
+/**
+ * Atmospheric haze ramp, shared by terrain.wgsl and diorama.wgsl as
+ * uniforms. The ramp is expressed as a multiple of the camera-to-target
+ * orbit distance, not an absolute km value: at the default framing the
+ * visible block ends well inside 1.5x the orbit distance, so a start at
+ * 1.6x leaves the overview completely clear, and haze only ever touches
+ * the far rim the user sees at grazing angles. The haze color lives in
+ * the shaders — it must match the sky's horizon color.
+ */
+export const HAZE_START_DISTANCE_FACTOR = 1.6;
+export const HAZE_END_DISTANCE_FACTOR = 2.6;
+
+/** [start, end] of the haze ramp in km, for the given orbit distance. */
+export function hazeRangeKm(
+  distanceKm: number,
+): readonly [number, number] {
+  return [
+    distanceKm * HAZE_START_DISTANCE_FACTOR,
+    distanceKm * HAZE_END_DISTANCE_FACTOR,
+  ];
+}
+
 export function buildTerrainGridUniforms(
   spec: GridSpec,
   meshSize: readonly [number, number],

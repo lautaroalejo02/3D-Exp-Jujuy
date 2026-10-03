@@ -4,6 +4,7 @@ import { DEM_GRID } from "../geo/jujuy";
 import { gridToWorld } from "../geo/world";
 import {
   buildTerrainGridUniforms,
+  hazeRangeKm,
   meshVertexToGrid,
   shaderWorldPosition,
 } from "./terrain-uniforms";
@@ -74,5 +75,23 @@ describe("terrain grid uniforms", () => {
     );
     expect(half.cellKm).toBeCloseTo(u.cellKm * 2, 12);
     expect(half.kmPerPx).toBeCloseTo(u.kmPerPx, 12);
+  });
+});
+
+describe("hazeRangeKm", () => {
+  it("scales the ramp with the orbit distance, start before end", () => {
+    const [start, end] = hazeRangeKm(600);
+    expect(start).toBeGreaterThan(600);
+    expect(end).toBeGreaterThan(start);
+    const [farStart] = hazeRangeKm(60);
+    expect(farStart).toBeLessThan(start);
+  });
+
+  it("keeps the default framing clear: start sits beyond the block's far corner", () => {
+    // The overview cameras sit ~600 km (landscape) and ~1040 km
+    // (portrait) from the target, and the block's far corner reaches
+    // ~800 / ~1200 km from the eye — all well under 1.6x the distance.
+    expect(hazeRangeKm(600)[0]).toBeGreaterThan(800);
+    expect(hazeRangeKm(1040)[0]).toBeGreaterThan(1200);
   });
 });

@@ -9,6 +9,7 @@ import {
   type DepartmentsData,
 } from "../terrain/departments";
 import { departmentIndexAt } from "../terrain/regions";
+import { syncSheetState } from "./layout";
 
 /**
  * Pick info panel: shows the latitude, longitude and DEM elevation of the
@@ -115,6 +116,7 @@ export function createPickPanelLayer(
     readonly hint: HTMLElement;
   }
   let els: PanelEls | undefined;
+  let overlayRoot: HTMLElement | undefined;
 
   const showHit = (hit: PickHit): void => {
     if (!els) return;
@@ -142,6 +144,7 @@ export function createPickPanelLayer(
     els.note.hidden = false;
     els.hint.hidden = true;
     els.panel.hidden = false;
+    if (overlayRoot) syncSheetState(overlayRoot);
   };
 
   const showMiss = (): void => {
@@ -150,6 +153,7 @@ export function createPickPanelLayer(
     els.note.hidden = true;
     els.hint.hidden = false;
     els.panel.hidden = false;
+    if (overlayRoot) syncSheetState(overlayRoot);
   };
 
   return {
@@ -163,6 +167,7 @@ export function createPickPanelLayer(
     },
     ui: {
       mount(root: HTMLElement): () => void {
+        overlayRoot = root;
         const doc = root.ownerDocument;
         const panel = doc.createElement("section");
         panel.className = "pick-panel";
@@ -201,6 +206,7 @@ export function createPickPanelLayer(
 
         close.addEventListener("click", () => {
           panel.hidden = true;
+          syncSheetState(root);
         });
 
         panel.append(close, dataRows, note, hint);
@@ -208,6 +214,7 @@ export function createPickPanelLayer(
         els = { panel, lat, lon, alt, dept, region, dataRows, note, hint };
         return () => {
           els = undefined;
+          overlayRoot = undefined;
           panel.remove();
         };
       },

@@ -1,8 +1,9 @@
 /**
- * "Regiones" UI: a checkbox toggle (off by default, the satellite view is
- * the default), a compact legend while the layer is on, and a small card
- * per region with its sourced description, the source's nuance (if any)
- * as "Nota: …" and the PIP Jujuy source link. Text is Argentine Spanish
+ * "Regiones" UI: a large pill switch (off by default, the satellite view
+ * is the default), a dismissible legend while the layer is on — an ×
+ * closes it and a "Leyenda" pill brings it back — and a small card per
+ * region with its sourced description, the source's nuance (if any) as
+ * "Nota: …" and the PIP Jujuy source link. Text is Argentine Spanish
  * for high-school students.
  */
 import {
@@ -36,9 +37,47 @@ export function createRegionsControls(
   toggleText.textContent = "Regiones";
   toggleLabel.append(checkbox, toggleText);
 
-  const legend = doc.createElement("ul");
+  // The legend is dismissible on its own: the × closes it while the
+  // regions stay on, and a small "Leyenda" pill brings it back. Flipping
+  // the switch off and on also restores it.
+  let legendDismissed = false;
+
+  const legend = doc.createElement("div");
   legend.className = "regions-legend";
-  legend.hidden = !checkbox.checked;
+
+  const legendHead = doc.createElement("div");
+  legendHead.className = "regions-legend-head";
+  const legendTitle = doc.createElement("span");
+  legendTitle.className = "regions-legend-title";
+  legendTitle.textContent = "Leyenda";
+  const legendClose = doc.createElement("button");
+  legendClose.type = "button";
+  legendClose.className = "regions-legend-close";
+  legendClose.textContent = "×";
+  legendClose.setAttribute("aria-label", "Cerrar la leyenda");
+  legendHead.append(legendTitle, legendClose);
+
+  const legendItems = doc.createElement("ul");
+  legendItems.className = "regions-legend-items";
+  legend.append(legendHead, legendItems);
+
+  const legendReopen = doc.createElement("button");
+  legendReopen.type = "button";
+  legendReopen.className = "regions-legend-reopen";
+  legendReopen.textContent = "Leyenda";
+
+  const renderLegend = (): void => {
+    legend.hidden = !checkbox.checked || legendDismissed;
+    legendReopen.hidden = !checkbox.checked || !legendDismissed;
+  };
+  legendClose.addEventListener("click", () => {
+    legendDismissed = true;
+    renderLegend();
+  });
+  legendReopen.addEventListener("click", () => {
+    legendDismissed = false;
+    renderLegend();
+  });
 
   const card = doc.createElement("article");
   card.className = "region-card";
@@ -99,12 +138,13 @@ export function createRegionsControls(
       showRegion(region);
     });
     item.appendChild(button);
-    legend.appendChild(item);
+    legendItems.appendChild(item);
   }
 
   checkbox.addEventListener("change", () => {
-    legend.hidden = !checkbox.checked;
     if (!checkbox.checked) card.hidden = true;
+    else legendDismissed = false;
+    renderLegend();
     opts.onToggle(checkbox.checked);
   });
 
@@ -116,6 +156,7 @@ export function createRegionsControls(
     cardNote,
     cardSource,
   );
-  panel.append(toggleLabel, legend, card);
+  renderLegend();
+  panel.append(toggleLabel, legend, legendReopen, card);
   return panel;
 }

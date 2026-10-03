@@ -67,6 +67,8 @@ import {
 import { loadPlaces, type Place } from "./terrain/places-manifest";
 import type { SatelliteImage } from "./terrain/satellite";
 import { assertSameGroundExtent } from "./terrain/validate";
+import { createDioramaLayer } from "./terrain/diorama";
+import dioramaShader from "./terrain/diorama.wgsl";
 import {
   createTerrainLayer,
   DEFAULT_VERTICAL_EXAGGERATION,
@@ -74,6 +76,7 @@ import {
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
+import { DropdownGroup } from "./ui/dropdowns";
 import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
 import { createPickPanelLayer } from "./ui/pick-panel";
 import { createRegionsControls } from "./ui/regions";
@@ -143,9 +146,12 @@ function showWebGpuNotice(
 }
 
 /** Mounts the attribution panel once, no matter how many failure paths run. */
-function mountAttributions(overlay: HTMLElement): void {
+function mountAttributions(
+  overlay: HTMLElement,
+  dropdowns?: DropdownGroup,
+): void {
   if (overlay.querySelector(".attributions")) return;
-  overlay.appendChild(createAttributionPanel());
+  overlay.appendChild(createAttributionPanel(document, dropdowns));
 }
 
 interface TerrainData {
@@ -305,7 +311,10 @@ async function main(): Promise<void> {
     throw new Error("index.html is missing #scene canvas or #overlay root");
   }
 
-  mountAttributions(overlay);
+  // Shared dropdown coordination for the whole overlay: one dropdown
+  // open at a time, tapping outside closes it (Lugares list, Fuentes).
+  const dropdowns = new DropdownGroup(document);
+  mountAttributions(overlay, dropdowns);
 
   const support = await checkWebGpuSupport(navigator);
   if (!support.supported) {
@@ -572,8 +581,21 @@ async function main(): Promise<void> {
       regionNames,
       source: data.regions.source,
     },
+    dropdowns,
+  });
+  // Diorama first: its sky draw is the pass's opaque backdrop (no depth),
+  // everything else overdraws it. The walls bind the terrain's heights
+  // buffer lazily on the first update() — the terrain layer inits after
+  // this one because draw order is init order.
+  const diorama = createDioramaLayer({
+    grid: terrain.gridUniforms,
+    heights: () => terrain.baseHeightsStorage(),
+    minElevationMeters: data.heightfield.min,
+    verticalExaggeration: () => verticalExaggeration,
+    shader: dioramaShader,
   });
   const layers: readonly Layer[] = [
+    diorama,
     terrain,
     detail,
     pickMarker,
@@ -582,7 +604,7 @@ async function main(): Promise<void> {
   ];
   for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
-  overlay.appendChild(
+  (overlay.querySelector("#hud") ?? overlay).appendChild(
     createRegionsControls({
       regions: data.regions.regions,
       source: data.regions.source,

@@ -8,6 +8,65 @@
     />
     <title>Maqueta 3D de Jujuy</title>
     <style>
+      /* Design tokens: colors, radii, spacing, shadows, type sizes. The
+         accent is a warm sand/terracotta that sits well over the satellite
+         imagery; the cool counterpoint is reserved for links and focus. */
+      :root {
+        --font-ui:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          sans-serif;
+        --font-mono:
+          ui-monospace,
+          "SF Mono",
+          "Cascadia Mono",
+          Consolas,
+          monospace;
+        --fs-xs: 0.72rem;
+        --fs-sm: 0.8rem;
+        --fs-md: 0.92rem;
+        --fs-lg: 1.25rem;
+        --text: #eef0f4;
+        --text-dim: #aab1bd;
+        /* Panels are translucent "glass" over the scene, with a nearly
+           opaque fallback when backdrop-filter is unavailable. */
+        --panel-bg: rgb(18 20 26 / 0.58);
+        --panel-bg-solid: rgb(20 22 28 / 0.92);
+        --panel-border: rgb(255 255 255 / 0.11);
+        --panel-shadow: 0 10px 30px rgb(0 0 0 / 0.45);
+        --panel-blur: blur(14px) saturate(1.25);
+        --radius-panel: 0.9rem;
+        --radius-sm: 0.55rem;
+        --radius-pill: 999px;
+        --control-bg: rgb(255 255 255 / 0.07);
+        --control-bg-hover: rgb(255 255 255 / 0.14);
+        --control-bg-active: rgb(255 255 255 / 0.18);
+        /* Terracotta accent: AA contrast against --on-accent text. */
+        --accent: #dd9663;
+        --accent-hover: #e9ab7d;
+        --on-accent: #26150a;
+        --cool: #8fc1ff;
+        --note: #eec078;
+        --focus: rgb(143 193 255 / 0.95);
+        --touch: 44px;
+        --pad-panel: 0.65rem 0.8rem;
+        --gap-panel: 0.5rem;
+        /* Single z-index scale for the overlay UI, lowest to highest:
+           map canvas < places layer (markers + labels, visual only) <
+           panels/controls < bottom sheets (pick panel, place card) <
+           lightbox/modals < notices. Markers always render BELOW every
+           panel. */
+        --z-places: 1;
+        --z-panels: 5;
+        --z-sheets: 10;
+        --z-modals: 20;
+        --z-notices: 30;
+        /* Marker dot: a soft blue that reads over the warm satellite
+           terrain, with a white ring. */
+        --marker-fill: #7ba7de;
+      }
+
       html,
       body {
         margin: 0;
@@ -16,12 +75,8 @@
         overflow: hidden;
         overscroll-behavior: none;
         background: #17191d;
-        color: #e8e9eb;
-        font-family:
-          system-ui,
-          -apple-system,
-          "Segoe UI",
-          sans-serif;
+        color: var(--text);
+        font-family: var(--font-ui);
       }
       #app {
         position: fixed;
@@ -53,47 +108,162 @@
          Safari then pinch-zooms the page instead of the camera. */
       #overlay > .places-layer,
       #overlay > .debug-overlay,
-      #overlay > .loading-message {
+      #overlay > .loading-message,
+      #overlay > #hud {
         pointer-events: none;
         touch-action: none;
       }
+      /* The control column is click-through itself; only its panels
+         receive events, so map gestures work in the gaps between them. */
+      #hud > * {
+        pointer-events: auto;
+        touch-action: manipulation;
+      }
+      /* Control column: every panel stacks top-right with a consistent
+         gap, in desktop and on phones, so nothing can overlap. */
+      #hud {
+        position: absolute;
+        top: calc(0.5rem + env(safe-area-inset-top));
+        right: calc(0.5rem + env(safe-area-inset-right));
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: var(--gap-panel);
+        max-width: calc(100vw - 1rem - env(safe-area-inset-left));
+        z-index: var(--z-panels);
+      }
+
+      /* Shared panel chrome: translucent glass when the engine supports
+         it, near-solid dark otherwise (the scene behind is bright and a
+         transparent panel without blur would be unreadable). */
+      .terrain-controls,
+      .regions-controls,
+      .pick-panel,
+      .attributions,
+      .places-control,
+      .loading-message,
+      .debug-overlay,
+      .place-marker-label,
       .webgpu-notice {
+        border: 1px solid var(--panel-border);
+        background: var(--panel-bg-solid);
+        box-shadow: var(--panel-shadow);
+      }
+      @supports (
+        (backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))
+      ) {
+        .terrain-controls,
+        .regions-controls,
+        .pick-panel,
+        .attributions,
+        .places-control,
+        .loading-message,
+        .debug-overlay,
+        .place-marker-label,
+        .webgpu-notice {
+          background: var(--panel-bg);
+          -webkit-backdrop-filter: var(--panel-blur);
+          backdrop-filter: var(--panel-blur);
+        }
+      }
+
+      /* Pill buttons: one shape for every action control. */
+      .controls-collapse,
+      .quality-toggle,
+      .places-toggle,
+      .regions-legend-reopen,
+      .webgpu-notice-reload {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        min-height: var(--touch);
+        padding: 0 1rem;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-pill);
+        background: var(--control-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      .controls-collapse:hover,
+      .quality-toggle:hover,
+      .places-toggle:hover,
+      .regions-legend-reopen:hover,
+      .webgpu-notice-reload:hover {
+        background: var(--control-bg-hover);
+      }
+      .controls-collapse:active,
+      .quality-toggle:active,
+      .places-toggle:active,
+      .regions-legend-reopen:active,
+      .webgpu-notice-reload:active {
+        background: var(--control-bg-active);
+      }
+      .controls-collapse:focus-visible,
+      .quality-toggle:focus-visible,
+      .places-toggle:focus-visible,
+      .regions-legend-reopen:focus-visible,
+      .webgpu-notice-reload:focus-visible,
+      .pick-panel-close:focus-visible,
+      .region-card-close:focus-visible,
+      .places-list-item:focus-visible,
+      .region-item:focus-visible,
+      .attributions summary:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+      }
+      /* The quality button is the one primary action on the panel. */
+      .quality-toggle {
+        align-self: flex-start;
+        border-color: transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 600;
+      }
+      .quality-toggle:hover {
+        background: var(--accent-hover);
+      }
+      /* The collapse pill only exists in the compact layout. */
+      .controls-collapse {
+        display: none;
+      }
+      .controls-collapse::after {
+        content: "▾";
+        margin-left: 0.2rem;
+      }
+      .controls-collapse[aria-expanded="false"]::after {
+        content: "▸";
+      }
+
+      .webgpu-notice {
+        position: relative;
+        z-index: var(--z-notices);
         box-sizing: border-box;
         max-width: 34rem;
         margin: calc(10vh + env(safe-area-inset-top)) auto 0;
         padding: 1.25rem 1.5rem;
-        border-radius: 0.75rem;
-        background: #23262c;
-        box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 0.45);
+        border-radius: var(--radius-panel);
         line-height: 1.5;
       }
       .webgpu-notice-reload {
-        display: block;
-        min-width: 44px;
-        min-height: 44px;
         margin-top: 0.9rem;
-        padding: 0 1.4rem;
-        border: none;
-        border-radius: 0.5rem;
-        background: #4f7ec4;
-        color: #fff;
-        font-size: 0.95rem;
-        cursor: pointer;
-      }
-      .webgpu-notice-reload:hover {
-        background: #5d8cd6;
+        font-size: var(--fs-md);
       }
       .webgpu-notice h1 {
         margin: 0 0 0.75rem;
-        font-size: 1.25rem;
+        font-size: var(--fs-lg);
       }
       .webgpu-notice p {
         margin: 0.5rem 0;
       }
       .webgpu-notice .detail {
-        font-family: ui-monospace, monospace;
-        font-size: 0.8rem;
-        color: #9aa3b2;
+        font-family: var(--font-mono);
+        font-size: var(--fs-sm);
+        color: var(--text-dim);
         word-break: break-word;
       }
       .attributions {
@@ -101,26 +271,28 @@
         left: calc(0.5rem + env(safe-area-inset-left));
         bottom: calc(0.5rem + env(safe-area-inset-bottom));
         max-width: min(26rem, calc(100vw - 1rem));
-        padding: 0.4rem 0.6rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.8);
-        font-size: 0.72rem;
-        color: #b9bec7;
+        padding: 0.35rem 0.7rem;
+        border-radius: var(--radius-sm);
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+        z-index: var(--z-panels);
+        transition: bottom 0.18s ease;
       }
       .attributions summary {
         cursor: pointer;
         font-weight: 600;
         outline: none;
-        min-height: 44px;
+        min-height: var(--touch);
         display: flex;
         align-items: center;
+        border-radius: var(--radius-sm);
       }
       .attributions ul {
         margin: 0.35rem 0 0;
         padding-left: 1rem;
       }
       .attributions a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       .loading-message {
         position: absolute;
@@ -128,52 +300,111 @@
         left: 50%;
         transform: translate(-50%, -50%);
         margin: 0;
-        padding: 0.6rem 1.1rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.85);
-        font-size: 0.95rem;
-        color: #d7dae0;
+        padding: 0.6rem 1.2rem;
+        border-radius: var(--radius-pill);
+        font-size: var(--fs-md);
+        color: var(--text);
+        z-index: var(--z-notices);
       }
+      /* The panels live inside #hud's column, so they are statically
+         positioned here — the column owns placement and gaps. */
       .terrain-controls {
-        position: absolute;
-        top: calc(0.5rem + env(safe-area-inset-top));
-        right: calc(0.5rem + env(safe-area-inset-right));
         display: flex;
         flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.6rem 0.75rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.8);
-        font-size: 0.78rem;
-        color: #d7dae0;
+        gap: var(--gap-panel);
+        padding: var(--pad-panel);
+        border-radius: var(--radius-panel);
+        font-size: var(--fs-sm);
+        color: var(--text);
       }
       .terrain-controls .exaggeration {
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        font-weight: 500;
       }
+      /* Styled range slider, cross-browser incl. iOS Safari: the input
+         box stays 44px tall as the touch hit area while the visual track
+         is a thin line with a round thumb. WebKit tracks get their fill
+         from the --fill custom property the JS keeps updated. */
       .terrain-controls .exaggeration input[type="range"] {
-        width: 7rem;
+        -webkit-appearance: none;
+        appearance: none;
+        width: 8rem;
         /* the input box is the touch hit area for the thumb */
-        height: 44px;
+        height: var(--touch);
+        margin: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .terrain-controls .exaggeration input[type="range"]:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+        border-radius: var(--radius-pill);
+      }
+      .terrain-controls
+        .exaggeration
+        input[type="range"]::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(
+          to right,
+          var(--accent) 0%,
+          var(--accent) var(--fill, 50%),
+          rgb(255 255 255 / 0.18) var(--fill, 50%)
+        );
+      }
+      .terrain-controls
+        .exaggeration
+        input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        margin-top: -7px; /* (track 6px - thumb 20px) / 2 */
+        border: none;
+        border-radius: 50%;
+        background: #f4f1ec;
+        box-shadow:
+          0 0 0 2px var(--accent),
+          0 1px 4px rgb(0 0 0 / 0.5);
+      }
+      .terrain-controls
+        .exaggeration
+        input[type="range"]::-moz-range-track {
+        height: 6px;
+        border-radius: 3px;
+        background: rgb(255 255 255 / 0.18);
+      }
+      .terrain-controls
+        .exaggeration
+        input[type="range"]::-moz-range-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--accent);
+      }
+      .terrain-controls
+        .exaggeration
+        input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 50%;
+        background: #f4f1ec;
+        box-shadow:
+          0 0 0 2px var(--accent),
+          0 1px 4px rgb(0 0 0 / 0.5);
       }
       .terrain-controls .exaggeration-value {
         min-width: 2.2rem;
         text-align: right;
         font-variant-numeric: tabular-nums;
-      }
-      .terrain-controls .quality-toggle {
-        align-self: flex-start;
-        display: inline-flex;
-        align-items: center;
-        min-height: 44px;
-        color: #8fc1ff;
+        color: var(--text-dim);
       }
       .terrain-controls .quality-warning {
         margin: 0;
         max-width: 12rem;
-        font-size: 0.7rem;
-        color: #e3b567;
+        font-size: var(--fs-xs);
+        color: var(--note);
       }
       .pick-panel {
         position: absolute;
@@ -181,27 +412,31 @@
         bottom: calc(0.5rem + env(safe-area-inset-bottom));
         max-width: min(16rem, calc(100vw - 1rem));
         padding: 0.55rem 0.75rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.85);
-        font-size: 0.8rem;
-        color: #d7dae0;
+        border-radius: var(--radius-panel);
+        font-size: var(--fs-sm);
+        color: var(--text);
+        z-index: var(--z-sheets);
       }
-      .pick-panel-close {
+      .pick-panel-close,
+      .region-card-close {
         position: absolute;
         top: 0;
         right: 0;
-        width: 44px;
-        height: 44px;
+        width: var(--touch);
+        height: var(--touch);
         border: none;
+        border-radius: 50%;
         background: none;
-        color: #9aa3b2;
-        font-size: 1rem;
+        color: var(--text-dim);
+        font-size: 1.05rem;
         line-height: 1;
         padding: 0;
         cursor: pointer;
       }
-      .pick-panel-close:hover {
-        color: #e8e9eb;
+      .pick-panel-close:hover,
+      .region-card-close:hover {
+        color: var(--text);
+        background: var(--control-bg);
       }
       .pick-panel [hidden] {
         display: none;
@@ -213,7 +448,7 @@
         margin: 0 2rem 0 0;
       }
       .pick-panel-data dt {
-        color: #9aa3b2;
+        color: var(--text-dim);
       }
       .pick-panel-data dd {
         margin: 0;
@@ -223,8 +458,8 @@
       .pick-panel-note,
       .pick-panel-hint {
         margin: 0.4rem 0 0;
-        font-size: 0.68rem;
-        color: #9aa3b2;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
       }
       /* Places layer: full-screen marker overlay, purely visual — marker
          taps are resolved by the canvas pick path (places.pickAt). Its
@@ -234,7 +469,9 @@
         position: absolute;
         inset: 0;
         overflow: hidden;
-        z-index: 3;
+        /* Below every panel, sheet and notice: markers and labels are
+           the lowest overlay content (see the --z-* scale in :root). */
+        z-index: var(--z-places);
       }
       #overlay .place-marker {
         pointer-events: none;
@@ -247,30 +484,44 @@
         width: 0;
         height: 0;
       }
+      /* Marker: a small dot with a white ring and a soft shadow — the
+         white ring keeps it readable over any terrain color. */
       .place-marker-dot {
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 10px;
-        height: 10px;
-        margin: -5px 0 0 -5px;
+        width: 12px;
+        height: 12px;
+        margin: -6px 0 0 -6px;
         border-radius: 50%;
-        background: #ffb74d;
-        border: 1.5px solid #4a2f00;
+        background: var(--marker-fill);
+        border: 2px solid #f8f9fb;
         box-shadow:
-          0 0 0 1px rgb(0 0 0 / 0.35),
-          0 1px 3px rgb(0 0 0 / 0.5);
+          0 1px 5px rgb(0 0 0 / 0.5),
+          0 0 0 1px rgb(0 0 0 / 0.18);
+        transition:
+          width 0.15s ease,
+          height 0.15s ease,
+          margin 0.15s ease;
+      }
+      /* The place whose card is open: a bigger dot with an accent ring. */
+      .place-marker--selected .place-marker-dot {
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        box-shadow:
+          0 0 0 3px var(--accent),
+          0 2px 7px rgb(0 0 0 / 0.55);
       }
       .place-marker-label {
         position: absolute;
         top: 50%;
         left: 10px;
         transform: translateY(-50%);
-        padding: 0.15rem 0.45rem;
-        border-radius: 0.4rem;
-        background: rgb(23 25 29 / 0.85);
-        color: #e8e9eb;
-        font-size: 0.72rem;
+        padding: 0.2rem 0.55rem;
+        border-radius: var(--radius-pill);
+        color: var(--text);
+        font-size: var(--fs-xs);
         font-weight: 600;
         white-space: nowrap;
         pointer-events: none;
@@ -289,17 +540,17 @@
         margin: 0;
         padding-right: 2rem;
         font-size: 0.9rem;
-        color: #e8e9eb;
+        color: var(--text);
       }
       .place-card-desc {
         margin: 0.15rem 0 0.4rem;
         padding-right: 2rem;
         font-size: 0.75rem;
         line-height: 1.45;
-        color: #d7dae0;
+        color: var(--text);
       }
       .place-card-desc--empty {
-        color: #9aa3b2;
+        color: var(--text-dim);
         font-style: italic;
       }
       .place-card-links {
@@ -307,7 +558,7 @@
         font-size: 0.75rem;
       }
       .place-card-links a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       /* The card is wider than the pick panel (photos need room) and can
          grow tall when expanded, so it scrolls internally. */
@@ -338,7 +589,7 @@
         display: block;
         padding: 0;
         border: none;
-        border-radius: 0.35rem;
+        border-radius: var(--radius-sm);
         background: #101216;
         cursor: zoom-in;
       }
@@ -346,29 +597,29 @@
         display: block;
         height: 170px;
         width: auto;
-        border-radius: 0.35rem;
+        border-radius: var(--radius-sm);
       }
       .place-card-photo-button:focus-visible {
-        outline: 2px solid #8fc1ff;
+        outline: 2px solid var(--focus);
         outline-offset: 2px;
       }
       .place-card-photo-credit {
         margin-top: 0.15rem;
         font-size: 0.62rem;
-        color: #9aa3b2;
+        color: var(--text-dim);
         white-space: nowrap;
       }
       .place-card-photo-credit a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       .place-card-more {
         display: inline-flex;
         align-items: center;
-        min-height: 44px;
+        min-height: var(--touch);
         padding: 0;
         border: none;
         background: none;
-        color: #8fc1ff;
+        color: var(--cool);
         font: inherit;
         font-size: 0.78rem;
         cursor: pointer;
@@ -393,10 +644,10 @@
       .place-card-extract-source {
         margin: 0.25rem 0 0;
         font-size: 0.68rem;
-        color: #9aa3b2;
+        color: var(--text-dim);
       }
       .place-card-extract-source a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       .place-card-facts {
         margin-top: 0.4rem;
@@ -404,21 +655,22 @@
       .place-card-facts-source {
         margin: 0.25rem 0 0;
         font-size: 0.68rem;
-        color: #9aa3b2;
+        color: var(--text-dim);
       }
       .place-card-facts-source a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
-      /* Photo lightbox: full-screen dialog over the overlay. Its
-         touch-action opt-out needs the #overlay > selector to out-
-         specify `#overlay > *`, like .places-layer's. */
+      /* Photo lightbox: full-screen dialog over the overlay, on the
+         --z-modals tier (above sheets and panels). Its touch-action
+         opt-out needs the #overlay > selector to out-specify
+         `#overlay > *`, like .places-layer's. */
       #overlay > .photo-lightbox {
         touch-action: none;
       }
       .photo-lightbox {
         position: absolute;
         inset: 0;
-        z-index: 10;
+        z-index: var(--z-modals);
         background: rgb(0 0 0 / 0.92);
       }
       .photo-lightbox[hidden] {
@@ -440,7 +692,7 @@
         max-height: 78vh;
         width: auto;
         height: auto;
-        border-radius: 0.4rem;
+        border-radius: var(--radius-sm);
       }
       .photo-lightbox-caption {
         position: absolute;
@@ -451,22 +703,22 @@
         padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom));
         background: rgb(0 0 0 / 0.55);
         font-size: 0.72rem;
-        color: #d7dae0;
+        color: var(--text-dim);
         text-align: center;
       }
       .photo-lightbox-caption a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       .photo-lightbox-nav {
         position: absolute;
         top: 50%;
         transform: translateY(-50%);
-        width: 44px;
+        width: var(--touch);
         height: 64px;
         border: none;
-        border-radius: 0.5rem;
+        border-radius: var(--radius-sm);
         background: rgb(23 25 29 / 0.6);
-        color: #e8e9eb;
+        color: var(--text);
         font-size: 1.6rem;
         cursor: pointer;
       }
@@ -480,58 +732,54 @@
         position: absolute;
         top: calc(0.5rem + env(safe-area-inset-top));
         right: calc(0.5rem + env(safe-area-inset-right));
-        width: 44px;
-        height: 44px;
+        width: var(--touch);
+        height: var(--touch);
         border: none;
-        border-radius: 50%;
+        border-radius: var(--radius-pill);
         background: rgb(23 25 29 / 0.6);
-        color: #e8e9eb;
+        color: var(--text);
         font-size: 1.3rem;
         line-height: 1;
         cursor: pointer;
       }
-      /* "Lugares" control: a button that opens the place list — the
-         keyboard path to each card now that markers are visual only —
-         plus a checkbox that shows/hides the map markers. Lives inside
-         the controls panel like the quality toggle. */
+      /* "Lugares" control: a panel in the #hud column — a button that
+         opens the place list (the keyboard path to each card now that
+         markers are visual only) plus a checkbox that shows/hides the
+         map markers. */
       .places-control {
-        align-self: flex-start;
         display: flex;
         flex-direction: column;
         gap: 0.35rem;
+        padding: 0.4rem 0.6rem;
+        border-radius: var(--radius-panel);
+        font-size: var(--fs-sm);
+        color: var(--text);
       }
       .places-toggle {
         align-self: flex-start;
-        display: inline-flex;
-        align-items: center;
-        min-height: 44px;
-        padding: 0;
-        border: none;
-        background: none;
-        color: #8fc1ff;
-        font: inherit;
-        cursor: pointer;
       }
       .places-toggle::after {
         content: "▾";
-        margin-left: 0.35rem;
+        margin-left: 0.2rem;
+      }
+      .places-toggle[aria-expanded="true"] {
+        background: var(--control-bg-hover);
       }
       .places-toggle[aria-expanded="true"]::after {
         content: "▴";
       }
-      .places-toggle:focus-visible {
-        outline: 2px solid #8fc1ff;
-        outline-offset: 2px;
-      }
+      /* The list opens inside the control panel, so it gets a light
+         inner surface instead of a second layer of glass. */
       .places-list {
         display: flex;
         flex-direction: column;
         gap: 0.15rem;
         max-width: 14rem;
         padding: 0.4rem 0.5rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.9);
-        font-size: 0.75rem;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-sm);
+        background: var(--control-bg);
+        font-size: var(--fs-sm);
       }
       .places-list[hidden] {
         display: none;
@@ -540,7 +788,7 @@
         display: flex;
         align-items: center;
         gap: 0.4rem;
-        min-height: 44px;
+        min-height: var(--touch);
       }
       .places-list-items {
         margin: 0;
@@ -554,26 +802,28 @@
       .places-list-item {
         display: block;
         width: 100%;
-        min-height: 44px;
-        padding: 0 0.4rem;
+        min-height: var(--touch);
+        padding: 0 0.6rem;
         border: none;
-        border-radius: 0.35rem;
+        border-radius: var(--radius-sm);
         background: none;
-        color: #e8e9eb;
+        color: var(--text);
         font: inherit;
         text-align: left;
         cursor: pointer;
       }
+      .places-list-item:hover {
+        background: var(--control-bg);
+      }
+      .places-list-item:active {
+        background: var(--control-bg-active);
+      }
       .regions-controls {
-        position: absolute;
-        top: calc(0.5rem + env(safe-area-inset-top));
-        left: calc(0.5rem + env(safe-area-inset-left));
         max-width: min(15rem, calc(100vw - 1rem));
         padding: 0.5rem 0.65rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.8);
-        font-size: 0.78rem;
-        color: #d7dae0;
+        border-radius: var(--radius-panel);
+        font-size: var(--fs-sm);
+        color: var(--text);
       }
       .regions-controls [hidden] {
         display: none;
@@ -581,18 +831,101 @@
       .regions-toggle {
         display: flex;
         align-items: center;
-        gap: 0.45rem;
-        min-height: 44px;
+        gap: 0.6rem;
+        min-height: var(--touch);
+        font-weight: 600;
         cursor: pointer;
       }
+      /* The "Regiones" toggle is a large pill switch: the checkbox is the
+         whole track and ::after is the knob. */
       .regions-toggle input {
-        width: 1.1rem;
-        height: 1.1rem;
+        -webkit-appearance: none;
+        appearance: none;
+        position: relative;
+        width: 2.6rem;
+        height: 1.5rem;
         flex: none;
+        margin: 0;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-pill);
+        background: var(--control-bg-active);
+        cursor: pointer;
+        transition: background 0.15s ease;
       }
+      .regions-toggle input::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0.18rem;
+        width: 1.05rem;
+        height: 1.05rem;
+        margin-top: -0.53rem;
+        border-radius: 50%;
+        background: #f4f1ec;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+        transition: left 0.15s ease;
+      }
+      .regions-toggle input:checked {
+        border-color: transparent;
+        background: var(--accent);
+      }
+      .regions-toggle input:checked::after {
+        left: 1.32rem;
+      }
+      .regions-toggle input:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+      }
+      .places-list-visible input {
+        width: 1.15rem;
+        height: 1.15rem;
+        flex: none;
+        accent-color: var(--accent);
+      }
+      /* The legend is dismissible: an explicit × closes it (the regions
+         stay on) and a small "Leyenda" pill brings it back. */
       .regions-legend {
+        position: relative;
+        margin-top: 0.1rem;
+      }
+      .regions-legend-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.4rem;
+        min-height: 1.6rem;
+      }
+      .regions-legend-title {
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .regions-legend-close {
+        width: var(--touch);
+        height: var(--touch);
+        margin: -0.55rem -0.35rem -0.55rem 0;
+        border: none;
+        border-radius: 50%;
+        background: none;
+        color: var(--text-dim);
+        font-size: 1.05rem;
+        line-height: 1;
+        padding: 0;
+        cursor: pointer;
+      }
+      .regions-legend-close:hover {
+        color: var(--text);
+        background: var(--control-bg);
+      }
+      .regions-legend-close:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+      }
+      .regions-legend-reopen {
+        margin-top: 0.1rem;
+      }
+      .regions-legend-items {
         list-style: none;
-        margin: 0.1rem 0 0;
+        margin: 0;
         padding: 0;
       }
       .region-item {
@@ -600,38 +933,26 @@
         align-items: center;
         gap: 0.5rem;
         width: 100%;
-        min-height: 44px;
-        padding: 0 0.2rem;
+        min-height: var(--touch);
+        padding: 0 0.4rem;
         border: none;
+        border-radius: var(--radius-sm);
         background: none;
         color: inherit;
         font: inherit;
         text-align: left;
         cursor: pointer;
       }
-      .places-list-item:hover {
-        background: rgb(255 255 255 / 0.08);
+      .region-item:hover {
+        background: var(--control-bg);
       }
-      .places-list-item:focus-visible {
-        outline: 2px solid #8fc1ff;
-        outline-offset: -2px;
-      }
-      .places-control--floating {
-        position: absolute;
-        top: calc(0.5rem + env(safe-area-inset-top));
-        left: calc(0.5rem + env(safe-area-inset-left));
-        padding: 0.4rem 0.6rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.8);
-        z-index: 4;
-      }
-      .region-item:hover .region-name {
-        text-decoration: underline;
+      .region-item:active {
+        background: var(--control-bg-active);
       }
       .region-swatch {
         width: 0.85rem;
         height: 0.85rem;
-        border-radius: 0.2rem;
+        border-radius: 0.25rem;
         flex: none;
         box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.3);
       }
@@ -639,63 +960,72 @@
         position: relative;
         margin-top: 0.3rem;
         padding-top: 0.4rem;
-        border-top: 1px solid rgb(255 255 255 / 0.12);
+        border-top: 1px solid var(--panel-border);
       }
       .region-card h3 {
         margin: 0 2rem 0.15rem 0;
-        font-size: 0.92rem;
+        font-size: var(--fs-md);
       }
       .region-card p {
         margin: 0.3rem 0;
       }
       .region-card-departments,
       .region-card-note {
-        font-size: 0.7rem;
-        color: #b9bec7;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
       }
       .region-card-note {
-        color: #e3b567;
+        color: var(--note);
       }
       .region-card-source {
-        font-size: 0.7rem;
+        font-size: var(--fs-xs);
       }
       .region-card-source a {
-        color: #8fc1ff;
+        color: var(--cool);
       }
       .region-card-close {
-        position: absolute;
-        top: 0;
         right: -0.35rem;
-        width: 44px;
-        height: 44px;
-        border: none;
-        background: none;
-        color: #9aa3b2;
-        font-size: 1rem;
-        line-height: 1;
-        padding: 0;
-        cursor: pointer;
-      }
-      .region-card-close:hover {
-        color: #e8e9eb;
       }
       .debug-overlay {
         position: absolute;
         top: calc(0.5rem + env(safe-area-inset-top));
         left: calc(0.5rem + env(safe-area-inset-left));
         padding: 0.4rem 0.6rem;
-        border-radius: 0.5rem;
-        background: rgb(23 25 29 / 0.8);
-        font-family: ui-monospace, monospace;
+        border-radius: var(--radius-sm);
+        font-family: var(--font-mono);
         font-size: 0.66rem;
         line-height: 1.45;
-        color: #b9bec7;
+        color: var(--text-dim);
         white-space: pre;
         pointer-events: none;
+        z-index: var(--z-notices);
       }
       @media (max-width: 640px) {
         .attributions {
           font-size: 0.66rem;
+        }
+        /* While a bottom sheet is open the attributions toggle lifts
+           above it: --sheet-lift is the tallest open sheet's height,
+           set from JS (syncSheetState in src/ui/layout.ts). */
+        #overlay.overlay--sheet-open .attributions {
+          bottom: calc(
+            var(--sheet-lift, 0px) + 0.5rem + env(safe-area-inset-bottom)
+          );
+        }
+        /* Compact controls: the panel folds into a single pill anchored
+           to the corner, so the center of the map stays clear. */
+        .controls-collapse {
+          display: inline-flex;
+        }
+        .terrain-controls {
+          padding: 0.4rem;
+        }
+        .terrain-controls[data-collapsed="true"] {
+          gap: 0;
+          padding: 0.25rem;
+        }
+        .terrain-controls[data-collapsed="true"] > :not(.controls-collapse) {
+          display: none;
         }
         /* Bottom sheet: anchored to the screen edge so the center of the
            map stays visible and reachable. */
@@ -704,7 +1034,7 @@
           right: 0;
           bottom: 0;
           max-width: none;
-          border-radius: 0.75rem 0.75rem 0 0;
+          border-radius: var(--radius-panel) var(--radius-panel) 0 0;
           padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
         }
         .pick-panel-close {
@@ -725,7 +1055,12 @@
   <body>
     <div id="app">
       <canvas id="scene"></canvas>
-      <div id="overlay"></div>
+      <div id="overlay">
+        <!-- Control column: terrain controls, "Lugares" and "Regiones"
+             mount here (they fall back to the overlay root when absent).
+             Click-through between its panels. -->
+        <div id="hud"></div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -35,10 +35,14 @@ export function qualityToggleLabel(quality: TerrainQuality): string {
   return `Calidad: ${current} · Cambiar a ${next}`;
 }
 
+/** Media query that matches the collapsed-controls layout in index.html. */
+const COMPACT_CONTROLS_QUERY = "(max-width: 640px)";
+
 /**
  * Control panel: vertical exaggeration slider (1x–5x, updates only the
- * terrain uniform) and a quality toggle that reloads the page with or
- * without `?calidad=alta`.
+ * terrain uniform) and a quality button that reloads the page with or
+ * without `?calidad=alta`. On small screens a "Controles" pill collapses
+ * the whole panel so it never covers the center of the map.
  */
 export function createTerrainControls(
   opts: TerrainControlsOptions,
@@ -46,6 +50,24 @@ export function createTerrainControls(
 ): HTMLElement {
   const panel = doc.createElement("section");
   panel.className = "terrain-controls";
+
+  // Collapse affordance: CSS hides this button on wide screens, where the
+  // panel always stays expanded.
+  const collapse = doc.createElement("button");
+  collapse.type = "button";
+  collapse.className = "controls-collapse";
+  collapse.textContent = "Controles";
+  let collapsed =
+    doc.defaultView?.matchMedia?.(COMPACT_CONTROLS_QUERY)?.matches ?? false;
+  const renderCollapsed = (): void => {
+    panel.dataset.collapsed = String(collapsed);
+    collapse.setAttribute("aria-expanded", String(!collapsed));
+  };
+  renderCollapsed();
+  collapse.addEventListener("click", () => {
+    collapsed = !collapsed;
+    renderCollapsed();
+  });
 
   const label = doc.createElement("label");
   label.className = "exaggeration";
@@ -63,6 +85,12 @@ export function createTerrainControls(
   value.className = "exaggeration-value";
   const renderValue = (): void => {
     value.textContent = `${Number(slider.value).toFixed(1)}×`;
+    // WebKit has no ::-moz-range-progress: the filled track portion is a
+    // gradient stop driven by this property (see index.html).
+    const min = Number(slider.min);
+    const max = Number(slider.max);
+    const fill = ((Number(slider.value) - min) / (max - min)) * 100;
+    slider.style.setProperty("--fill", `${fill}%`);
   };
   renderValue();
 
@@ -73,16 +101,20 @@ export function createTerrainControls(
 
   label.append(labelText, slider, value);
 
-  const quality = doc.createElement("a");
+  const quality = doc.createElement("button");
+  quality.type = "button";
   quality.className = "quality-toggle";
   const isHigh = opts.quality === "high";
   quality.textContent = qualityToggleLabel(opts.quality);
   const url = new URL(doc.defaultView?.location.href ?? "http://localhost/");
   if (isHigh) url.searchParams.delete("calidad");
   else url.searchParams.set("calidad", "alta");
-  quality.href = `${url.pathname}${url.search}`;
+  quality.addEventListener("click", () => {
+    const view = doc.defaultView;
+    if (view) view.location.href = `${url.pathname}${url.search}`;
+  });
 
-  panel.append(label, quality);
+  panel.append(collapse, label, quality);
   if (opts.warnHighQualityOnMobile) {
     const warning = doc.createElement("p");
     warning.className = "quality-warning";
