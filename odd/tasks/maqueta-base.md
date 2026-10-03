@@ -80,6 +80,7 @@ src/features/<nombre>/     (futuro) regiones, lugares, perfil, lluvia
 | `sha256:61e98…d421` | 036c136..ff30bd5 (T1–T5) | medium | 6372 |
 | `sha256:c88b9…2970` | 036c136..b3172fb (T1–T6) | medium | 7214 |
 | `sha256:10122…f524` | 036c136..cb135ee (T1–T7) | medium | 8325 |
+| `sha256:533b8…2bf5` | 036c136..726f044 (T1–T9 + docs) | medium | 8932 |
 
 ## Mediciones (T4/T5/T8)
 - Descarga medida en producción (brotli): normal ~4,9 MB (alturas 2,36 + satélite 2,49 + JS ~0,06); alta ~16,9 MB (8,83 + 7,99).
