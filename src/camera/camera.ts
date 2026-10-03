@@ -18,6 +18,14 @@
  * infinity mapping to z = 0. Draws must use depth compare "greater" and
  * passes must clear depth to 0. Reversed-Z concentrates float precision
  * near the camera, avoiding z-fighting over the ~400 km scene span.
+ *
+ * `viewOffsetX`/`viewOffsetY` shift the projection's principal point in
+ * NDC: with offset (ox, oy) the camera target — normally the NDC center —
+ * lands at (ox, oy) instead. The app uses this to aim the framed content
+ * at the center of the screen rectangle the UI leaves free (e.g. above
+ * the bottom sheet, right of the desktop panel) without moving the orbit
+ * target. Picking and marker projection read the same matrices, so they
+ * stay consistent automatically.
  */
 
 export type Vec3 = readonly [number, number, number];
@@ -44,6 +52,8 @@ export interface OrbitCameraOptions {
   readonly nearKm?: number;
   readonly minDistanceKm?: number;
   readonly maxDistanceKm?: number;
+  /** NDC principal-point shift: the view axis lands at (x, y). */
+  readonly viewOffset?: { readonly x: number; readonly y: number };
 }
 
 function clamp(v: number, lo: number, hi: number): number {
@@ -108,6 +118,9 @@ export class OrbitCamera {
   nearKm: number;
   readonly minDistanceKm: number;
   readonly maxDistanceKm: number;
+  /** NDC offset of the projection's principal point (0 = centered). */
+  viewOffsetX: number;
+  viewOffsetY: number;
 
   constructor(options: OrbitCameraOptions = {}) {
     this.target = options.target ? [...options.target] : [0, 0, 0];
@@ -128,6 +141,8 @@ export class OrbitCamera {
       this.minDistanceKm,
       this.maxDistanceKm,
     );
+    this.viewOffsetX = options.viewOffset?.x ?? 0;
+    this.viewOffsetY = options.viewOffset?.y ?? 0;
   }
 
   /** Camera position in world km, derived from the orbit state. */
@@ -210,6 +225,17 @@ export class OrbitCamera {
     if (Number.isFinite(aspect) && aspect > 0) this.aspect = aspect;
   }
 
+  /**
+   * Shift the projection's principal point so the camera target projects
+   * to NDC (x, y) instead of the frame center — the "view offset" that
+   * centers framed content inside the UI-free screen rectangle.
+   */
+  setViewOffset(x: number, y: number): void {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+    this.viewOffsetX = x;
+    this.viewOffsetY = y;
+  }
+
   /** Column-major lookAt view matrix (world -> view, camera looks -Z). */
   viewMatrix(): number[] {
     const e = this.eye();
@@ -236,10 +262,12 @@ export class OrbitCamera {
    */
   projectionMatrix(): number[] {
     const f = 1 / Math.tan((this.fovDeg * DEG) / 2);
+    // The view-offset terms multiply z_view: clip_x gains -ox*z = ox*w,
+    // so the principal point moves to NDC (ox, oy).
     return [
       f / this.aspect, 0, 0, 0,
       0, f, 0, 0,
-      0, 0, 0, -1,
+      -this.viewOffsetX, -this.viewOffsetY, 0, -1,
       0, 0, this.nearKm, 0,
     ];
   }

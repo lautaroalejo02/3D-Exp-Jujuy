@@ -5,18 +5,17 @@ import type { Heightfield } from "../../terrain/heightfield";
 import type { Place } from "../../terrain/places-manifest";
 import { createPlaceCard, type PlaceCard } from "./place-card";
 import type { DropdownGroup } from "../../ui/dropdowns";
-import { syncSheetState } from "../../ui/layout";
 import {
   createPhotoLightbox,
   type PhotoLightbox,
 } from "./photo-lightbox";
 import type { PlaceRegionLookup } from "./place-region";
 import {
+  clusterMarkers,
   declutterLabels,
   isOccluded,
   MARKER_LIFT_METERS,
   MARKER_TAP_RADIUS_PX,
-  nearestMarker,
   projectToScreen,
   type LabelRect,
 } from "./places-markers";
@@ -44,6 +43,10 @@ import {
  *   drawn surface, so a ridge blocks the markers behind it.
  * - Labels declutter greedily in screen space; dots always stay. The
  *   open card's marker keeps its label pinned.
+ * - Markers closer than MARKER_CLUSTER_PX on screen merge into one
+ *   cluster dot with a member count; tapping it asks the caller to
+ *   zoom in (onClusterTap) so the members separate. The selected
+ *   marker never joins a cluster — it stays emphasized.
  *
  * The layer is a DOM citizen like the pick panel: init/draw are no-ops,
  * update() touches the DOM only while mounted (ui.mount), so the headless
@@ -100,6 +103,26 @@ export interface PlacesLayerOptions {
    * close). Optional so headless/test callers don't need a Document.
    */
   readonly dropdowns?: DropdownGroup;
+  /**
+   * The element the place card mounts into (default: the overlay root).
+   * The detail sheet passes its card slot here.
+   */
+  readonly cardHost?: (root: HTMLElement) => HTMLElement;
+  /** A card opened — the detail sheet presents it under this title. */
+  readonly onCardPresent?: (placeName: string) => void;
+  /** The card closed — the detail sheet frees its slot. */
+  readonly onCardDismissed?: () => void;
+  /**
+   * A cluster dot was tapped: the caller should fly the camera to the
+   * cluster — `world` is the member mean on the drawn surface and
+   * `spreadPx` the members' current screen spread, both ready to feed a
+   * fly-to that separates the cluster.
+   */
+  readonly onClusterTap?: (cluster: {
+    readonly places: readonly Place[];
+    readonly world: readonly [number, number, number];
+    readonly spreadPx: number;
+  }) => void;
 }
 
 interface MarkerState {
@@ -117,8 +140,25 @@ interface MarkerState {
   labelSize: { w: number; h: number } | undefined;
 }
 
+/** A visible marker cluster from the last update() — draw + tap state. */
+interface ClusterState {
+  /** Cluster center on screen, CSS px (member mean). */
+  readonly x: number;
+  readonly y: number;
+  readonly members: readonly MarkerState[];
+  /** Member mean in world km — the fly-to target on a cluster tap. */
+  readonly world: readonly [number, number, number];
+  /** Largest pairwise member distance on screen, CSS px. */
+  readonly spreadPx: number;
+}
+
+/** One tappable dot on screen: a single marker or a cluster center. */
+type PickTarget =
+  | { readonly x: number; readonly y: number; readonly marker: MarkerState }
+  | { readonly x: number; readonly y: number; readonly cluster: ClusterState };
+
 export interface PlacesLayer extends Layer {
-  /** The "Lugares" marker visibility; on by default. */
+  /** The "Mostrar lugares" marker visibility; on by default. */
   setVisible(visible: boolean): void;
   /**
    * Canvas-tap hit test at (x, y) in canvas CSS px: opens the card of
@@ -127,6 +167,10 @@ export interface PlacesLayer extends Layer {
    * run the normal terrain pick.
    */
   pickAt(x: number, y: number): boolean;
+  /** Open a place's card — the Explorar list's path to the same ficha. */
+  openPlaceCard(place: Place): void;
+  /** Close the open card (and lightbox), if any. */
+  closeCard(): void;
 }
 
 export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
@@ -148,26 +192,32 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
   let visible = true;
   let selected: MarkerState | undefined;
   let occlusionCursor = 0;
+  // Clustering state from the last update(): the drawn clusters, the
+  // markers they absorbed, and the merged pick-target list (cluster
+  // centers + unclustered marker dots) pickAt() hit-tests against.
+  let clustersNow: ClusterState[] = [];
+  const clusteredNow = new Set<MarkerState>();
+  let pickTargets: readonly PickTarget[] = [];
 
   // Mounted DOM (set by ui.mount; absent in the headless snapshot).
   let container: HTMLElement | undefined;
   let card: PlaceCard | undefined;
   let lightbox: PhotoLightbox | undefined;
-  let visibleCheckbox: HTMLInputElement | undefined;
-  let overlayRoot: HTMLElement | undefined;
+  const clusterEls: HTMLElement[] = [];
 
   const closeCard = (): void => {
+    const wasOpen = card !== undefined && !card.el.hidden;
     card?.close();
     lightbox?.close();
     selected = undefined;
-    if (overlayRoot) syncSheetState(overlayRoot);
+    if (wasOpen) opts.onCardDismissed?.();
   };
 
   const openCard = (marker: MarkerState): void => {
     if (!card) return;
     card.open(marker.place);
     selected = marker;
-    if (overlayRoot) syncSheetState(overlayRoot);
+    opts.onCardPresent?.(marker.place.name);
   };
 
   /** One occlusion check per rendered frame for a rotating batch. */
@@ -231,6 +281,48 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
       }
       updateOcclusion(state);
 
+      // Screen-space clustering: markers nearer than MARKER_CLUSTER_PX
+      // merge into one dot with a count. The selected marker never
+      // clusters — its card is open and the dot stays emphasized.
+      clusteredNow.clear();
+      clustersNow = [];
+      const groups = clusterMarkers(
+        markers.map((m) =>
+          visible && m !== selected && m.screen !== undefined && !m.occluded
+            ? m.screen
+            : undefined,
+        ),
+      );
+      for (const group of groups) {
+        if (group.members.length < 2) continue;
+        const members = group.members.map((i) => markers[i]!);
+        let wx = 0;
+        let wy = 0;
+        let wz = 0;
+        let spreadPx = 0;
+        for (const [a, m] of members.entries()) {
+          const w = m.world ?? [0, 0, 0];
+          wx += w[0];
+          wy += w[1];
+          wz += w[2];
+          for (const other of members.slice(a + 1)) {
+            spreadPx = Math.max(
+              spreadPx,
+              Math.hypot(m.screen!.x - other.screen!.x, m.screen!.y - other.screen!.y),
+            );
+          }
+          clusteredNow.add(m);
+        }
+        const n = members.length;
+        clustersNow.push({
+          x: group.x,
+          y: group.y,
+          members,
+          world: [wx / n, wy / n, wz / n],
+          spreadPx,
+        });
+      }
+
       // Labels show only when the camera is near enough — dots always
       // stay. Declutter among the labels left visible; the selected
       // marker's label is pinned regardless of overlaps or distance.
@@ -246,7 +338,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         );
       };
       const decluttered = markers.filter(
-        (m) => m !== selected && labelCandidate(m),
+        (m) => m !== selected && !clusteredNow.has(m) && labelCandidate(m),
       );
       const keep = declutterLabels(
         decluttered.map((m) => {
@@ -272,7 +364,10 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         const el = marker.el;
         if (!el) continue;
         const onScreen =
-          visible && marker.screen !== undefined && !marker.occluded;
+          visible &&
+          marker.screen !== undefined &&
+          !marker.occluded &&
+          !clusteredNow.has(marker);
         if (el.hidden === onScreen) el.hidden = !onScreen;
         if (!onScreen || !marker.screen) continue;
         el.classList.toggle("place-marker--selected", marker === selected);
@@ -291,21 +386,85 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           !labelOn,
         );
       }
+
+      // Cluster dots: one element per visible cluster (the pool grows on
+      // demand, never shrinks). Same translate-centering as the markers.
+      while (clusterEls.length < clustersNow.length && container) {
+        const el = container.ownerDocument.createElement("span");
+        el.className = "place-marker place-marker--cluster";
+        el.setAttribute("aria-hidden", "true");
+        const dot = container.ownerDocument.createElement("span");
+        dot.className = "place-marker-dot";
+        const count = container.ownerDocument.createElement("span");
+        count.className = "place-marker-count";
+        dot.appendChild(count);
+        el.appendChild(dot);
+        container.appendChild(el);
+        clusterEls.push(el);
+      }
+      for (const [k, cluster] of clustersNow.entries()) {
+        const el = clusterEls[k]!;
+        el.hidden = false;
+        el.style.transform =
+          `translate(${cluster.x.toFixed(1)}px, ` +
+          `${cluster.y.toFixed(1)}px) translate(-50%, -50%)`;
+        const count = el.firstElementChild?.firstElementChild;
+        if (count && count.textContent !== String(cluster.members.length)) {
+          count.textContent = String(cluster.members.length);
+        }
+      }
+      for (let k = clustersNow.length; k < clusterEls.length; k++) {
+        clusterEls[k]!.hidden = true;
+      }
+
+      // The tap targets pickAt() sees — the same dots on screen: single
+      // markers (incl. the selected one) and cluster centers.
+      const targets: PickTarget[] = [];
+      for (const marker of markers) {
+        if (
+          visible &&
+          marker.screen !== undefined &&
+          !marker.occluded &&
+          !clusteredNow.has(marker)
+        ) {
+          targets.push({
+            x: marker.screen.x,
+            y: marker.screen.y,
+            marker,
+          });
+        }
+      }
+      for (const cluster of clustersNow) {
+        targets.push({ x: cluster.x, y: cluster.y, cluster });
+      }
+      pickTargets = targets;
     },
 
     pickAt(x: number, y: number): boolean {
-      const index = nearestMarker(
-        markers.map((m) =>
-          visible && m.screen !== undefined && !m.occluded
-            ? m.screen
-            : undefined,
-        ),
-        { x, y },
-        MARKER_TAP_RADIUS_PX,
-      );
-      const marker = index === undefined ? undefined : markers[index];
-      if (!marker) return false;
-      openCard(marker);
+      // Hit-test the same dots the layer draws: unclustered markers and
+      // cluster centers. The nearest one inside the tap radius wins.
+      const radius2 = MARKER_TAP_RADIUS_PX * MARKER_TAP_RADIUS_PX;
+      let best: PickTarget | undefined;
+      let bestD2 = radius2;
+      for (const t of pickTargets) {
+        const dx = t.x - x;
+        const dy = t.y - y;
+        const d2 = dx * dx + dy * dy;
+        if (d2 <= bestD2) {
+          best = t;
+          bestD2 = d2;
+        }
+      }
+      if (best === undefined) return false;
+      if ("marker" in best) {
+        openCard(best.marker);
+      } else {
+        opts.onClusterTap?.({
+          places: best.cluster.members.map((m) => m.place),
+          world: best.cluster.world,
+          spreadPx: best.cluster.spreadPx,
+        });
+      }
       return true;
     },
 
@@ -344,11 +503,10 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         }
 
         // Card ("ficha") + photo lightbox: DOM components built by
-        // place-card.ts / photo-lightbox.ts. The card mounts on the
-        // overlay root, not inside the click-through marker layer: it is
-        // a bottom sheet on the --z-* scale (above panels) while the
-        // markers stay below every panel. The lightbox mounts above
-        // everything.
+        // place-card.ts / photo-lightbox.ts. The card mounts into the
+        // detail sheet's card slot (cardHost) so it shares the sheet
+        // system with the pick info — the lightbox mounts above
+        // everything on the overlay root.
         const lightboxEl = createPhotoLightbox(doc);
         const cardComponent = createPlaceCard(doc, {
           ...(opts.regions !== undefined
@@ -359,94 +517,11 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           },
           onDismiss: closeCard,
         });
-        root.appendChild(cardComponent.el);
+        (opts.cardHost?.(root) ?? root).appendChild(cardComponent.el);
         root.appendChild(layer);
         root.appendChild(lightboxEl.el);
 
-        // "Lugares" control: a panel in the #hud column with a button
-        // that expands a list with one button per place (sorted by
-        // name) — the keyboard path to the same card pickAt() opens —
-        // plus a checkbox that keeps the show/hide-markers toggle. The
-        // list joins the shared dropdown coordination when present.
-        const control = doc.createElement("div");
-        control.className = "places-control";
-
-        const listToggle = doc.createElement("button");
-        listToggle.type = "button";
-        listToggle.className = "places-toggle";
-        listToggle.textContent = "Lugares";
-        listToggle.setAttribute("aria-expanded", "false");
-        listToggle.setAttribute(
-          "aria-label",
-          "Mostrar la lista de lugares",
-        );
-
-        const listPanel = doc.createElement("div");
-        listPanel.className = "places-list";
-        listPanel.hidden = true;
-
-        const visLabel = doc.createElement("label");
-        visLabel.className = "places-list-visible";
-        const checkbox = doc.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.checked = visible;
-        visLabel.append(
-          checkbox,
-          doc.createTextNode("Mostrar en el mapa"),
-        );
-
-        const setListOpen = (open: boolean): void => {
-          listPanel.hidden = !open;
-          listToggle.setAttribute("aria-expanded", String(open));
-        };
-        const listDropdown = {
-          container: control,
-          close: () => setListOpen(false),
-        };
-
-        const items = doc.createElement("ul");
-        items.className = "places-list-items";
-        const sorted = [...markers].sort((a, b) =>
-          a.place.name.localeCompare(b.place.name, "es"),
-        );
-        for (const marker of sorted) {
-          const li = doc.createElement("li");
-          const item = doc.createElement("button");
-          item.type = "button";
-          item.className = "places-list-item";
-          item.textContent = marker.place.name;
-          item.addEventListener("click", () => {
-            openCard(marker);
-            setListOpen(false);
-            opts.dropdowns?.closed(listDropdown);
-          });
-          li.appendChild(item);
-          items.appendChild(li);
-        }
-        listPanel.append(visLabel, items);
-        control.append(listToggle, listPanel);
-
-        listToggle.addEventListener("click", () => {
-          const open = listPanel.hidden;
-          if (open) opts.dropdowns?.opened(listDropdown);
-          else opts.dropdowns?.closed(listDropdown);
-          setListOpen(open);
-        });
-
-        const applyVisible = (v: boolean): void => {
-          visible = v;
-          checkbox.checked = v;
-          layer.hidden = !v;
-          if (!v) closeCard();
-        };
-        checkbox.addEventListener("change", () => {
-          applyVisible(checkbox.checked);
-        });
-
-        (root.querySelector("#hud") ?? root).appendChild(control);
-        visibleCheckbox = checkbox;
         layer.hidden = !visible;
-        overlayRoot = root;
 
         container = layer;
         card = cardComponent;
@@ -456,20 +531,25 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           container = undefined;
           card = undefined;
           lightbox = undefined;
-          visibleCheckbox = undefined;
-          overlayRoot = undefined;
           lightboxEl.el.remove();
           layer.remove();
           cardComponent.el.remove();
-          control.remove();
         };
       },
+    },
+
+    openPlaceCard(place: Place): void {
+      const marker = markers.find((m) => m.place === place);
+      if (marker) openCard(marker);
+    },
+
+    closeCard(): void {
+      closeCard();
     },
 
     setVisible(v: boolean): void {
       visible = v;
       if (container) container.hidden = !v;
-      if (visibleCheckbox) visibleCheckbox.checked = v;
       if (!v) closeCard();
     },
   };

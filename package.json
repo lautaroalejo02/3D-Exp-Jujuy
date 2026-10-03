@@ -16,12 +16,14 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "check:wgsl": "node scripts/check-wgsl.mjs",
-    "snapshot": "tsx scripts/render-snapshot.ts"
+    "snapshot": "tsx scripts/render-snapshot.ts",
+    "ui:shots": "npm run build && node scripts/ui-shots.mjs"
   },
   "dependencies": {
     "vgpu": "0.5.0"
   },
   "devDependencies": {
+    "@playwright/test": "1.62.1",
     "@types/node": "22.20.4",
     "@types/pngjs": "6.0.5",
     "@vgpu/wgsl": "0.5.0",

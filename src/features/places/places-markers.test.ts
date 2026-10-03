@@ -4,8 +4,11 @@ import { OrbitCamera } from "../../camera/camera";
 import { gridToWorld, type GridSpec } from "../../geo";
 import { Heightfield } from "../../terrain/heightfield";
 import {
+  clusterMarkers,
+  clusterZoomDistanceKm,
   declutterLabels,
   isOccluded,
+  MARKER_CLUSTER_PX,
   nearestMarker,
   projectToScreen,
 } from "./places-markers";
@@ -149,6 +152,77 @@ describe("nearestMarker", () => {
 
   it("returns undefined for an empty candidate list", () => {
     expect(nearestMarker([], tap, 22)).toBeUndefined();
+  });
+});
+
+describe("clusterMarkers", () => {
+  const pt = (x: number, y: number) => ({ x, y });
+
+  it("keeps spread-out markers as singletons", () => {
+    const clusters = clusterMarkers([pt(0, 0), pt(100, 0), pt(0, 200)]);
+    expect(clusters).toHaveLength(3);
+    expect(clusters.every((c) => c.members.length === 1)).toBe(true);
+  });
+
+  it("merges markers nearer than the threshold into one cluster", () => {
+    const clusters = clusterMarkers([
+      pt(50, 50),
+      pt(50 + MARKER_CLUSTER_PX - 2, 50), // inside the threshold
+      pt(300, 300),
+    ]);
+    expect(clusters).toHaveLength(2);
+    const big = clusters.find((c) => c.members.length === 2)!;
+    expect(big.members).toEqual([0, 1]);
+    // The cluster center is the member mean.
+    expect(big.x).toBeCloseTo((50 + 50 + MARKER_CLUSTER_PX - 2) / 2);
+    expect(big.y).toBeCloseTo(50);
+  });
+
+  it("merges transitively through a chain of near points", () => {
+    // A–C are farther than the threshold, but both are near B.
+    const clusters = clusterMarkers([
+      pt(0, 0),
+      pt(MARKER_CLUSTER_PX - 1, 0),
+      pt(2 * (MARKER_CLUSTER_PX - 1), 0),
+    ]);
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0]!.members).toEqual([0, 1, 2]);
+  });
+
+  it("skips undefined points (occluded, off-screen, selected)", () => {
+    const clusters = clusterMarkers([
+      pt(0, 0),
+      undefined,
+      pt(10, 0),
+      pt(500, 500),
+    ]);
+    expect(clusters).toHaveLength(2);
+    const big = clusters.find((c) => c.members.length === 2)!;
+    expect(big.members).toEqual([0, 2]);
+  });
+
+  it("handles an empty input", () => {
+    expect(clusterMarkers([])).toEqual([]);
+  });
+});
+
+describe("clusterZoomDistanceKm", () => {
+  it("zooms in by the ratio needed to reach the target spread", () => {
+    // Spread 15 px -> target 66 px: distance scales by 15/66.
+    expect(clusterZoomDistanceKm(400, 15, 66)).toBeCloseTo(400 * (15 / 66));
+  });
+
+  it("never zooms out on a cluster tap", () => {
+    expect(clusterZoomDistanceKm(50, 200, 66)).toBe(50);
+  });
+
+  it("clamps at the minimum distance", () => {
+    expect(clusterZoomDistanceKm(30, 2, 66, 12)).toBe(12);
+  });
+
+  it("survives degenerate input", () => {
+    expect(clusterZoomDistanceKm(0, 10)).toBe(12);
+    expect(clusterZoomDistanceKm(50, 0)).toBe(50);
   });
 });
 

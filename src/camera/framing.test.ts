@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { GridSpec } from "../geo/grid";
 import { gridToWorld } from "../geo/world";
 import { transformPoint, type OrbitCamera } from "./camera";
-import { bboxOnGrid, overviewCamera } from "./framing";
+import { bboxOnGrid, freeRectViewFit, overviewCamera } from "./framing";
 
 /**
  * The default-quality grid and the province mask bounds, taken from
@@ -109,6 +109,90 @@ describe("overviewCamera", () => {
       expect(Math.abs(x)).toBeLessThanOrEqual(1);
       expect(Math.abs(y)).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("fits the region inside the free rect when a ViewFit is given", () => {
+    // Desktop: a left panel occludes 300 px of a 1000x500 viewport.
+    const viewport = { width: 1000, height: 500 };
+    const free = { x: 300, y: 0, width: 700, height: 500 };
+    const fit = freeRectViewFit(viewport, free, 45);
+    const camera = overviewCamera(SPEC, viewport.width / viewport.height, RELIEF, {
+      region: { bboxGrid: PROVINCE_BBOX },
+      fit,
+    });
+    camera.setViewOffset(fit.offsetX, fit.offsetY);
+    const reliefKm =
+      (RELIEF.maxElevationMeters / 1000) * RELIEF.verticalExaggeration;
+    // The free rect spans offsetX ± fw/w around the shifted center; every
+    // corner must land inside it (the fit margin only tightens this).
+    const halfNdcX = free.width / viewport.width;
+    const halfNdcY = free.height / viewport.height;
+    for (const corner of regionCorners(PROVINCE_BBOX, reliefKm)) {
+      const [x, y, z] = projectedToNdc(camera, corner);
+      expect(Math.abs(x - fit.offsetX), `ndc x of ${corner}`).toBeLessThanOrEqual(
+        halfNdcX,
+      );
+      expect(Math.abs(y - fit.offsetY), `ndc y of ${corner}`).toBeLessThanOrEqual(
+        halfNdcY,
+      );
+      expect(z).toBeGreaterThan(0);
+      expect(z).toBeLessThanOrEqual(1);
+    }
+  });
+});
+
+describe("freeRectViewFit", () => {
+  const tanHalf = Math.tan((45 * Math.PI) / 360);
+
+  it("a full-viewport rect is centered and uses the nominal FOV tangents", () => {
+    const fit = freeRectViewFit(
+      { width: 400, height: 300 },
+      { x: 0, y: 0, width: 400, height: 300 },
+      45,
+    );
+    expect(fit.offsetX).toBeCloseTo(0);
+    expect(fit.offsetY).toBeCloseTo(0);
+    expect(fit.tanY).toBeCloseTo(tanHalf);
+    expect(fit.tanX).toBeCloseTo((tanHalf * 400) / 300);
+    expect(fit.aspect).toBeCloseTo(400 / 300);
+  });
+
+  it("shifts the center right when a panel occludes the left", () => {
+    const fit = freeRectViewFit(
+      { width: 1000, height: 500 },
+      { x: 300, y: 0, width: 700, height: 500 },
+      45,
+    );
+    // Free-rect center x = 650 -> ndc (2*650 - 1000) / 1000 = 0.3.
+    expect(fit.offsetX).toBeCloseTo(0.3);
+    expect(fit.offsetY).toBeCloseTo(0);
+    expect(fit.tanX).toBeCloseTo((tanHalf * 700) / 500);
+    expect(fit.tanY).toBeCloseTo(tanHalf);
+  });
+
+  it("shifts the center up when a sheet occludes the bottom", () => {
+    const fit = freeRectViewFit(
+      { width: 390, height: 844 },
+      { x: 0, y: 0, width: 390, height: 600 },
+      45,
+    );
+    // Free-rect center y = 300 -> ndc_y (844 - 600) / 844.
+    expect(fit.offsetX).toBeCloseTo(0);
+    expect(fit.offsetY).toBeCloseTo((844 - 600) / 844);
+    expect(fit.tanY).toBeCloseTo((tanHalf * 600) / 844);
+    expect(fit.aspect).toBeCloseTo(390 / 600);
+  });
+
+  it("clamps a fully occluded viewport to a degenerate-but-finite pinhole", () => {
+    const fit = freeRectViewFit(
+      { width: 390, height: 844 },
+      { x: 0, y: 500, width: 390, height: 0 },
+      45,
+    );
+    expect(Number.isFinite(fit.offsetX)).toBe(true);
+    expect(Number.isFinite(fit.offsetY)).toBe(true);
+    expect(fit.tanY).toBeGreaterThan(0);
+    expect(fit.aspect).toBeCloseTo(390);
   });
 });
 

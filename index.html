@@ -54,14 +54,20 @@
         --gap-panel: 0.5rem;
         /* Single z-index scale for the overlay UI, lowest to highest:
            map canvas < places layer (markers + labels, visual only) <
-           panels/controls < bottom sheets (pick panel, place card) <
+           panels/controls < mode sheet < detail sheet < mode bar <
            lightbox/modals < notices. Markers always render BELOW every
-           panel. */
+           panel. The mode bar tops the sheets: a minimized sheet extends
+           down behind the bar and must not cover it. */
         --z-places: 1;
         --z-panels: 5;
         --z-sheets: 10;
+        --z-detail: 12;
+        --z-modebar: 14;
         --z-modals: 20;
         --z-notices: 30;
+        /* Bottom thumb bar: 58px of controls plus the home-indicator
+           safe area. Bottom sheets anchor right above it. */
+        --mode-bar-h: calc(58px + env(safe-area-inset-bottom));
         /* Marker dot: a soft blue that reads over the warm satellite
            terrain, with a white ring. */
         --marker-fill: #7ba7de;
@@ -108,39 +114,17 @@
          Safari then pinch-zooms the page instead of the camera. */
       #overlay > .places-layer,
       #overlay > .debug-overlay,
-      #overlay > .loading-message,
-      #overlay > #hud {
+      #overlay > .loading-message {
         pointer-events: none;
         touch-action: none;
-      }
-      /* The control column is click-through itself; only its panels
-         receive events, so map gestures work in the gaps between them. */
-      #hud > * {
-        pointer-events: auto;
-        touch-action: manipulation;
-      }
-      /* Control column: every panel stacks top-right with a consistent
-         gap, in desktop and on phones, so nothing can overlap. */
-      #hud {
-        position: absolute;
-        top: calc(0.5rem + env(safe-area-inset-top));
-        right: calc(0.5rem + env(safe-area-inset-right));
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-        gap: var(--gap-panel);
-        max-width: calc(100vw - 1rem - env(safe-area-inset-left));
-        z-index: var(--z-panels);
       }
 
       /* Shared panel chrome: translucent glass when the engine supports
          it, near-solid dark otherwise (the scene behind is bright and a
          transparent panel without blur would be unreadable). */
-      .terrain-controls,
-      .regions-controls,
-      .pick-panel,
-      .attributions,
-      .places-control,
+      .sheet,
+      #mode-bar,
+      #reset-view,
       .loading-message,
       .debug-overlay,
       .place-marker-label,
@@ -152,11 +136,9 @@
       @supports (
         (backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))
       ) {
-        .terrain-controls,
-        .regions-controls,
-        .pick-panel,
-        .attributions,
-        .places-control,
+        .sheet,
+        #mode-bar,
+        #reset-view,
         .loading-message,
         .debug-overlay,
         .place-marker-label,
@@ -168,9 +150,7 @@
       }
 
       /* Pill buttons: one shape for every action control. */
-      .controls-collapse,
       .quality-toggle,
-      .places-toggle,
       .regions-legend-reopen,
       .webgpu-notice-reload {
         display: inline-flex;
@@ -189,29 +169,25 @@
         text-decoration: none;
         cursor: pointer;
       }
-      .controls-collapse:hover,
       .quality-toggle:hover,
-      .places-toggle:hover,
       .regions-legend-reopen:hover,
       .webgpu-notice-reload:hover {
         background: var(--control-bg-hover);
       }
-      .controls-collapse:active,
       .quality-toggle:active,
-      .places-toggle:active,
       .regions-legend-reopen:active,
       .webgpu-notice-reload:active {
         background: var(--control-bg-active);
       }
-      .controls-collapse:focus-visible,
       .quality-toggle:focus-visible,
-      .places-toggle:focus-visible,
       .regions-legend-reopen:focus-visible,
       .webgpu-notice-reload:focus-visible,
       .pick-panel-close:focus-visible,
       .region-card-close:focus-visible,
-      .places-list-item:focus-visible,
+      .explorar-places-item:focus-visible,
       .region-item:focus-visible,
+      .mode-tab:focus-visible,
+      #reset-view:focus-visible,
       .attributions summary:focus-visible {
         outline: none;
         box-shadow: 0 0 0 2px var(--focus);
@@ -226,17 +202,6 @@
       }
       .quality-toggle:hover {
         background: var(--accent-hover);
-      }
-      /* The collapse pill only exists in the compact layout. */
-      .controls-collapse {
-        display: none;
-      }
-      .controls-collapse::after {
-        content: "▾";
-        margin-left: 0.2rem;
-      }
-      .controls-collapse[aria-expanded="false"]::after {
-        content: "▸";
       }
 
       .webgpu-notice {
@@ -266,17 +231,12 @@
         color: var(--text-dim);
         word-break: break-word;
       }
+      /* "Fuentes de datos": a section at the bottom of the Explorar
+         sheet (the texts come verbatim from ATTRIBUTIONS.md). */
       .attributions {
-        position: absolute;
-        left: calc(0.5rem + env(safe-area-inset-left));
-        bottom: calc(0.5rem + env(safe-area-inset-bottom));
-        max-width: min(26rem, calc(100vw - 1rem));
-        padding: 0.35rem 0.7rem;
-        border-radius: var(--radius-sm);
+        padding: 0.3rem 0.2rem 0;
         font-size: var(--fs-xs);
         color: var(--text-dim);
-        z-index: var(--z-panels);
-        transition: bottom 0.18s ease;
       }
       .attributions summary {
         cursor: pointer;
@@ -306,14 +266,13 @@
         color: var(--text);
         z-index: var(--z-notices);
       }
-      /* The panels live inside #hud's column, so they are statically
-         positioned here — the column owns placement and gaps. */
+      /* The control sections live inside the Explorar sheet, so they
+         are plain blocks — the sheet owns the glass chrome. */
       .terrain-controls {
         display: flex;
         flex-direction: column;
         gap: var(--gap-panel);
-        padding: var(--pad-panel);
-        border-radius: var(--radius-panel);
+        padding: 0.35rem 0.2rem;
         font-size: var(--fs-sm);
         color: var(--text);
       }
@@ -330,7 +289,8 @@
       .terrain-controls .exaggeration input[type="range"] {
         -webkit-appearance: none;
         appearance: none;
-        width: 8rem;
+        flex: 1;
+        min-width: 0;
         /* the input box is the touch hit area for the thumb */
         height: var(--touch);
         margin: 0;
@@ -402,20 +362,16 @@
       }
       .terrain-controls .quality-warning {
         margin: 0;
-        max-width: 12rem;
+        max-width: 16rem;
         font-size: var(--fs-xs);
         color: var(--note);
       }
+      /* Pick info / place card: content blocks inside the detail sheet —
+         plain sections, the sheet owns position, size and chrome. */
       .pick-panel {
-        position: absolute;
-        right: calc(0.5rem + env(safe-area-inset-right));
-        bottom: calc(0.5rem + env(safe-area-inset-bottom));
-        max-width: min(16rem, calc(100vw - 1rem));
-        padding: 0.55rem 0.75rem;
-        border-radius: var(--radius-panel);
+        position: relative;
         font-size: var(--fs-sm);
         color: var(--text);
-        z-index: var(--z-sheets);
       }
       .pick-panel-close,
       .region-card-close {
@@ -485,17 +441,18 @@
         height: 0;
       }
       /* Marker: a small dot with a white ring and a soft shadow — the
-         white ring keeps it readable over any terrain color. */
+         white ring keeps it readable over any terrain color. ~10 px CSS
+         keeps the overview tidy; clusters group what would overlap. */
       .place-marker-dot {
         position: absolute;
         top: 50%;
         left: 50%;
-        width: 12px;
-        height: 12px;
-        margin: -6px 0 0 -6px;
+        width: 10px;
+        height: 10px;
+        margin: -6.5px 0 0 -6.5px;
         border-radius: 50%;
         background: var(--marker-fill);
-        border: 2px solid #f8f9fb;
+        border: 1.5px solid #f8f9fb;
         box-shadow:
           0 1px 5px rgb(0 0 0 / 0.5),
           0 0 0 1px rgb(0 0 0 / 0.18);
@@ -506,12 +463,29 @@
       }
       /* The place whose card is open: a bigger dot with an accent ring. */
       .place-marker--selected .place-marker-dot {
-        width: 18px;
-        height: 18px;
-        margin: -9px 0 0 -9px;
+        width: 16px;
+        height: 16px;
+        margin: -9.5px 0 0 -9.5px;
         box-shadow:
           0 0 0 3px var(--accent),
           0 2px 7px rgb(0 0 0 / 0.55);
+      }
+      /* Cluster dot: a bigger circle with the member count inside —
+         tapping it zooms in until the markers separate. */
+      .place-marker--cluster .place-marker-dot {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        margin: -11.5px 0 0 -11.5px;
+        transition: none;
+      }
+      .place-marker-count {
+        color: #16202b;
+        font-size: 0.66rem;
+        font-weight: 700;
+        line-height: 1;
       }
       .place-marker-label {
         position: absolute;
@@ -536,12 +510,6 @@
         pointer-events: auto;
         touch-action: manipulation;
       }
-      .place-card-name {
-        margin: 0;
-        padding-right: 2rem;
-        font-size: 0.9rem;
-        color: var(--text);
-      }
       .place-card-desc {
         margin: 0.15rem 0 0.4rem;
         padding-right: 2rem;
@@ -560,14 +528,11 @@
       .place-card-links a {
         color: var(--cool);
       }
-      /* The card is wider than the pick panel (photos need room) and can
-         grow tall when expanded, so it scrolls internally. */
+      /* The card fills the detail sheet's content width; the sheet's
+         scroll region handles overflow. */
       .place-card {
-        width: min(26rem, calc(100vw - 1rem));
+        width: auto;
         max-width: none;
-        max-height: calc(100dvh - 1rem);
-        overflow-y: auto;
-        overscroll-behavior: contain;
       }
       /* Photo strip: horizontal swipeable thumbnails, credit under each. */
       .place-card-photos {
@@ -742,65 +707,37 @@
         line-height: 1;
         cursor: pointer;
       }
-      /* "Lugares" control: a panel in the #hud column — a button that
-         opens the place list (the keyboard path to each card now that
-         markers are visual only) plus a checkbox that shows/hides the
-         map markers. */
-      .places-control {
+      /* Explorar sheet: search field, the place list it filters, the
+         "Mostrar lugares" switch and the section spacing. */
+      .explorar {
         display: flex;
         flex-direction: column;
-        gap: 0.35rem;
-        padding: 0.4rem 0.6rem;
-        border-radius: var(--radius-panel);
-        font-size: var(--fs-sm);
-        color: var(--text);
+        gap: 0.7rem;
       }
-      .places-toggle {
-        align-self: flex-start;
-      }
-      .places-toggle::after {
-        content: "▾";
-        margin-left: 0.2rem;
-      }
-      .places-toggle[aria-expanded="true"] {
-        background: var(--control-bg-hover);
-      }
-      .places-toggle[aria-expanded="true"]::after {
-        content: "▴";
-      }
-      /* The list opens inside the control panel, so it gets a light
-         inner surface instead of a second layer of glass. */
-      .places-list {
-        display: flex;
-        flex-direction: column;
-        gap: 0.15rem;
-        max-width: 14rem;
-        padding: 0.4rem 0.5rem;
-        border: 1px solid var(--panel-border);
-        border-radius: var(--radius-sm);
-        background: var(--control-bg);
-        font-size: var(--fs-sm);
-      }
-      .places-list[hidden] {
-        display: none;
-      }
-      .places-list-visible {
-        display: flex;
-        align-items: center;
-        gap: 0.4rem;
+      .explorar-search {
+        box-sizing: border-box;
+        width: 100%;
         min-height: var(--touch);
+        padding: 0 0.9rem;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-pill);
+        background: var(--control-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: var(--fs-md);
       }
-      .places-list-items {
+      .explorar-search::placeholder {
+        color: var(--text-dim);
+      }
+      .explorar-places {
         margin: 0;
         padding: 0;
         list-style: none;
-        max-height: min(45vh, 18rem);
-        overflow-y: auto;
-        overscroll-behavior: contain;
-        touch-action: manipulation;
       }
-      .places-list-item {
-        display: block;
+      .explorar-places-item {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
         width: 100%;
         min-height: var(--touch);
         padding: 0 0.6rem;
@@ -812,16 +749,26 @@
         text-align: left;
         cursor: pointer;
       }
-      .places-list-item:hover {
+      .explorar-places-item:hover {
         background: var(--control-bg);
       }
-      .places-list-item:active {
+      .explorar-places-item:active {
         background: var(--control-bg-active);
       }
+      .explorar-places-dept {
+        margin-left: auto;
+        padding-left: 0.5rem;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .explorar-empty {
+        margin: 0;
+        padding: 0 0.2rem;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
       .regions-controls {
-        max-width: min(15rem, calc(100vw - 1rem));
-        padding: 0.5rem 0.65rem;
-        border-radius: var(--radius-panel);
+        padding: 0.35rem 0.2rem;
         font-size: var(--fs-sm);
         color: var(--text);
       }
@@ -1000,54 +947,225 @@
         pointer-events: none;
         z-index: var(--z-notices);
       }
-      @media (max-width: 640px) {
-        .attributions {
-          font-size: 0.66rem;
+      /* --- Mode bar + bottom sheets (mobile-first) --------------------
+         The bar sits in the thumb zone; each sheet anchors right above
+         it at a fixed height and slides down with translateY so only the
+         visible portion shows (JS writes the offset; 100% = hidden). */
+      #mode-bar {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: var(--z-modebar);
+        display: flex;
+        gap: 0.3rem;
+        box-sizing: border-box;
+        height: var(--mode-bar-h);
+        padding: 0.35rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--panel-border);
+      }
+      .mode-tab {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.1rem;
+        min-width: 0;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: none;
+        color: var(--text-dim);
+        font: inherit;
+        font-size: 0.66rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .mode-tab svg {
+        width: 1.4rem;
+        height: 1.4rem;
+      }
+      .mode-tab:hover {
+        background: var(--control-bg);
+        color: var(--text);
+      }
+      .mode-tab[aria-pressed="true"] {
+        background: var(--control-bg);
+        color: var(--accent);
+      }
+      .sheet {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: var(--mode-bar-h);
+        display: flex;
+        flex-direction: column;
+        height: 88vh;
+        height: 88dvh;
+        max-height: calc(100vh - var(--mode-bar-h) - 0.5rem);
+        max-height: calc(100dvh - var(--mode-bar-h) - 0.5rem);
+        transform: translateY(100%);
+        transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+        border-top: 1px solid var(--panel-border);
+        border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+        overflow: hidden;
+        color: var(--text);
+        font-size: var(--fs-sm);
+        z-index: var(--z-sheets);
+        will-change: transform;
+      }
+      .sheet--detail {
+        z-index: var(--z-detail);
+      }
+      .sheet--dragging {
+        transition: none;
+      }
+      .sheet[hidden],
+      .sheet [hidden] {
+        display: none;
+      }
+      /* The handle row is the only drag surface — its ~64px are also
+         the minimized snap, so the title stays readable when folded. */
+      .sheet-head {
+        flex: none;
+        padding: 0.5rem 1rem 0.5rem;
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .sheet-head:active {
+        cursor: grabbing;
+      }
+      .sheet-grip {
+        display: block;
+        width: 2.6rem;
+        height: 0.3rem;
+        margin: 0 auto 0.5rem;
+        border-radius: var(--radius-pill);
+        background: rgb(255 255 255 / 0.35);
+      }
+      .sheet-title {
+        margin: 0;
+        font-size: var(--fs-md);
+        font-weight: 600;
+      }
+      /* The content scrolls inside the sheet box — pan-y keeps sheet
+         gestures off the map and overscroll keeps the page still. */
+      .sheet-content {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        touch-action: pan-y;
+        padding: 0.1rem 1rem 1rem;
+      }
+      .mode-placeholder {
+        margin: 0.8rem 0.2rem;
+        color: var(--text-dim);
+        font-size: var(--fs-md);
+      }
+      /* Minimized mobile sheet: only the grip + title row stays visible.
+         The content is clipped away so nothing peeks above the mode bar;
+         while dragging the content stays on so the gesture reads live.
+         clip-path (not visibility/display) is used so the clipped items
+         keep their layout boxes: they stay attached and "visible" to
+         probes and the accessibility tree without painting.
+         (Desktop keeps the content: there the sheet is a static panel
+         and data-snap has no visual meaning.) */
+      @media (max-width: 1023.98px) {
+        .sheet[data-snap="min"]:not(.sheet--dragging) .sheet-content {
+          clip-path: inset(0 0 100% 0);
         }
-        /* While a bottom sheet is open the attributions toggle lifts
-           above it: --sheet-lift is the tallest open sheet's height,
-           set from JS (syncSheetState in src/ui/layout.ts). */
-        #overlay.overlay--sheet-open .attributions {
-          bottom: calc(
-            var(--sheet-lift, 0px) + 0.5rem + env(safe-area-inset-bottom)
-          );
+      }
+      /* Round "reset view" button, top-right — the only floating
+         control left; the map stays the protagonist. */
+      #reset-view {
+        position: absolute;
+        top: calc(0.6rem + env(safe-area-inset-top));
+        right: calc(0.6rem + env(safe-area-inset-right));
+        z-index: var(--z-panels);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch);
+        height: var(--touch);
+        padding: 0;
+        border-radius: 50%;
+        color: var(--text);
+        cursor: pointer;
+      }
+      #reset-view:hover {
+        background: var(--control-bg-hover);
+      }
+      #reset-view svg {
+        width: 1.4rem;
+        height: 1.4rem;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .sheet {
+          transition: none;
         }
-        /* Compact controls: the panel folds into a single pill anchored
-           to the corner, so the center of the map stays clear. */
-        .controls-collapse {
-          display: inline-flex;
+      }
+      /* Desktop (>= 1024px): the same modes become a ~360px left panel
+         with the tabs on top; the detail sheet docks inside it. The map
+         keeps the rest of the screen. */
+      @media (min-width: 1024px) {
+        #mode-bar {
+          top: 0;
+          right: auto;
+          bottom: auto;
+          width: 22.5rem;
+          height: 3.6rem;
+          padding: 0.3rem 0.4rem;
+          border-top: none;
+          border-right: 1px solid var(--panel-border);
+          border-bottom: 1px solid var(--panel-border);
         }
-        .terrain-controls {
-          padding: 0.4rem;
+        .mode-tab {
+          flex-direction: row;
+          gap: 0.4rem;
+          font-size: var(--fs-xs);
         }
-        .terrain-controls[data-collapsed="true"] {
-          gap: 0;
-          padding: 0.25rem;
+        .mode-tab svg {
+          width: 1.15rem;
+          height: 1.15rem;
         }
-        .terrain-controls[data-collapsed="true"] > :not(.controls-collapse) {
+        .sheet {
+          top: 3.6rem;
+          bottom: 0;
+          left: 0;
+          right: auto;
+          width: 22.5rem;
+          height: auto;
+          max-height: none;
+          transform: none !important;
+          transition: none;
+          border-top: none;
+          border-right: 1px solid var(--panel-border);
+          border-radius: 0;
+          box-shadow: none;
+        }
+        .sheet-head {
+          padding-top: 0.8rem;
+          cursor: default;
+        }
+        .sheet-grip {
           display: none;
         }
-        /* Bottom sheet: anchored to the screen edge so the center of the
-           map stays visible and reachable. */
-        .pick-panel {
-          left: 0;
-          right: 0;
-          bottom: 0;
-          max-width: none;
-          border-radius: var(--radius-panel) var(--radius-panel) 0 0;
-          padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+        /* The detail sheet docks at the top of the panel, over the mode
+           sheet's content — the place card shows inside the panel. */
+        .sheet--detail {
+          top: 3.6rem;
+          bottom: auto;
+          max-height: 72%;
+          border-bottom: 1px solid var(--panel-border);
+          border-radius: 0 0 var(--radius-panel) 0;
+          box-shadow: var(--panel-shadow);
         }
-        .pick-panel-close {
-          right: calc(0.25rem + env(safe-area-inset-right));
-        }
-        /* The card sheet never covers more than ~55% of the viewport —
-           the map stays usable above it; the photos strip shrinks. */
-        .place-card {
-          width: auto;
-          max-height: 55vh;
-        }
-        .place-card-photo-button img {
-          height: 110px;
+        .debug-overlay {
+          top: calc(4.1rem + env(safe-area-inset-top));
+          left: calc(23rem + env(safe-area-inset-left));
         }
       }
     </style>
@@ -1056,10 +1174,9 @@
     <div id="app">
       <canvas id="scene"></canvas>
       <div id="overlay">
-        <!-- Control column: terrain controls, "Lugares" and "Regiones"
-             mount here (they fall back to the overlay root when absent).
-             Click-through between its panels. -->
-        <div id="hud"></div>
+        <!-- The mode bar, the mode sheet and the detail sheet are built
+             by src/ui/menu.ts on startup; the places layer, pick panel,
+             place card and lightbox mount here too. -->
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

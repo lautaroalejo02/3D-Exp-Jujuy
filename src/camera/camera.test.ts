@@ -142,6 +142,30 @@ describe("OrbitCamera matrices", () => {
     expect(ndc[2]).toBeLessThan(1);
   });
 
+  it("viewOffset moves the target's NDC to the shifted principal point", () => {
+    const cam = new OrbitCamera({
+      target: [12, 4, -30],
+      distanceKm: 200,
+      azimuthDeg: 45,
+      elevationDeg: 45,
+      aspect: 16 / 9,
+    });
+    cam.setViewOffset(0.25, -0.4);
+    const ndc = transformPoint(cam.viewProjectionMatrix(), [12, 4, -30]);
+    expect(ndc[0]).toBeCloseTo(0.25, 9);
+    expect(ndc[1]).toBeCloseTo(-0.4, 9);
+    // Depth is unaffected by the offset.
+    expect(ndc[2]).toBeGreaterThan(0);
+    expect(ndc[2]).toBeLessThan(1);
+  });
+
+  it("setViewOffset ignores non-finite values", () => {
+    const cam = new OrbitCamera({ viewOffset: { x: 0.1, y: -0.1 } });
+    cam.setViewOffset(Number.NaN, 0.5);
+    expect(cam.viewOffsetX).toBe(0.1);
+    expect(cam.viewOffsetY).toBe(-0.1);
+  });
+
   it("multiplyMat4 agrees with identity and composition", () => {
     const id = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
     const cam = new OrbitCamera({ distanceKm: 10, aspect: 1 });

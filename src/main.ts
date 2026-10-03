@@ -16,7 +16,17 @@ import {
 import { createDirtyTracker } from "./app/dirty-tracker";
 import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
-import { bboxOnGrid, overviewCamera } from "./camera/framing";
+import {
+  bboxOnGrid,
+  freeRectViewFit,
+  overviewCamera,
+  type ViewRect,
+} from "./camera/framing";
+import {
+  cameraPoseOf,
+  flyTo,
+  type FlyToHandle,
+} from "./camera/fly-to";
 import { attachCameraInput } from "./camera/input";
 import { detailSatelliteDivisor } from "./features/detail/detail-load";
 import {
@@ -30,8 +40,10 @@ import {
 import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
+import { placeViewDistanceKm } from "./features/places/place-distance";
+import { clusterZoomDistanceKm } from "./features/places/places-markers";
 import { createPlacesLayer } from "./features/places/places-layer";
-import { metersPerGridCell } from "./geo";
+import { gridToWorld, lonLatToGrid, metersPerGridCell } from "./geo";
 import {
   detailSurfaceElevation,
   type DetailPickPatch,
@@ -79,11 +91,18 @@ import {
 } from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
-import { createLoadingMessage } from "./ui/controls";
+import {
+  createLoadingMessage,
+  createResetViewButton,
+  createTerrainControls,
+} from "./ui/controls";
 import { DropdownGroup } from "./ui/dropdowns";
 import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
-import { createPickPanelLayer } from "./ui/pick-panel";
+import { createExplorarContent } from "./ui/explorar";
+import { createAppMenu, type AppMenu } from "./ui/menu";
+import { createPickPanelLayer, type PickPanelLayer } from "./ui/pick-panel";
 import { createRegionsControls } from "./ui/regions";
+import { sheetSnapHeightsPx, type SheetSnap } from "./ui/sheet";
 
 // Bundled as a raw string (Vite ?raw) and validated by parseRegions; the
 // file is hand-authored from the verified PIP Jujuy source — see
@@ -149,13 +168,41 @@ function showWebGpuNotice(
   overlay.appendChild(notice);
 }
 
-/** Mounts the attribution panel once, no matter how many failure paths run. */
+/**
+ * The menu chrome (mode bar + mode sheet + detail sheet) is created once
+ * and shared by every code path — including the no-WebGPU fallback and
+ * the last-resort catch, so the bars never hide.
+ */
+let appMenu: AppMenu | undefined;
+/**
+ * Set by main() once the camera exists: recomputes the view offset that
+ * centers the framed scene in the UI-free screen rectangle. The menu is
+ * created before the camera (also on failure paths), so the sheets report
+ * geometry changes through this late-bound hook.
+ */
+let reframeView: (() => void) | undefined;
+function ensureMenu(overlay: HTMLElement): AppMenu {
+  appMenu ??= createAppMenu(overlay, {
+    onSheetGeometry: () => reframeView?.(),
+  });
+  return appMenu;
+}
+
+/**
+ * Mounts the attribution section once, no matter how many failure paths
+ * run. It lives at the bottom of the Explorar sheet when the menu is up
+ * and falls back to the overlay root otherwise. Returns the element so
+ * the Explorar content can re-order it into its sections.
+ */
 function mountAttributions(
   overlay: HTMLElement,
   dropdowns?: DropdownGroup,
-): void {
-  if (overlay.querySelector(".attributions")) return;
-  overlay.appendChild(createAttributionPanel(document, dropdowns));
+): HTMLElement {
+  const existing = overlay.querySelector<HTMLElement>(".attributions");
+  if (existing) return existing;
+  const el = createAttributionPanel(document, dropdowns);
+  (overlay.querySelector("#sheet-explorar") ?? overlay).appendChild(el);
+  return el;
 }
 
 interface TerrainData {
@@ -315,10 +362,14 @@ async function main(): Promise<void> {
     throw new Error("index.html is missing #scene canvas or #overlay root");
   }
 
+  // The menu (mode bar + sheets) mounts before any data or GPU work, so
+  // it is on screen on every path — loading, no-WebGPU and failures.
+  const menu = ensureMenu(overlay);
+
   // Shared dropdown coordination for the whole overlay: one dropdown
-  // open at a time, tapping outside closes it (Lugares list, Fuentes).
+  // open at a time, tapping outside closes it (the Fuentes details).
   const dropdowns = new DropdownGroup(document);
-  mountAttributions(overlay, dropdowns);
+  const attributionsEl = mountAttributions(overlay, dropdowns);
 
   const support = await checkWebGpuSupport(navigator);
   if (!support.supported) {
@@ -412,6 +463,9 @@ async function main(): Promise<void> {
   canvasSurface.onResize(({ width, height }) => {
     renderer.resize([width, height]);
     debugOverlay?.refresh();
+    // The free rectangle depends on the viewport: recompute the view
+    // offset (sheet snap/show/hide report through the menu's hook).
+    reframeView?.();
     requestFrame();
   });
 
@@ -545,6 +599,11 @@ async function main(): Promise<void> {
       hitSpec: data.heightfield.spec,
       regionNames,
     },
+    {
+      host: () => pickHost,
+      onPresent: () => presentDetail("pick", "Punto elegido"),
+      onDismiss: () => dismissDetail("pick"),
+    },
   );
   const detail = createDetailLayer({
     baseSpec: data.heightfield.spec,
@@ -591,6 +650,27 @@ async function main(): Promise<void> {
       source: data.regions.source,
     },
     dropdowns,
+    cardHost: () => cardHost,
+    onCardPresent: (name) => presentDetail("card", name),
+    onCardDismissed: () => dismissDetail("card"),
+    // A cluster tap zooms in until its markers separate: the target is
+    // the cluster's world centroid (it lands on the free rect's center
+    // via the view offset) and the distance grows the current screen
+    // spread to ~3x the merge threshold.
+    onClusterTap: (cluster) => {
+      flyToPose(
+        {
+          target: cluster.world,
+          distanceKm: clusterZoomDistanceKm(
+            camera.distanceKm,
+            cluster.spreadPx,
+          ),
+          azimuthDeg: camera.azimuthDeg,
+          elevationDeg: camera.elevationDeg,
+        },
+        900,
+      );
+    },
   });
   // Diorama first: its sky draw is the pass's opaque backdrop (no depth),
   // everything else overdraws it. The walls bind the terrain's heights
@@ -611,18 +691,128 @@ async function main(): Promise<void> {
     pickPanel,
     places,
   ];
+  // The detail sheet holds two mutually exclusive slots — pick info and
+  // place card — so there are never two overlapping panels. presentDetail
+  // swaps them (closing the other for real); dismissDetail hides the
+  // sheet only when the dismissed slot is the one on screen. Both go
+  // through the menu: on phone/tablet it folds the mode sheet while a
+  // detail is up and restores it on close (sheet-stack.ts). The slots
+  // and handlers exist before ui.mount runs: the layers' mount asks for
+  // them via the host hooks above.
+  const pickHost = document.createElement("div");
+  pickHost.className = "detail-slot";
+  const cardHost = document.createElement("div");
+  cardHost.className = "detail-slot";
+  menu.detailSheet.contentEl.append(pickHost, cardHost);
+  let detailKind: "pick" | "card" | null = null;
+  const syncDetail = (): void => {
+    pickHost.hidden = detailKind !== "pick";
+    cardHost.hidden = detailKind !== "card";
+    if (detailKind === null) menu.dismissDetail();
+    else menu.presentDetail();
+  };
+  const presentDetail = (kind: "pick" | "card", title: string): void => {
+    detailKind = kind;
+    if (kind === "pick") places.closeCard();
+    else pickPanel.hide();
+    menu.detailSheet.setTitle(title);
+    syncDetail();
+  };
+  const dismissDetail = (kind: "pick" | "card"): void => {
+    if (detailKind !== kind) return;
+    detailKind = null;
+    syncDetail();
+  };
+  syncDetail();
+
   for (const layer of layers) layer.init({ gpu });
-  for (const layer of layers) layer.ui?.mount(overlay);
-  (overlay.querySelector("#hud") ?? overlay).appendChild(
-    createRegionsControls({
-      regions: data.regions.regions,
-      source: data.regions.source,
-      onToggle: (on) => {
-        terrain.setRegionsVisible(on);
-        requestFrame();
+  for (const layer of layers) {
+    // The terrain layer's own ui.mount builds a floating control panel
+    // for the old #hud column — skipped: its controls now live in the
+    // Explorar sheet and drive the same layer setters.
+    if (layer.id === "terrain") continue;
+    layer.ui?.mount(overlay);
+  }
+
+  // Explorar sheet content: place search + list, "Mostrar lugares", the
+  // Regiones switch + legend, the exaggeration slider, the quality
+  // toggle and the "Fuentes de datos" section at the bottom.
+  menu.modeHosts.explorar.appendChild(
+    createExplorarContent({
+      places: placesData,
+      onSelectPlace: (place) => {
+        flyToPlace(place);
       },
+      onPlacesVisible: (v) => {
+        places.setVisible(v);
+      },
+      sections: [
+        createRegionsControls({
+          regions: data.regions.regions,
+          source: data.regions.source,
+          onToggle: (on) => {
+            terrain.setRegionsVisible(on);
+            requestFrame();
+          },
+        }),
+        createTerrainControls({
+          quality,
+          initialExaggeration: verticalExaggeration,
+          onExaggeration: (v) => {
+            terrain.setVerticalExaggeration(v);
+          },
+          warnHighQualityOnMobile: plan.warnHighQuality,
+        }),
+        attributionsEl,
+      ],
     }),
   );
+
+  // ---- Framing inside the UI-free rectangle ---------------------------
+  // The scene is framed for the part of the screen the chrome does NOT
+  // cover: on mobile that's the strip above the mode bar + the sheets'
+  // visible height at their current snap; on desktop the area right of
+  // the fixed side panel. The projection gets a view offset (principal
+  // point shift) so the camera target lands on the free rect's CENTER,
+  // and overview framing fits the free rect's size. Recomputed on every
+  // sheet snap/show/hide and on window resize (canvasSurface.onResize).
+  const DESKTOP_PANEL_QUERY = "(min-width: 1024px)";
+  const SNAP_INDEX: Record<SheetSnap, number> = { min: 0, half: 1, full: 2 };
+  const modeBarEl = overlay.querySelector<HTMLElement>("#mode-bar");
+  const computeFreeRect = (): ViewRect => {
+    const w = canvas.clientWidth || window.innerWidth;
+    const h = canvas.clientHeight || window.innerHeight;
+    const barRect = modeBarEl?.getBoundingClientRect();
+    if (window.matchMedia(DESKTOP_PANEL_QUERY).matches) {
+      // Desktop: bar + sheets form a fixed panel of the bar's width.
+      const panelW = barRect?.width ?? 0;
+      return { x: panelW, y: 0, width: w - panelW, height: h };
+    }
+    const barH = barRect?.height ?? 0;
+    // Each shown sheet anchors at the bar's top edge and covers
+    // `visible px` above it; the topmost visible edge wins.
+    let top = h - barH;
+    for (const sheet of [menu.modeSheet, menu.detailSheet]) {
+      if (!sheet.isShown()) continue;
+      const visible =
+        sheetSnapHeightsPx(h, sheet.el.offsetHeight)[
+          SNAP_INDEX[sheet.snap()]
+        ] ?? 0;
+      top = Math.min(top, h - barH - visible);
+    }
+    return { x: 0, y: 0, width: w, height: top };
+  };
+  const fovDeg = 45;
+  const viewFit = () =>
+    freeRectViewFit(
+      {
+        width: canvas.clientWidth || window.innerWidth,
+        height: canvas.clientHeight || window.innerHeight,
+      },
+      computeFreeRect(),
+      fovDeg,
+    );
+  const startFit = viewFit();
 
   const camera = overviewCamera(
     data.heightfield.spec,
@@ -632,6 +822,9 @@ async function main(): Promise<void> {
       verticalExaggeration: DEFAULT_VERTICAL_EXAGGERATION,
     },
     {
+      fovDeg,
+      // Fit the province to the free rect, not the whole viewport.
+      fit: startFit,
       // Frame the province, not the whole mosaic: the pipeline records the
       // mask's inclusive cell bounds per level in terrain.json (on the
       // departments raster's grid).
@@ -644,6 +837,53 @@ async function main(): Promise<void> {
       },
     },
   );
+  camera.setViewOffset(startFit.offsetX, startFit.offsetY);
+  reframeView = () => {
+    const fit = viewFit();
+    camera.setViewOffset(fit.offsetX, fit.offsetY);
+    requestFrame();
+  };
+  // Camera flights: one at a time, always cancelable — a new target or
+  // any real user input takes over. Each step asks the dirty tracker for
+  // a frame, so render-on-demand only runs while a flight is alive.
+  let fly: FlyToHandle | undefined;
+  const flyToPose = (
+    pose: Parameters<typeof flyTo>[1],
+    durationMs: number,
+  ): void => {
+    fly?.cancel();
+    fly = flyTo(camera, pose, { durationMs, requestFrame });
+  };
+  const flyToPlace = (place: Place): void => {
+    const [i, j] = lonLatToGrid(data.heightfield.spec, place.lon, place.lat);
+    // The target rides the drawn surface (geomorph + exaggeration), the
+    // same elevation the marker anchors to.
+    const [x, y, z] = gridToWorld(data.heightfield.spec, i, j, {
+      elevationMeters: drawnElevationAt(i, j),
+      verticalExaggeration,
+    });
+    flyToPose(
+      {
+        target: [x, y, z],
+        // Context, not a closeup: ~25 km for towns, ~40 km for large
+        // features (place-distance.ts). Azimuth/elevation keep their
+        // current values so the flight only re-centers and zooms.
+        distanceKm: placeViewDistanceKm(place),
+        azimuthDeg: camera.azimuthDeg,
+        elevationDeg: camera.elevationDeg,
+      },
+      1300,
+    );
+    places.openPlaceCard(place);
+  };
+
+  const initialPose = cameraPoseOf(camera);
+  overlay.appendChild(
+    createResetViewButton(() => {
+      flyToPose(initialPose, 1100);
+    }),
+  );
+
   attachCameraInput(canvas, {
     camera,
     onTap: (point) => {
@@ -678,7 +918,11 @@ async function main(): Promise<void> {
       // A miss (sky) dispatches undefined so layers clear pick state.
       for (const layer of layers) layer.onPick?.(hit);
     },
-    onActivity: requestFrame,
+    onActivity: () => {
+      // Real camera input takes over an in-flight animation.
+      fly?.cancel();
+      requestFrame();
+    },
   });
   const appClock = clock(gpu);
 
@@ -808,6 +1052,7 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   // Last-resort fallback: never leave a blank page or an unhandled rejection.
   const overlay = document.getElementById("overlay") ?? document.body;
+  ensureMenu(overlay);
   mountAttributions(overlay);
   showWebGpuNotice(
     overlay,

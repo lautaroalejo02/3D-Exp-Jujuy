@@ -14,6 +14,34 @@ export function createLoadingMessage(doc: Document = document): HTMLElement {
   return el;
 }
 
+/**
+ * Round "reset view" button, the only floating control — top-right over
+ * the map. The icon is a circular arrow around a small mountain.
+ */
+export function createResetViewButton(
+  onReset: () => void,
+  doc: Document = document,
+): HTMLElement {
+  const button = doc.createElement("button");
+  button.type = "button";
+  button.id = "reset-view";
+  button.setAttribute("aria-label", "Volver a la vista inicial");
+  const icon = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+  icon.setAttribute("viewBox", "0 0 24 24");
+  icon.setAttribute("fill", "none");
+  icon.setAttribute("stroke", "currentColor");
+  icon.setAttribute("stroke-width", "1.8");
+  icon.setAttribute("stroke-linecap", "round");
+  icon.setAttribute("stroke-linejoin", "round");
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML =
+    '<polyline points="4,17 9,8.5 12,12 15,6.5 20,17"/>' +
+    '<line x1="4" y1="17" x2="20" y2="17"/>';
+  button.appendChild(icon);
+  button.addEventListener("click", onReset);
+  return button;
+}
+
 export interface TerrainControlsOptions {
   readonly quality: TerrainQuality;
   readonly initialExaggeration: number;
@@ -35,14 +63,11 @@ export function qualityToggleLabel(quality: TerrainQuality): string {
   return `Calidad: ${current} · Cambiar a ${next}`;
 }
 
-/** Media query that matches the collapsed-controls layout in index.html. */
-const COMPACT_CONTROLS_QUERY = "(max-width: 640px)";
-
 /**
  * Control panel: vertical exaggeration slider (1x–5x, updates only the
  * terrain uniform) and a quality button that reloads the page with or
- * without `?calidad=alta`. On small screens a "Controles" pill collapses
- * the whole panel so it never covers the center of the map.
+ * without `?calidad=alta`. Lives inside the Explorar sheet — a plain
+ * block, the sheet owns the chrome.
  */
 export function createTerrainControls(
   opts: TerrainControlsOptions,
@@ -50,24 +75,6 @@ export function createTerrainControls(
 ): HTMLElement {
   const panel = doc.createElement("section");
   panel.className = "terrain-controls";
-
-  // Collapse affordance: CSS hides this button on wide screens, where the
-  // panel always stays expanded.
-  const collapse = doc.createElement("button");
-  collapse.type = "button";
-  collapse.className = "controls-collapse";
-  collapse.textContent = "Controles";
-  let collapsed =
-    doc.defaultView?.matchMedia?.(COMPACT_CONTROLS_QUERY)?.matches ?? false;
-  const renderCollapsed = (): void => {
-    panel.dataset.collapsed = String(collapsed);
-    collapse.setAttribute("aria-expanded", String(!collapsed));
-  };
-  renderCollapsed();
-  collapse.addEventListener("click", () => {
-    collapsed = !collapsed;
-    renderCollapsed();
-  });
 
   const label = doc.createElement("label");
   label.className = "exaggeration";
@@ -114,7 +121,7 @@ export function createTerrainControls(
     if (view) view.location.href = `${url.pathname}${url.search}`;
   });
 
-  panel.append(collapse, label, quality);
+  panel.append(label, quality);
   if (opts.warnHighQualityOnMobile) {
     const warning = doc.createElement("p");
     warning.className = "quality-warning";

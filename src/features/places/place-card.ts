@@ -19,11 +19,12 @@ const BOUNDARIES_SOURCE_URL =
   "https://www.geoboundaries.org/api/current/gbOpen/ARG/ADM2/";
 
 /**
- * The place card ("ficha") DOM: photo strip on top, name, short
- * description, the always-visible Región/Altura rows and a "Ver más"
- * toggle that reveals the Wikipedia extract, the facts rows, the rest of
- * the data rows and the links. The content comes from placeCardModel —
- * this file only turns it into elements.
+ * The place card ("ficha") DOM: photo strip on top, short description,
+ * the always-visible Región/Altura rows and a "Ver más" toggle that
+ * reveals the Wikipedia extract, the facts rows, the rest of the data
+ * rows and the links. The place's name is NOT repeated here — it is the
+ * detail sheet's title already (onCardPresent sets it). The content
+ * comes from placeCardModel — this file only turns it into elements.
  *
  * Rebuilt on every open: the dynamic parts (photos, rows that exist
  * only when their data does) make cached element refs more brittle than
@@ -160,10 +161,6 @@ export function createPlaceCard(
       el.appendChild(strip);
     }
 
-    const name = doc.createElement("h2");
-    name.className = "place-card-name";
-    name.textContent = model.name;
-
     const desc = doc.createElement("p");
     desc.className = "place-card-desc";
     desc.textContent = model.description;
@@ -285,7 +282,7 @@ export function createPlaceCard(
     });
     expandedEls.push(links);
 
-    el.append(name, desc, moreButton, extra, rows, altNote, sourceNote, links);
+    el.append(desc, moreButton, extra, rows, altNote, sourceNote, links);
     setExpanded(false);
   };
 

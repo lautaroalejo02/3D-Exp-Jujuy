@@ -18,6 +18,16 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 - `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
+- `npm run snapshot` — renders headless del terreno a `data/build/snapshots/`
+- `npm run ui:shots` — build + `vite preview` + capturas de la UI con
+  Chromium headless (Playwright) a `data/build/ui-shots/`: layout móvil
+  390×844 (barra de modos, hoja minimizada/mitad, ficha de lugar, modo
+  Sol) y escritorio 1440×900. Si WebGPU no arranca headless, igual
+  captura la interfaz con el aviso de respaldo (la barra y las hojas
+  quedan visibles). Requiere `npx playwright install chromium` una vez;
+  `@playwright/test` es devDependency porque los tests unitarios y los
+  snapshots de terreno no cubren regresiones de la UI móvil (gestos,
+  hojas solapadas)
 
 ## Controles de la cámara
 

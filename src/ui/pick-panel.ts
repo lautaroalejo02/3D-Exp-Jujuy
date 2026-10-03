@@ -9,7 +9,6 @@ import {
   type DepartmentsData,
 } from "../terrain/departments";
 import { departmentIndexAt } from "../terrain/regions";
-import { syncSheetState } from "./layout";
 
 /**
  * Pick info panel: shows the latitude, longitude and DEM elevation of the
@@ -100,10 +99,35 @@ export interface PickPanelDepartments {
 
 const MISS_HINT = "Tocá o hacé clic sobre el relieve";
 
+/**
+ * Wiring the panel needs to live inside the shared detail sheet: where
+ * to mount and when to tell the sheet it has content / was dismissed.
+ */
+export interface PickPanelUiHooks {
+  /**
+   * The element the panel mounts into (default: the overlay root). The
+   * detail sheet passes one of its content slots here.
+   */
+  readonly host?: (root: HTMLElement) => HTMLElement;
+  /** The panel became visible — the sheet should present it. */
+  readonly onPresent?: () => void;
+  /** The user dismissed the panel with its × button. */
+  readonly onDismiss?: () => void;
+}
+
+export interface PickPanelLayer extends Layer {
+  /**
+   * Hide the panel without firing dismiss callbacks — the detail sheet
+   * calls this when the place card takes its slot.
+   */
+  hide(): void;
+}
+
 export function createPickPanelLayer(
   precision: PickPanelPrecision,
   departments?: PickPanelDepartments,
-): Layer {
+  hooks?: PickPanelUiHooks,
+): PickPanelLayer {
   interface PanelEls {
     readonly panel: HTMLElement;
     readonly lat: HTMLElement;
@@ -116,7 +140,6 @@ export function createPickPanelLayer(
     readonly hint: HTMLElement;
   }
   let els: PanelEls | undefined;
-  let overlayRoot: HTMLElement | undefined;
 
   const showHit = (hit: PickHit): void => {
     if (!els) return;
@@ -144,7 +167,7 @@ export function createPickPanelLayer(
     els.note.hidden = false;
     els.hint.hidden = true;
     els.panel.hidden = false;
-    if (overlayRoot) syncSheetState(overlayRoot);
+    hooks?.onPresent?.();
   };
 
   const showMiss = (): void => {
@@ -153,7 +176,7 @@ export function createPickPanelLayer(
     els.note.hidden = true;
     els.hint.hidden = false;
     els.panel.hidden = false;
-    if (overlayRoot) syncSheetState(overlayRoot);
+    hooks?.onPresent?.();
   };
 
   return {
@@ -161,13 +184,15 @@ export function createPickPanelLayer(
     init(): void {},
     update(): void {},
     draw(): void {},
+    hide(): void {
+      if (els) els.panel.hidden = true;
+    },
     onPick(hit: PickHit | undefined): void {
       if (hit) showHit(hit);
       else showMiss();
     },
     ui: {
       mount(root: HTMLElement): () => void {
-        overlayRoot = root;
         const doc = root.ownerDocument;
         const panel = doc.createElement("section");
         panel.className = "pick-panel";
@@ -206,15 +231,14 @@ export function createPickPanelLayer(
 
         close.addEventListener("click", () => {
           panel.hidden = true;
-          syncSheetState(root);
+          hooks?.onDismiss?.();
         });
 
         panel.append(close, dataRows, note, hint);
-        root.appendChild(panel);
+        (hooks?.host?.(root) ?? root).appendChild(panel);
         els = { panel, lat, lon, alt, dept, region, dataRows, note, hint };
         return () => {
           els = undefined;
-          overlayRoot = undefined;
           panel.remove();
         };
       },

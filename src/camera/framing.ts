@@ -8,6 +8,78 @@ import {
 } from "../geo";
 import { OrbitCamera } from "./camera";
 
+/**
+ * A rectangle in canvas CSS px — used for the screen area the UI leaves
+ * free (occluded by the mode bar + sheets on mobile, by the left panel
+ * on desktop).
+ */
+export interface ViewRect {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+/**
+ * The projection parameters that make framed content land inside a free
+ * screen rectangle instead of the full viewport:
+ *
+ * - `offsetX`/`offsetY` are the camera's NDC view offset — the principal
+ *   point moves to the free rect's center, so the orbit target projects
+ *   there.
+ * - `tanX`/`tanY` are the |tan| of the half-angles the free rect spans
+ *   around that center. Fitting content to `|tanθ| <= tanX/tanY` keeps it
+ *   inside the free rect even though the projection covers the full
+ *   viewport.
+ * - `aspect` is the free rect's own aspect, for choosing the framing
+ *   direction (portrait vs landscape look).
+ */
+export interface ViewFit {
+  readonly offsetX: number;
+  readonly offsetY: number;
+  readonly tanX: number;
+  readonly tanY: number;
+  readonly aspect: number;
+}
+
+/**
+ * Derive the ViewFit of `free` inside a `viewport` (same CSS-px space)
+ * for a camera with vertical `fovDeg`. The free rect is clamped to the
+ * viewport and to a 1 px minimum — a fully occluded viewport degenerates
+ * to a near-centered pinhole instead of NaN.
+ *
+ * The math: NDC spans [-1, 1] over the viewport, so the free rect's
+ * center sits at NDC (2cx/w - 1, 1 - 2cy/h) and its half-size is
+ * (fw/w, fh/h) in NDC units. A view-space point projects to
+ * ndc = (tanθx * aspect / f, tanθy * f)... so the |tanθ| limits that keep
+ * content inside the free rect scale the nominal half-FOV tangents by
+ * fh/h and fw/h.
+ */
+export function freeRectViewFit(
+  viewport: { readonly width: number; readonly height: number },
+  free: ViewRect,
+  fovDeg: number,
+): ViewFit {
+  const w = Math.max(1, viewport.width);
+  const h = Math.max(1, viewport.height);
+  const x0 = Math.min(w, Math.max(0, free.x));
+  const y0 = Math.min(h, Math.max(0, free.y));
+  const x1 = Math.min(w, Math.max(0, free.x + free.width));
+  const y1 = Math.min(h, Math.max(0, free.y + free.height));
+  const fw = Math.max(1, x1 - x0);
+  const fh = Math.max(1, y1 - y0);
+  const cx = x0 + fw / 2;
+  const cy = y0 + fh / 2;
+  const tanHalfY = Math.tan((fovDeg * Math.PI) / 360);
+  return {
+    offsetX: (2 * cx - w) / w,
+    offsetY: (h - 2 * cy) / h,
+    tanX: (tanHalfY * fw) / h,
+    tanY: (tanHalfY * fh) / h,
+    aspect: fw / fh,
+  };
+}
+
 /** A sub-region of the grid to frame instead of the whole mosaic. */
 export interface FrameRegion {
   /**
@@ -74,11 +146,19 @@ export function overviewCamera(
     readonly azimuthDeg?: number;
     readonly elevationDeg?: number;
     readonly region?: FrameRegion;
+    /**
+     * Fit the region to a sub-rectangle of the viewport instead of the
+     * whole frame: `tanX`/`tanY` are the usable half-FOV tangents and
+     * `aspect` the free rect's aspect (it picks the portrait/landscape
+     * view direction). The caller applies the matching view offset on
+     * the returned camera so the target lands on the rect's center.
+     */
+    readonly fit?: Pick<ViewFit, "tanX" | "tanY" | "aspect">;
   } = {},
 ): OrbitCamera {
   const fovDeg = options.fovDeg ?? 45;
   const margin = options.margin ?? 1.1;
-  const portrait = aspect < 1;
+  const portrait = (options.fit?.aspect ?? aspect) < 1;
   const azimuthDeg = options.azimuthDeg ?? (portrait ? 0 : 45);
   const elevationDeg = options.elevationDeg ?? (portrait ? 40 : 45);
   const az = (azimuthDeg * Math.PI) / 180;
@@ -114,9 +194,10 @@ export function overviewCamera(
   // |linear| over the (ground-offset, height) box, so the max is at one of
   // the 8 box corners — checking them all is exact.
   const halfFovY = (fovDeg * Math.PI) / 360;
-  const halfFovX = Math.atan(Math.tan(halfFovY) * aspect);
-  const tanX = Math.tan(halfFovX);
-  const tanY = Math.tan(halfFovY);
+  const tanX =
+    options.fit?.tanX ??
+    Math.tan(Math.atan(Math.tan(halfFovY) * aspect));
+  const tanY = options.fit?.tanY ?? Math.tan(halfFovY);
   const sinAz = Math.sin(az);
   const cosAz = Math.cos(az);
   const sinEl = Math.sin(el);

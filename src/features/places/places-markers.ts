@@ -35,6 +35,105 @@ export interface ScreenPoint {
 export const MARKER_TAP_RADIUS_PX = 22;
 
 /**
+ * Screen distance (CSS px) under which markers merge into one cluster
+ * dot. Roughly two dot diameters: closer than this, two markers overlap
+ * visually and stop being separate tap targets.
+ */
+export const MARKER_CLUSTER_PX = 22;
+
+/**
+ * A group of markers closer than MARKER_CLUSTER_PX on screen, drawn as a
+ * single cluster dot. `members` are indices into the input points array;
+ * `x`/`y` is the cluster center (member mean) in the same units.
+ */
+export interface MarkerCluster {
+  readonly members: readonly number[];
+  readonly x: number;
+  readonly y: number;
+}
+
+/**
+ * Greedy screen-space clustering of the projected marker positions:
+ * two points nearer than `thresholdPx` belong to the same cluster and
+ * the merge is transitive (A near B, B near C -> one cluster even when
+ * A and C are farther apart). `undefined` points (off-screen, occluded,
+ * hidden or the selected marker — the caller decides) never cluster.
+ * Singletons come back as one-member clusters so the caller can treat
+ * every marker uniformly. Order of the input is preserved per cluster.
+ */
+export function clusterMarkers(
+  points: readonly (ScreenPoint | undefined)[],
+  thresholdPx = MARKER_CLUSTER_PX,
+): MarkerCluster[] {
+  // Union-find over the indices that have a point.
+  const indices: number[] = [];
+  for (const [i, p] of points.entries()) {
+    if (p !== undefined) indices.push(i);
+  }
+  const parent = new Map<number, number>(indices.map((i) => [i, i]));
+  const root = (i: number): number => {
+    let r = i;
+    while (parent.get(r) !== r) r = parent.get(r)!;
+    // Path compression keeps later unions near O(1).
+    while (parent.get(i) !== i) {
+      const next = parent.get(i)!;
+      parent.set(i, r);
+      i = next;
+    }
+    return r;
+  };
+  const t2 = thresholdPx * thresholdPx;
+  for (let a = 0; a < indices.length; a++) {
+    const pa = points[indices[a]!]!;
+    for (let b = a + 1; b < indices.length; b++) {
+      const pb = points[indices[b]!]!;
+      const dx = pa.x - pb.x;
+      const dy = pa.y - pb.y;
+      if (dx * dx + dy * dy < t2) {
+        const ra = root(indices[a]!);
+        const rb = root(indices[b]!);
+        if (ra !== rb) parent.set(ra, rb);
+      }
+    }
+  }
+  const groups = new Map<number, number[]>();
+  for (const i of indices) {
+    const r = root(i);
+    const g = groups.get(r);
+    if (g) g.push(i);
+    else groups.set(r, [i]);
+  }
+  return [...groups.values()].map((members) => {
+    let x = 0;
+    let y = 0;
+    for (const i of members) {
+      x += points[i]!.x;
+      y += points[i]!.y;
+    }
+    return { members, x: x / members.length, y: y / members.length };
+  });
+}
+
+/**
+ * Camera distance a cluster tap should fly to: enough zoom-in for the
+ * cluster's current screen spread to grow to `targetSpreadPx`. Screen
+ * spread scales inversely with camera distance, so
+ * d_new = d_now * spread / targetSpread — never wider than the current
+ * distance (a cluster tap only zooms in) and never closer than `minKm`.
+ */
+export function clusterZoomDistanceKm(
+  currentDistanceKm: number,
+  spreadPx: number,
+  targetSpreadPx = MARKER_CLUSTER_PX * 3,
+  minKm = 12,
+): number {
+  if (!(currentDistanceKm > 0)) return minKm;
+  if (!(spreadPx > 0)) return currentDistanceKm;
+  const wanted = (currentDistanceKm * spreadPx) / Math.max(1, targetSpreadPx);
+  return Math.min(currentDistanceKm, Math.max(minKm, wanted));
+}
+
+/**
  * Index of the candidate screen point nearest to `tap`, or undefined
  * when none lies within `radiusPx`. `undefined` entries are markers that
  * are off-screen, occluded or hidden — they are never tapped. Runs on
