@@ -11,8 +11,10 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 - `npm run build:data` — genera `data/build/` (alturas Int16, satélite, departamentos, `terrain.json`) desde `data/raw/`; idempotente, `--force` reconstruye. Requiere el extracto commiteado `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson`
 - `npm run build:detail` — genera `data/build/detail/` (parches de alta resolución por sitio: satélite z14 mosaico + alturas z12 Int16 + `manifest.json`); idempotente, `--force` reconstruye. Verifica el sha256 de cada tile crudo contra `data/raw/detail/sources.json` antes de usarlo
 - `npm run verify:detail` — vuelve a descargar cada URL de `data/raw/detail/sources.json` y compara el sha256 (también contra la copia local). No escribe nada; sale con error si hay diferencias
+- `npm run build:places` — genera `data/build/places.json` (los 35 lugares de `data/raw/places/wikidata-places.json` con altura bilineal del DEM — y del DEM de detalle cuando el punto cae en un parche — y departamento del raster geoBoundaries); idempotente, imprime «up to date» si nada cambió
+- `npm run verify:places` — vuelve a consultar cada Q-id en Wikidata (secuencial, con pausa) y compara etiqueta, descripción y coordenadas contra el archivo crudo. No escribe nada; sale con error si hay diferencias
 - `npm run dev` — servidor de desarrollo (sirve `data/build/` en la raíz del sitio)
-- `npm run build` — `build:data` + `build:detail` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
+- `npm run build` — `build:data` + `build:detail` + `build:places` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
 - `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
@@ -73,6 +75,15 @@ aviso de que puede ir lenta).
 - `terrain.json` — manifiesto con grillas, hashes sha256, estadísticas de
   elevación, el error de reconstrucción y el bbox de la provincia
   (lon/lat y celdas por nivel).
+- `places.json` (lo genera `npm run build:places`) — los 35 lugares con
+  nombre y descripción en español de Wikidata (CC0), coordenadas, altura
+  del DEM a resolución completa (y del DEM de detalle cuando el punto cae
+  en un parche, con `elevationSource` que dice cuál usa la ficha),
+  departamento del raster geoBoundaries («Fuera de Jujuy» si cae afuera)
+  y enlaces a Wikidata/es.wikipedia. La capa `src/features/places/` los
+  dibuja como marcadores DOM proyectados por cuadro, con oclusión
+  aproximada contra el relieve y desempalme de etiquetas; el interruptor
+  «Lugares» los enciende/apaga.
 - `debug-alignment.png` — hillshade sobre satélite para verificar la
   registración DEM/imagen (no se publica en `dist/`).
 - `debug-province.png` — contorno de la provincia y bordes departamentales

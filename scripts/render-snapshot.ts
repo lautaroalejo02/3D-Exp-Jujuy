@@ -15,6 +15,13 @@
  * - hornocal-base.png      identical framing without the patch layer —
  *                          the before/after evidence for the feature
  * - salinas-detail.png     Salinas Grandes patch drawn
+ * - places.png             overview framing with the place markers drawn
+ *                          as dots. The app's markers are DOM elements,
+ *                          which do not exist headless — the dots use the
+ *                          same pure helpers (projection, anchor lift,
+ *                          occlusion against the base DEM) so they sit
+ *                          where the DOM markers would. Labels/cards are
+ *                          DOM-only and not represented here.
  *
  * Data is read from data/build (run `npm run build:data` and
  * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
@@ -40,8 +47,13 @@ import {
   type DetailSiteData,
 } from "../src/features/detail/detail-layer";
 import { createPickMarkerLayer } from "../src/features/pick-marker/pick-marker";
+import {
+  isOccluded,
+  MARKER_LIFT_METERS,
+  projectToScreen,
+} from "../src/features/places/places-markers";
 import { lonLatToGrid } from "../src/geo/grid";
-import { lonLatToWorld } from "../src/geo/world";
+import { gridToWorld, lonLatToWorld } from "../src/geo/world";
 import { createSceneRenderer } from "../src/render/scene-renderer";
 import { buildDetailPatchRects } from "../src/terrain/detail-grids";
 import {
@@ -56,6 +68,7 @@ import {
   type FetchResponseLike,
 } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
+import { loadPlaces, type PlacesDoc } from "../src/terrain/places-manifest";
 import {
   createTerrainLayer,
   DEFAULT_VERTICAL_EXAGGERATION,
@@ -240,6 +253,20 @@ async function main(): Promise<void> {
         "skipped (run npm run build:detail)",
     );
   }
+  // Place markers for places.png. Additive like the detail data: a
+  // missing/invalid places.json only means the shot has no dots.
+  let placesDoc: PlacesDoc | undefined;
+  try {
+    placesDoc = await loadPlaces(fileFetch);
+  } catch (error) {
+    console.warn(
+      "data/build/places.json unavailable — places.png will have no " +
+        `marker dots (run npm run build:places): ${
+          error instanceof Error ? error.message : error
+        }`,
+    );
+  }
+
   const patchRects = buildDetailPatchRects(
     detailSites.map((d) => ({ id: d.site.id, spec: d.heightfield.spec })),
     heightfield.spec,
@@ -392,6 +419,69 @@ async function main(): Promise<void> {
     verticalExaggeration: EXAGGERATION,
   };
 
+  /**
+   * Filled disc into the PNG pixels — the stand-in for the DOM marker
+   * dot (outer ring + inner fill, same amber as .place-marker-dot).
+   */
+  const stampDisc = (
+    png: PNG,
+    cx: number,
+    cy: number,
+    radius: number,
+    rgb: readonly [number, number, number],
+  ): void => {
+    const r2 = radius * radius;
+    const x0 = Math.max(0, Math.floor(cx - radius));
+    const x1 = Math.min(png.width - 1, Math.ceil(cx + radius));
+    const y0 = Math.max(0, Math.floor(cy - radius));
+    const y1 = Math.min(png.height - 1, Math.ceil(cy + radius));
+    for (let y = y0; y <= y1; y++) {
+      for (let x = x0; x <= x1; x++) {
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy > r2) continue;
+        const o = (y * png.width + x) * 4;
+        png.data[o] = rgb[0];
+        png.data[o + 1] = rgb[1];
+        png.data[o + 2] = rgb[2];
+        png.data[o + 3] = 255;
+      }
+    }
+  };
+
+  /**
+   * Where the DOM marker of each place would land, headless: world anchor
+   * on the base DEM with the same lift, projected with the shot's camera,
+   * skipped when off-screen or occluded (isOccluded, base DEM only — the
+   * patch blend is not geomorphed here). Dots only: no labels or cards.
+   */
+  const drawPlaceDots = (png: PNG, camera: OrbitCamera): void => {
+    if (!placesDoc) return;
+    const viewProjection = camera.viewProjectionMatrix();
+    const eye = camera.eye();
+    for (const place of placesDoc.places) {
+      const [i, j] = lonLatToGrid(heightfield.spec, place.lon, place.lat);
+      const elevationMeters = heightfield.heightAtGrid(i, j);
+      const world = gridToWorld(heightfield.spec, i, j, {
+        elevationMeters: elevationMeters + MARKER_LIFT_METERS,
+        verticalExaggeration: EXAGGERATION,
+      });
+      const p = projectToScreen(viewProjection, world, [WIDTH, HEIGHT]);
+      if (
+        !p ||
+        p.x < 0 ||
+        p.x >= WIDTH ||
+        p.y < 0 ||
+        p.y >= HEIGHT ||
+        isOccluded(heightfield, eye, world, EXAGGERATION)
+      ) {
+        continue;
+      }
+      stampDisc(png, p.x, p.y, 5, [60, 32, 0]);
+      stampDisc(png, p.x, p.y, 3.2, [255, 183, 77]);
+    }
+  };
+
   const shots: {
     name: string;
     camera: OrbitCamera;
@@ -399,6 +489,7 @@ async function main(): Promise<void> {
     scene: ReturnType<typeof createSceneRenderer>;
     output: ReturnType<typeof target>;
     size: readonly [number, number];
+    drawExtras?: (png: PNG, camera: OrbitCamera) => void;
   }[] = [
     {
       name: "overview",
@@ -508,6 +599,17 @@ async function main(): Promise<void> {
           size: readonly [number, number];
         }[])
       : []),
+    {
+      name: "places",
+      camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
+        region: provinceRegion,
+      }),
+      layers: [terrain],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+      drawExtras: drawPlaceDots,
+    },
   ];
 
   mkdirSync(OUT_DIR, { recursive: true });
@@ -542,6 +644,7 @@ async function main(): Promise<void> {
     const pixels = await shot.output.color.read({ mipLevel: 0, region: "all" });
     const png = new PNG({ width: shot.size[0], height: shot.size[1] });
     png.data.set(pixels);
+    shot.drawExtras?.(png, shot.camera);
     const path = join(OUT_DIR, `${shot.name}.png`);
     writeFileSync(path, PNG.sync.write(png));
     console.log(`wrote ${path}`);

@@ -1,0 +1,671 @@
+{
+  "description": "Wikidata entity subsets (label, description, P625, eswiki title) for Jujuy places, downloaded once by the coordinator on 2026-10-03 with each entity lastrevid for provenance. Wikidata content is CC0. Place candidates were selected by the coordinator from a research list; only Wikidata fields are stored here (no region/category). two unreliable stubs excluded (Dique La Ciénaga, Lagunas de Yala). Paleta del Pintor (OSM only) excluded: ODbL point without a Wikidata item.",
+  "license": "CC0 1.0 (Wikidata)",
+  "places": [
+    {
+      "id": "Q1025405",
+      "lastrevid": 2552211574,
+      "url": "https://www.wikidata.org/wiki/Q1025405",
+      "label": {
+        "es": "Purmamarca",
+        "en": "Purmamarca"
+      },
+      "description": {
+        "es": "localidad en la provincia de Jujuy, Argentina",
+        "en": "village in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.733333333333,
+        "lon": -65.483333333333,
+        "precision": 0.016666666666667
+      },
+      "eswiki": "Purmamarca"
+    },
+    {
+      "id": "Q1056078",
+      "lastrevid": 2521598207,
+      "url": "https://www.wikidata.org/wiki/Q1056078",
+      "label": {
+        "es": "Cerro de los Siete Colores",
+        "en": "Cerro de los Siete Colores"
+      },
+      "description": {
+        "es": "cerro en la provincia de Jujuy, Argentina",
+        "en": "hill in Jujuy province, Argentina"
+      },
+      "coordinates": {
+        "lat": -23.7469,
+        "lon": -65.5035,
+        "precision": 0.0001
+      },
+      "eswiki": "Cerro de los Siete Colores"
+    },
+    {
+      "id": "Q3843526",
+      "lastrevid": 2529607373,
+      "url": "https://www.wikidata.org/wiki/Q3843526",
+      "label": {
+        "es": "Maimará",
+        "en": "Maimará"
+      },
+      "description": {
+        "es": "asentamiento en Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.6260856,
+        "lon": -65.4091433,
+        "precision": 1e-7
+      },
+      "eswiki": "Maimará"
+    },
+    {
+      "id": "Q604722",
+      "lastrevid": 2549164947,
+      "url": "https://www.wikidata.org/wiki/Q604722",
+      "label": {
+        "es": "Tilcara",
+        "en": "Tilcara"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Tilcara, en la provincia de Jujuy, Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.5768095,
+        "lon": -65.3934201,
+        "precision": 1e-7
+      },
+      "eswiki": "Tilcara"
+    },
+    {
+      "id": "Q2062241",
+      "lastrevid": 2537370688,
+      "url": "https://www.wikidata.org/wiki/Q2062241",
+      "label": {
+        "es": "Pucará de Tilcara",
+        "en": "Pucará de Tilcara"
+      },
+      "description": {
+        "es": "sitio arqueológico en Argentina",
+        "en": "archeological site in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.58861111,
+        "lon": -65.40277778,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Pucará de Tilcara"
+    },
+    {
+      "id": "Q3552109",
+      "lastrevid": 2521321183,
+      "url": "https://www.wikidata.org/wiki/Q3552109",
+      "label": {
+        "es": "Uquía",
+        "en": "Uquía"
+      },
+      "description": {
+        "es": "asentamiento en Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.30361111,
+        "lon": -65.35611111,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Uquía"
+    },
+    {
+      "id": "Q1026833",
+      "lastrevid": 2549918449,
+      "url": "https://www.wikidata.org/wiki/Q1026833",
+      "label": {
+        "es": "Humahuaca",
+        "en": "Humahuaca"
+      },
+      "description": {
+        "es": "ciudad en la provincia de Jujuy, Argentina",
+        "en": "city in the province of Jujuy, Argentina"
+      },
+      "coordinates": {
+        "lat": -23.20544,
+        "lon": -65.35048,
+        "precision": 0.00001
+      },
+      "eswiki": "Humahuaca"
+    },
+    {
+      "id": "Q16630587",
+      "lastrevid": 2436445649,
+      "url": "https://www.wikidata.org/wiki/Q16630587",
+      "label": {
+        "es": "Serranía de Hornocal",
+        "en": "Serranía de Hornocal"
+      },
+      "description": {
+        "es": "montañas argentinas",
+        "en": "Argentine mountains"
+      },
+      "coordinates": {
+        "lat": -23.2617,
+        "lon": -65.1226,
+        "precision": 0.000001
+      },
+      "eswiki": "Serranía de Hornocal"
+    },
+    {
+      "id": "Q28061",
+      "lastrevid": 2537370904,
+      "url": "https://www.wikidata.org/wiki/Q28061",
+      "label": {
+        "es": "Quebrada de Humahuaca",
+        "en": "Quebrada de Humahuaca"
+      },
+      "description": {
+        "es": "profundo y angosto surco en el noroeste argentino",
+        "en": "valley in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.199861111111,
+        "lon": -65.348861111111,
+        "precision": 0.000027777777777778
+      },
+      "eswiki": "Quebrada de Humahuaca"
+    },
+    {
+      "id": "Q5793997",
+      "lastrevid": 2086444662,
+      "url": "https://www.wikidata.org/wiki/Q5793997",
+      "label": {
+        "es": "Cuesta de Lipán",
+        "en": null
+      },
+      "description": {
+        "es": "montaña en Argentina",
+        "en": "mountain in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.6856,
+        "lon": -65.6211,
+        "precision": 0.000001
+      },
+      "eswiki": "Cuesta de Lipán"
+    },
+    {
+      "id": "Q2893104",
+      "lastrevid": 2455533996,
+      "url": "https://www.wikidata.org/wiki/Q2893104",
+      "label": {
+        "es": "Salinas Grandes",
+        "en": "Salinas Grandes"
+      },
+      "description": {
+        "es": "el salar más grande de la Argentina",
+        "en": "salt flats in the provinces of Jujuy and Salta, Argentina"
+      },
+      "coordinates": {
+        "lat": -23.63325,
+        "lon": -65.894441666667,
+        "precision": 0.0000027777777777778
+      },
+      "eswiki": "Salinas Grandes (Jujuy y Salta)"
+    },
+    {
+      "id": "Q1388407",
+      "lastrevid": 2159259640,
+      "url": "https://www.wikidata.org/wiki/Q1388407",
+      "label": {
+        "es": "Laguna de Guayatayoc",
+        "en": "Laguna de Guayatayoc"
+      },
+      "description": {
+        "es": "lago en Argentina",
+        "en": "lake"
+      },
+      "coordinates": {
+        "lat": -23.41666667,
+        "lon": -65.85,
+        "precision": 0.016666666666667
+      },
+      "eswiki": "Laguna de Guayatayoc"
+    },
+    {
+      "id": "Q830120",
+      "lastrevid": 2159259170,
+      "url": "https://www.wikidata.org/wiki/Q830120",
+      "label": {
+        "es": "Monumento natural Laguna de los Pozuelos",
+        "en": "Laguna de los Pozuelos natural monument"
+      },
+      "description": {
+        "es": "monumento natural de la Argentina, en Jujuy",
+        "en": "lake in Argentina"
+      },
+      "coordinates": {
+        "lat": -22.35,
+        "lon": -66,
+        "precision": 0.016666666666666666
+      },
+      "eswiki": "Monumento natural Laguna de los Pozuelos"
+    },
+    {
+      "id": "Q55386",
+      "lastrevid": 2530496349,
+      "url": "https://www.wikidata.org/wiki/Q55386",
+      "label": {
+        "es": "Abra Pampa",
+        "en": "Abra Pampa"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Cochinoca, en la provincia de Jujuy, Argentina",
+        "en": "human settlement"
+      },
+      "coordinates": {
+        "lat": -22.716666666667,
+        "lon": -65.7,
+        "precision": 0.016666666666667
+      },
+      "eswiki": "Abra Pampa"
+    },
+    {
+      "id": "Q693381",
+      "lastrevid": 2537276297,
+      "url": "https://www.wikidata.org/wiki/Q693381",
+      "label": {
+        "es": "La Quiaca",
+        "en": "La Quiaca"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Yavi, en la provincia de Jujuy, Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -22.105555555556,
+        "lon": -65.6,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "La Quiaca"
+    },
+    {
+      "id": "Q1024040",
+      "lastrevid": 2503277167,
+      "url": "https://www.wikidata.org/wiki/Q1024040",
+      "label": {
+        "es": "Yavi",
+        "en": "Yavi"
+      },
+      "description": {
+        "es": "localidad en Argentina",
+        "en": "locality"
+      },
+      "coordinates": {
+        "lat": -22.130980555556,
+        "lon": -65.462916666667,
+        "precision": 0.0000027777777777778
+      },
+      "eswiki": "Yavi"
+    },
+    {
+      "id": "Q1495796",
+      "lastrevid": 2432470727,
+      "url": "https://www.wikidata.org/wiki/Q1495796",
+      "label": {
+        "es": "Susques",
+        "en": "Susques"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Susques, en la provincia de Jujuy, Argentina",
+        "en": "locality"
+      },
+      "coordinates": {
+        "lat": -23.400555555556,
+        "lon": -66.367222222222,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Susques"
+    },
+    {
+      "id": "Q16589099",
+      "lastrevid": 2159258439,
+      "url": "https://www.wikidata.org/wiki/Q16589099",
+      "label": {
+        "es": "Laguna de Vilama",
+        "en": "Laguna de Vilama"
+      },
+      "description": {
+        "es": "lago en Argentina",
+        "en": "lake in Argentina"
+      },
+      "coordinates": {
+        "lat": -22.59553056,
+        "lon": -66.92620278,
+        "precision": 0.00001
+      },
+      "eswiki": "Laguna de Vilama"
+    },
+    {
+      "id": "Q147206",
+      "lastrevid": 2517975808,
+      "url": "https://www.wikidata.org/wiki/Q147206",
+      "label": {
+        "es": "Cerro Zapaleri",
+        "en": "Zapaleri"
+      },
+      "description": {
+        "es": "estratovolcán en el norte de Chile, Argentina y en el suroeste de Bolivia",
+        "en": "mountain in Argentina, Bolivia, and Chile"
+      },
+      "coordinates": {
+        "lat": -22.813805555555554,
+        "lon": -67.1807,
+        "precision": 0.000002777777777777778
+      },
+      "eswiki": "Cerro Zapaleri"
+    },
+    {
+      "id": "Q994862",
+      "lastrevid": 2521328333,
+      "url": "https://www.wikidata.org/wiki/Q994862",
+      "label": {
+        "es": "Tres Cruces",
+        "en": "Tres Cruces"
+      },
+      "description": {
+        "es": "asentamiento en Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -22.91666667,
+        "lon": -65.58055556,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Tres Cruces (Argentina)"
+    },
+    {
+      "id": "Q1817419",
+      "lastrevid": 2492161640,
+      "url": "https://www.wikidata.org/wiki/Q1817419",
+      "label": {
+        "es": "Rinconada",
+        "en": "Rinconada"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Rinconada, en la provincia de Jujuy, Argentina",
+        "en": "rural municipality and village in Jujuy Province, Argentina"
+      },
+      "coordinates": {
+        "lat": -22.440277777778,
+        "lon": -66.167222222222,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Rinconada (Argentina)"
+    },
+    {
+      "id": "Q1105115",
+      "lastrevid": 2488328082,
+      "url": "https://www.wikidata.org/wiki/Q1105115",
+      "label": {
+        "es": "Cochinoca",
+        "en": "Cochinoca"
+      },
+      "description": {
+        "es": "localidad en Argentina",
+        "en": "locality"
+      },
+      "coordinates": {
+        "lat": -22.745,
+        "lon": -65.896666666667,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Cochinoca"
+    },
+    {
+      "id": "Q2096227",
+      "lastrevid": 2521320160,
+      "url": "https://www.wikidata.org/wiki/Q2096227",
+      "label": {
+        "es": "Santa Catalina",
+        "en": "Santa Catalina"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Santa Catalina, en la provincia de Jujuy, Argentina",
+        "en": "human settlement in Jujuy Province, Argentina"
+      },
+      "coordinates": {
+        "lat": -21.9452659,
+        "lon": -66.0526142,
+        "precision": 1e-7
+      },
+      "eswiki": "Santa Catalina (Jujuy)"
+    },
+    {
+      "id": "Q829260",
+      "lastrevid": 2511406391,
+      "url": "https://www.wikidata.org/wiki/Q829260",
+      "label": {
+        "es": "Parque Nacional Calilegua",
+        "en": "Calilegua National Park"
+      },
+      "description": {
+        "es": "parque nacional de la provincia de Jujuy, en Argentina",
+        "en": "national park in Jujuy Province, Argentina"
+      },
+      "coordinates": {
+        "lat": -23.639,
+        "lon": -64.838,
+        "precision": 0.00002777777777778
+      },
+      "eswiki": "Parque nacional Calilegua"
+    },
+    {
+      "id": "Q600706",
+      "lastrevid": 2503277643,
+      "url": "https://www.wikidata.org/wiki/Q600706",
+      "label": {
+        "es": "Libertador General San Martín",
+        "en": "Libertador General San Martín"
+      },
+      "description": {
+        "es": "ciudad argentina ubicada en la provincia de Jujuy",
+        "en": "human settlement"
+      },
+      "coordinates": {
+        "lat": -23.8,
+        "lon": -64.783333333333,
+        "precision": 0.016666666666667
+      },
+      "eswiki": "Libertador General San Martín (Jujuy)"
+    },
+    {
+      "id": "Q1020263",
+      "lastrevid": 2530442375,
+      "url": "https://www.wikidata.org/wiki/Q1020263",
+      "label": {
+        "es": "San Pedro de Jujuy",
+        "en": "San Pedro de Jujuy"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de San Pedro, en la provincia de Jujuy, Argentina",
+        "en": "city in the province of Jujuy, Argentina"
+      },
+      "coordinates": {
+        "lat": -24.233333333333,
+        "lon": -64.866666666667,
+        "precision": 0.016666666666667
+      },
+      "eswiki": "San Pedro de Jujuy"
+    },
+    {
+      "id": "Q1015185",
+      "lastrevid": 2521319206,
+      "url": "https://www.wikidata.org/wiki/Q1015185",
+      "label": {
+        "es": "Valle Grande",
+        "en": "Valle Grande"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Valle Grande, en la provincia de Jujuy, Argentina",
+        "en": "village in Jujuy Province, Argentina"
+      },
+      "coordinates": {
+        "lat": -23.4761784,
+        "lon": -64.948555,
+        "precision": 1e-7
+      },
+      "eswiki": "Valle Grande (Jujuy)"
+    },
+    {
+      "id": "Q44217",
+      "lastrevid": 2547752362,
+      "url": "https://www.wikidata.org/wiki/Q44217",
+      "label": {
+        "es": "San Salvador de Jujuy",
+        "en": "San Salvador de Jujuy"
+      },
+      "description": {
+        "es": "capital de la provincia de Jujuy, Argentina",
+        "en": "city in Argentina, capital of Jujuy Province"
+      },
+      "coordinates": {
+        "lat": -24.185555555556,
+        "lon": -65.299444444444,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "San Salvador de Jujuy"
+    },
+    {
+      "id": "Q55385",
+      "lastrevid": 2506723074,
+      "url": "https://www.wikidata.org/wiki/Q55385",
+      "label": {
+        "es": "Palpalá",
+        "en": "Palpalá"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Palpalá, en la provincia de Jujuy, Argentina",
+        "en": "town in Jujuy, Argentina"
+      },
+      "coordinates": {
+        "lat": -24.258333333333,
+        "lon": -65.208333333333,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Palpalá"
+    },
+    {
+      "id": "Q6169692",
+      "lastrevid": 2521326796,
+      "url": "https://www.wikidata.org/wiki/Q6169692",
+      "label": {
+        "es": "Yala",
+        "en": "Yala"
+      },
+      "description": {
+        "es": "localidad de Jujuy, Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -24.116666666666667,
+        "lon": -65.4,
+        "precision": 0.016666666666666666
+      },
+      "eswiki": "Yala"
+    },
+    {
+      "id": "Q78803897",
+      "lastrevid": 2503487392,
+      "url": "https://www.wikidata.org/wiki/Q78803897",
+      "label": {
+        "es": "Termas de Reyes",
+        "en": null
+      },
+      "description": {
+        "es": "Paraje poblado de la provincia de Jujuy en Argentina",
+        "en": null
+      },
+      "coordinates": {
+        "lat": -24.17111111111111,
+        "lon": -65.48611111111111,
+        "precision": 0.0002777777777777778
+      },
+      "eswiki": "Termas de Reyes"
+    },
+    {
+      "id": "Q16616407",
+      "lastrevid": 2118617096,
+      "url": "https://www.wikidata.org/wiki/Q16616407",
+      "label": {
+        "es": "Parque provincial Potrero de Yala",
+        "en": "Parque Provincial"
+      },
+      "description": {
+        "es": null,
+        "en": "Área protegida bajo gestión del gobierno de la Provincia de Jujuy"
+      },
+      "coordinates": {
+        "lat": -24.1,
+        "lon": -65.46666667,
+        "precision": 0.1
+      },
+      "eswiki": "Parque provincial Potrero de Yala"
+    },
+    {
+      "id": "Q4016103",
+      "lastrevid": 2521321337,
+      "url": "https://www.wikidata.org/wiki/Q4016103",
+      "label": {
+        "es": "Volcán",
+        "en": "Volcán"
+      },
+      "description": {
+        "es": "localidad de Jujuy, Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.9179808,
+        "lon": -65.465287,
+        "precision": 0.00001
+      },
+      "eswiki": "Volcán (Jujuy)"
+    },
+    {
+      "id": "Q2302575",
+      "lastrevid": 2521320280,
+      "url": "https://www.wikidata.org/wiki/Q2302575",
+      "label": {
+        "es": "Tumbaya",
+        "en": "Tumbaya"
+      },
+      "description": {
+        "es": "ciudad y cabecera del departamento de Tumbaya, en la provincia de Jujuy, Argentina",
+        "en": "human settlement in Argentina"
+      },
+      "coordinates": {
+        "lat": -23.8575495,
+        "lon": -65.4670199,
+        "precision": 1e-7
+      },
+      "eswiki": "Tumbaya"
+    },
+    {
+      "id": "Q6746083",
+      "lastrevid": 2408274728,
+      "url": "https://www.wikidata.org/wiki/Q6746083",
+      "label": {
+        "es": "Chañi",
+        "en": "Nevado de Chañi"
+      },
+      "description": {
+        "es": "montaña en Argentina",
+        "en": "mountain in Argentina"
+      },
+      "coordinates": {
+        "lat": -24.063333333333,
+        "lon": -65.745833333333,
+        "precision": 0.00027777777777778
+      },
+      "eswiki": "Chañi"
+    }
+  ]
+}

@@ -43,6 +43,20 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
     ],
   },
   {
+    title: "Lugares (nombres, descripciones, coordenadas)",
+    lines: ["Wikidata"],
+    links: [
+      {
+        label: "CC0 1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://www.wikidata.org/",
+      },
+    ],
+  },
+  {
     title: "Límites departamentales",
     lines: [
       "geoBoundaries — Instituto Geográfico Nacional and UNHCR, OCHA ROLAC",

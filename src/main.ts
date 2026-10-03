@@ -27,6 +27,7 @@ import { DETAIL_EDGE_FADE } from "./features/detail/detail-uniforms";
 import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
+import { createPlacesLayer } from "./features/places/places-layer";
 import { metersPerGridCell } from "./geo";
 import {
   detailSurfaceElevation,
@@ -56,6 +57,7 @@ import {
   loadTerrainManifest,
   type TerrainQuality,
 } from "./terrain/heightfield";
+import { loadPlaces, type Place } from "./terrain/places-manifest";
 import type { SatelliteImage } from "./terrain/satellite";
 import { assertSameGroundExtent } from "./terrain/validate";
 import {
@@ -265,6 +267,16 @@ async function fetchDetailSites(
   );
 }
 
+/**
+ * Places are additive like the detail patches: if places.json is missing
+ * or unreadable the app still runs without markers (logged by the
+ * caller).
+ */
+async function fetchPlaces(): Promise<Place[]> {
+  const doc = await loadPlaces((url) => fetch(url));
+  return [...doc.places];
+}
+
 function selectedQuality(search: string): TerrainQuality {
   return new URLSearchParams(search).get("calidad") === "alta"
     ? "high"
@@ -316,13 +328,19 @@ async function main(): Promise<void> {
 
   let data: TerrainData;
   let detailSites: DetailSiteData[] = [];
+  let placesData: Place[] = [];
   try {
-    [data, detailSites] = await Promise.all([
+    [data, detailSites, placesData] = await Promise.all([
       fetchTerrainData(quality),
       fetchDetailSites(detailSatelliteDivisor(profile)).catch((error: unknown) => {
         // Non-fatal: the maqueta still works without the detail patches.
         console.warn("detail patches unavailable", error);
         return [] as DetailSiteData[];
+      }),
+      fetchPlaces().catch((error: unknown) => {
+        // Non-fatal like the patches: no markers, the rest still works.
+        console.warn("places unavailable", error);
+        return [] as Place[];
       }),
     ]);
   } catch (error) {
@@ -393,6 +411,51 @@ async function main(): Promise<void> {
   }
   let coveringPatchIds: ReadonlySet<string> = new Set();
 
+  /**
+   * The pick patches currently covering the base surface — shared by the
+   * tap handler and the places layer's marker anchoring/occlusion.
+   */
+  const coveringPickPatches = (): DetailPickPatch[] => {
+    const covering: DetailPickPatch[] = [];
+    for (const id of coveringPatchIds) {
+      const patch = pickPatchById.get(id);
+      if (patch) covering.push(patch);
+    }
+    return covering;
+  };
+  /**
+   * How far the geomorphed surface may exceed the base heightfield's
+   * [min, max] — the clip-box margin for ray marches over it.
+   */
+  const drawnSurfaceMarginMeters = (): number => {
+    let margin = 0;
+    for (const patch of coveringPickPatches()) {
+      // mix(base, patch) stays inside [min(baseMin, patchMin),
+      // max(baseMax, patchMax)] — that is all the clip box must grow.
+      margin = Math.max(
+        margin,
+        patch.heightfield.max - data.heightfield.max,
+        data.heightfield.min - patch.heightfield.min,
+      );
+    }
+    return Math.max(0, margin);
+  };
+  /**
+   * Elevation of the surface the user sees, in meters at base grid
+   * coords: the geomorphed blend inside covering patches, the plain DEM
+   * bilinear sample elsewhere.
+   */
+  const drawnElevationAt = (i: number, j: number): number =>
+    detailSurfaceElevation(
+      {
+        heightfield: data.heightfield,
+        meshToGrid: terrain.gridUniforms.meshToGrid,
+      },
+      coveringPickPatches(),
+      i,
+      j,
+    );
+
   const terrain = createTerrainLayer({
     heightfield: data.heightfield,
     satellite: data.satellite,
@@ -453,7 +516,27 @@ async function main(): Promise<void> {
       requestFrame();
     },
   });
-  const layers: readonly Layer[] = [terrain, detail, pickMarker, pickPanel];
+  // DOM markers over the terrain: positions, occlusion and labels all
+  // refresh inside update(), which runs only when a frame renders — the
+  // layer itself never dirties the tracker.
+  const places = createPlacesLayer({
+    places: placesData,
+    spec: data.heightfield.spec,
+    verticalExaggeration: () => verticalExaggeration,
+    pixelRatio: () => canvasSurface.dpr,
+    drawnElevationAt,
+    occlusion: {
+      heightfield: data.heightfield,
+      surfaceMarginMeters: drawnSurfaceMarginMeters,
+    },
+  });
+  const layers: readonly Layer[] = [
+    terrain,
+    detail,
+    pickMarker,
+    pickPanel,
+    places,
+  ];
   for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
 
@@ -490,20 +573,7 @@ async function main(): Promise<void> {
       // While patches cover, march the geomorphed surface the user sees —
       // and at ~patch-cell resolution: patch cells are ~1/8 of a base
       // cell, so the default 0.5-cell step could skip narrow ridges.
-      const covering: DetailPickPatch[] = [];
-      let patchMargin = 0;
-      for (const id of coveringPatchIds) {
-        const patch = pickPatchById.get(id);
-        if (!patch) continue;
-        covering.push(patch);
-        // mix(base, patch) stays inside [min(baseMin, patchMin),
-        // max(baseMax, patchMax)] — that is all the clip box must grow.
-        patchMargin = Math.max(
-          patchMargin,
-          patch.heightfield.max - data.heightfield.max,
-          data.heightfield.min - patch.heightfield.min,
-        );
-      }
+      const covering = coveringPickPatches();
       const hit = intersectHeightfield(
         ray,
         data.heightfield,
@@ -512,17 +582,8 @@ async function main(): Promise<void> {
           ? {}
           : {
               stepCells: 0.1,
-              surfaceMarginMeters: Math.max(0, patchMargin),
-              surfaceAt: (i, j) =>
-                detailSurfaceElevation(
-                  {
-                    heightfield: data.heightfield,
-                    meshToGrid: terrain.gridUniforms.meshToGrid,
-                  },
-                  covering,
-                  i,
-                  j,
-                ),
+              surfaceMarginMeters: drawnSurfaceMarginMeters(),
+              surfaceAt: drawnElevationAt,
             },
       );
       // A miss (sky) dispatches undefined so layers clear pick state.

@@ -212,6 +212,127 @@
         font-size: 0.68rem;
         color: #9aa3b2;
       }
+      /* Places layer: marker overlay, click-through except the buttons. */
+      .places-layer {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+        pointer-events: none;
+        z-index: 3;
+      }
+      .place-marker {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 44px;
+        height: 44px;
+        padding: 0;
+        border: none;
+        background: none;
+        cursor: pointer;
+        pointer-events: auto;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .place-marker-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 0.75rem;
+        height: 0.75rem;
+        margin: -0.375rem 0 0 -0.375rem;
+        border-radius: 50%;
+        background: #ffb74d;
+        border: 2px solid #4a2f00;
+        box-shadow: 0 0 0 2px rgb(0 0 0 / 0.35), 0 1px 3px rgb(0 0 0 / 0.5);
+        pointer-events: none;
+      }
+      .place-marker:hover .place-marker-dot,
+      .place-marker:focus-visible .place-marker-dot {
+        transform: scale(1.3);
+      }
+      .place-marker:focus-visible {
+        outline: 2px solid #ffb74d;
+        outline-offset: 2px;
+        border-radius: 50%;
+      }
+      .place-marker-label {
+        position: absolute;
+        top: 50%;
+        left: calc(50% + 10px);
+        transform: translateY(-50%);
+        padding: 0.15rem 0.45rem;
+        border-radius: 0.4rem;
+        background: rgb(23 25 29 / 0.85);
+        color: #e8e9eb;
+        font-size: 0.72rem;
+        font-weight: 600;
+        white-space: nowrap;
+        pointer-events: none;
+      }
+      .place-marker-label--hidden {
+        display: none;
+      }
+      /* Place card: reuses .pick-panel; card-specific bits only. The
+         overlay layer is click-through, so the card opts back in. */
+      .place-card {
+        pointer-events: auto;
+      }
+      .place-card-name {
+        margin: 0;
+        padding-right: 2rem;
+        font-size: 0.9rem;
+        color: #e8e9eb;
+      }
+      .place-card-desc {
+        margin: 0.15rem 0 0.4rem;
+        padding-right: 2rem;
+        font-size: 0.75rem;
+        line-height: 1.45;
+        color: #d7dae0;
+      }
+      .place-card-desc--empty {
+        color: #9aa3b2;
+        font-style: italic;
+      }
+      .place-card-links {
+        margin: 0.45rem 0 0;
+        font-size: 0.75rem;
+      }
+      .place-card-links a {
+        color: #8fc1ff;
+      }
+      /* "Lugares" toggle inside the controls panel, styled like the
+         quality toggle. */
+      .places-toggle {
+        align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0;
+        border: none;
+        background: none;
+        color: #8fc1ff;
+        font: inherit;
+        cursor: pointer;
+      }
+      .places-toggle[aria-pressed="false"] {
+        color: #9aa3b2;
+        text-decoration: line-through;
+      }
+      .places-toggle:focus-visible {
+        outline: 2px solid #8fc1ff;
+        outline-offset: 2px;
+      }
+      .places-toggle--floating {
+        position: absolute;
+        top: calc(0.5rem + env(safe-area-inset-top));
+        left: calc(0.5rem + env(safe-area-inset-left));
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.8);
+        z-index: 4;
+      }
       .debug-overlay {
         position: absolute;
         top: calc(0.5rem + env(safe-area-inset-top));
