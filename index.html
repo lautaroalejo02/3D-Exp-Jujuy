@@ -309,6 +309,187 @@
       .place-card-links a {
         color: #8fc1ff;
       }
+      /* The card is wider than the pick panel (photos need room) and can
+         grow tall when expanded, so it scrolls internally. */
+      .place-card {
+        width: min(26rem, calc(100vw - 1rem));
+        max-width: none;
+        max-height: calc(100dvh - 1rem);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+      }
+      /* Photo strip: horizontal swipeable thumbnails, credit under each. */
+      .place-card-photos {
+        display: flex;
+        gap: 0.6rem;
+        margin: 0 1.8rem 0.45rem 0;
+        overflow-x: auto;
+        overscroll-behavior: contain;
+        scroll-snap-type: x proximity;
+        touch-action: pan-x;
+        scrollbar-width: thin;
+      }
+      .place-card-photo {
+        flex: none;
+        scroll-snap-align: start;
+        margin: 0;
+      }
+      .place-card-photo-button {
+        display: block;
+        padding: 0;
+        border: none;
+        border-radius: 0.35rem;
+        background: #101216;
+        cursor: zoom-in;
+      }
+      .place-card-photo-button img {
+        display: block;
+        height: 170px;
+        width: auto;
+        border-radius: 0.35rem;
+      }
+      .place-card-photo-button:focus-visible {
+        outline: 2px solid #8fc1ff;
+        outline-offset: 2px;
+      }
+      .place-card-photo-credit {
+        margin-top: 0.15rem;
+        font-size: 0.62rem;
+        color: #9aa3b2;
+        white-space: nowrap;
+      }
+      .place-card-photo-credit a {
+        color: #8fc1ff;
+      }
+      .place-card-more {
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
+        padding: 0;
+        border: none;
+        background: none;
+        color: #8fc1ff;
+        font: inherit;
+        font-size: 0.78rem;
+        cursor: pointer;
+      }
+      .place-card-more::after {
+        content: "▾";
+        margin-left: 0.35rem;
+      }
+      .place-card-more[aria-expanded="true"]::after {
+        content: "▴";
+      }
+      .place-card-extract {
+        margin: 0.3rem 0 0;
+        padding: 0.15rem 0 0.15rem 0.6rem;
+        border-left: 3px solid rgb(143 193 255 / 0.5);
+      }
+      .place-card-extract p {
+        margin: 0;
+        font-size: 0.75rem;
+        line-height: 1.5;
+      }
+      .place-card-extract-source {
+        margin: 0.25rem 0 0;
+        font-size: 0.68rem;
+        color: #9aa3b2;
+      }
+      .place-card-extract-source a {
+        color: #8fc1ff;
+      }
+      .place-card-facts {
+        margin-top: 0.4rem;
+      }
+      .place-card-facts-source {
+        margin: 0.25rem 0 0;
+        font-size: 0.68rem;
+        color: #9aa3b2;
+      }
+      .place-card-facts-source a {
+        color: #8fc1ff;
+      }
+      /* Photo lightbox: full-screen dialog over the overlay. Its
+         touch-action opt-out needs the #overlay > selector to out-
+         specify `#overlay > *`, like .places-layer's. */
+      #overlay > .photo-lightbox {
+        touch-action: none;
+      }
+      .photo-lightbox {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        background: rgb(0 0 0 / 0.92);
+      }
+      .photo-lightbox[hidden] {
+        display: none;
+      }
+      .photo-lightbox-stage {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        /* every gesture on the image goes to the pointer handlers
+           (pan when zoomed, swipe to navigate, pinch to zoom) */
+        touch-action: none;
+      }
+      .photo-lightbox-image {
+        max-width: 94vw;
+        max-height: 78vh;
+        width: auto;
+        height: auto;
+        border-radius: 0.4rem;
+      }
+      .photo-lightbox-caption {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        margin: 0;
+        padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom));
+        background: rgb(0 0 0 / 0.55);
+        font-size: 0.72rem;
+        color: #d7dae0;
+        text-align: center;
+      }
+      .photo-lightbox-caption a {
+        color: #8fc1ff;
+      }
+      .photo-lightbox-nav {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 44px;
+        height: 64px;
+        border: none;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.6);
+        color: #e8e9eb;
+        font-size: 1.6rem;
+        cursor: pointer;
+      }
+      .photo-lightbox-prev {
+        left: calc(0.5rem + env(safe-area-inset-left));
+      }
+      .photo-lightbox-next {
+        right: calc(0.5rem + env(safe-area-inset-right));
+      }
+      .photo-lightbox-close {
+        position: absolute;
+        top: calc(0.5rem + env(safe-area-inset-top));
+        right: calc(0.5rem + env(safe-area-inset-right));
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        background: rgb(23 25 29 / 0.6);
+        color: #e8e9eb;
+        font-size: 1.3rem;
+        line-height: 1;
+        cursor: pointer;
+      }
       /* "Lugares" control: a button that opens the place list — the
          keyboard path to each card now that markers are visual only —
          plus a checkbox that shows/hides the map markers. Lives inside
@@ -528,6 +709,15 @@
         }
         .pick-panel-close {
           right: calc(0.25rem + env(safe-area-inset-right));
+        }
+        /* The card sheet never covers more than ~55% of the viewport —
+           the map stays usable above it; the photos strip shrinks. */
+        .place-card {
+          width: auto;
+          max-height: 55vh;
+        }
+        .place-card-photo-button img {
+          height: 110px;
         }
       }
     </style>

@@ -1,0 +1,322 @@
+{
+  "description": "Spanish Wikipedia page summaries (REST v1) with revision id, CC BY-SA 4.0. Shown verbatim with attribution and link.",
+  "downloaded": "2026-10-03",
+  "by": "coordinator, sequential polite requests",
+  "places": [
+    {
+      "id": "Q1025405",
+      "title": "Purmamarca",
+      "revision": "171623733",
+      "url": "https://es.wikipedia.org/wiki/Purmamarca",
+      "extract": "Purmamarca es una localidad del departamento de Tumbaya, en la provincia Jujuy de Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1056078",
+      "title": "Cerro de los Siete Colores",
+      "revision": "172324009",
+      "url": "https://es.wikipedia.org/wiki/Cerro_de_los_Siete_Colores",
+      "extract": "El Macizo de los Siete Colores es un cerro ubicado en las afueras de la ciudad de Purmamarca sobre la Ruta Nacional 52 que se dirige al Paso de Jama, a 4 kilómetros de la Ruta Nacional 9 en la provincia de Jujuy (Argentina).",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q3843526",
+      "title": "Maimará",
+      "revision": "172455553",
+      "url": "https://es.wikipedia.org/wiki/Maimar%C3%A1",
+      "extract": "Maimará es una localidad y municipio de Argentina ubicado en el departamento de Tilcara de la provincia de Jujuy. Su entorno geográfico pertenece a la quebrada de Humahuaca, y tiene como característica principal la policromía de sus cerros. El río Grande corre a escasos metros de allí. Existen quintas que abastecen de frutas y verduras a las localidades cercanas. La zona en el presente es poblada por habitantes de diversos orígenes, desde migrantes bolivianos, siendo estos los principales agricultores de dicho poblado, hasta migrantes de otras provincias argentinas que decidieron asentarse en Maimará.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q604722",
+      "title": "Tilcara",
+      "revision": "174717793",
+      "url": "https://es.wikipedia.org/wiki/Tilcara",
+      "extract": "Tilcara es una ciudad del departamento homónimo de la provincia de Jujuy en Argentina, en el centro de la quebrada de Humahuaca. Otras localidades de importancia son Maimará, Huacalera, Colonia San José, Juella, Hornillos, Perchel y Huichaira.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q2062241",
+      "title": "Pucará de Tilcara",
+      "revision": "174297373",
+      "url": "https://es.wikipedia.org/wiki/Pucar%C3%A1_de_Tilcara",
+      "extract": "El Pucará de Tilcara es un sitio arqueológico formado por numerosas construcciones realizadas por los tilcaras, una parcialidad de los omaguacas, en un punto estratégico sobre la Quebrada de Humahuaca, en la Provincia de Jujuy, República Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q3552109",
+      "title": "Uquía",
+      "revision": "173065043",
+      "url": "https://es.wikipedia.org/wiki/Uqu%C3%ADa",
+      "extract": "Uquía es una localidad ubicada en el departamento de Humahuaca, Provincia de Jujuy, Argentina. En ocasiones se la ha llamado Senador Pérez, que es el nombre de su estación ferroviaria, la cual homenajea al político conservador Domingo T. Pérez, que ejerciera como senador nacional durante más de treinta años.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1026833",
+      "title": "Humahuaca",
+      "revision": "175515895",
+      "url": "https://es.wikipedia.org/wiki/Humahuaca",
+      "extract": "Humahuaca es una localidad argentina en la Provincia de Jujuy, cabecera del departamento homónimo.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q16630587",
+      "title": "Serranía de Hornocal",
+      "revision": "163206570",
+      "url": "https://es.wikipedia.org/wiki/Serran%C3%ADa_de_Hornocal",
+      "extract": "La serranía de Hornocal es una sierra ubicada a 25 kilómetros de la ciudad de Humahuaca en la provincia de Jujuy en la Argentina. Está formada mayormente por rocas de la Formación Yacoraite, una unidad geológica calcárea de antigüedad Cretácico Superior, que se extiende desde la provincia de Salta, atravesando la Quebrada de Humahuaca y luego el altiplano boliviano hasta Perú. Este accidente geográfico tiene una altura de 4761 metros sobre el nivel del mar.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q28061",
+      "title": "Quebrada de Humahuaca",
+      "revision": "174297102",
+      "url": "https://es.wikipedia.org/wiki/Quebrada_de_Humahuaca",
+      "extract": "La Quebrada de Humahuaca se ubica al noroeste de Argentina, en la provincia de Jujuy. Es un valle andino de 155 kilómetros de extensión, flanqueado por altas cadenas montañosas y cavado laboriosamente por el río Grande, ubicado a más de 2000 metros de altura. Fue declarada Patrimonio Cultural de la Humanidad por la UNESCO en el 2003.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q5793997",
+      "title": "Cuesta de Lipán",
+      "revision": "175593057",
+      "url": "https://es.wikipedia.org/wiki/Cuesta_de_Lip%C3%A1n",
+      "extract": "La cuesta del Lipán corresponde a un tramo zigzagueante y empinado de la Ruta Nacional 52, ubicada en el departamento de Tumbaya, Provincia de Jujuy, República Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q2893104",
+      "title": "Salinas Grandes (Jujuy y Salta)",
+      "revision": "173831056",
+      "url": "https://es.wikipedia.org/wiki/Salinas_Grandes_(Jujuy_y_Salta)",
+      "extract": "Salinas Grandes es la denominación de un salar de las provincias argentinas de Jujuy y Salta situadas al noroeste de Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1388407",
+      "title": "Laguna de Guayatayoc",
+      "revision": "141567357",
+      "url": "https://es.wikipedia.org/wiki/Laguna_de_Guayatayoc",
+      "extract": "La Laguna de Guayatayoc es un cuerpo de agua salada de Argentina, situada en el sur del Departamento de Cochinoca en la provincia de Jujuy, es decir, en el extremo noroeste.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q830120",
+      "title": "Monumento natural Laguna de los Pozuelos",
+      "revision": "173903713",
+      "url": "https://es.wikipedia.org/wiki/Monumento_natural_Laguna_de_los_Pozuelos",
+      "extract": "El monumento natural Laguna de los Pozuelos es un área natural protegida de Argentina, que se ubica en el norte de la provincia de Jujuy en abarcando parte de los departamentos Rinconada, Yavi y Santa Catalina. Tiene 16 224 hectáreas y pertenece a la ecorregión de la Puna.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q55386",
+      "title": "Abra Pampa",
+      "revision": "174747283",
+      "url": "https://es.wikipedia.org/wiki/Abra_Pampa",
+      "extract": "Abra Pampa es la ciudad cabecera del departamento de Cochinoca, en la provincia argentina de Jujuy.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q693381",
+      "title": "La Quiaca",
+      "revision": "175035035",
+      "url": "https://es.wikipedia.org/wiki/La_Quiaca",
+      "extract": "La Quiaca es una ciudad del norte de Argentina, ubicada al norte de la provincia de Jujuy. Es cabecera del departamento de Yavi y sirve de paso fronterizo con Bolivia, a través de la ciudad de Villazón en el departamento de Potosí con la cual conforma actualmente una conurbación de más de 50 000 habitantes.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1024040",
+      "title": "Yavi",
+      "revision": "171089397",
+      "url": "https://es.wikipedia.org/wiki/Yavi",
+      "extract": "Yavi es una localidad de la Argentina en la provincia de Jujuy, en el departamento Yavi. Fue asiento del único marquesado que se creara en el territorio de lo que sería luego la República Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1495796",
+      "title": "Susques",
+      "revision": "173260692",
+      "url": "https://es.wikipedia.org/wiki/Susques",
+      "extract": "Susques es una localidad de la Puna argentina o Altiplano argentino, situada en el oeste de la provincia de Jujuy, cabecera del departamento homónimo.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q16589099",
+      "title": "Laguna de Vilama",
+      "revision": "170952240",
+      "url": "https://es.wikipedia.org/wiki/Laguna_de_Vilama",
+      "extract": "La laguna de Vilama es un cuerpo de agua endorreico que se sitúa en la región altiplánica del noroeste de la Argentina, en un área limítrofe con el sudoeste de Bolivia.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q147206",
+      "title": "Cerro Zapaleri",
+      "revision": "173383931",
+      "url": "https://es.wikipedia.org/wiki/Cerro_Zapaleri",
+      "extract": "El cerro Zapaleri es un volcán extinto que pertenece a un ramal de la cordillera de los Andes cuya cumbre sur -22.813810, -67.180724 sirve de punto trifinio entre Argentina, Bolivia y Chile.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q994862",
+      "title": "Tres Cruces (Argentina)",
+      "revision": "153889532",
+      "url": "https://es.wikipedia.org/wiki/Tres_Cruces_(Argentina)",
+      "extract": "Tres Cruces es una localidad de la Puna argentina, situada en el norte de la provincia de Jujuy, perteneciente al departamento Humahuaca.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1817419",
+      "title": "Rinconada (Argentina)",
+      "revision": "166970424",
+      "url": "https://es.wikipedia.org/wiki/Rinconada_(Argentina)",
+      "extract": "Rinconada es una localidad del Altiplano argentino, situada en el oeste de la provincia de Jujuy y cabecera del departamento Rinconada.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1105115",
+      "title": "Cochinoca",
+      "revision": "164827754",
+      "url": "https://es.wikipedia.org/wiki/Cochinoca",
+      "extract": "Cochinoca es una localidad del departamento Cochinoca en la provincia de Jujuy en Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q2096227",
+      "title": "Santa Catalina (Jujuy)",
+      "revision": "157401752",
+      "url": "https://es.wikipedia.org/wiki/Santa_Catalina_(Jujuy)",
+      "extract": "Santa Catalina es una localidad del norte argentino, y cabecera del departamento homónimo, provincia de Jujuy. Es la 2.ª localidad permanentemente habitada más norteña de la Argentina, luego de El Angosto. Se encuentra a 67 km al oeste de La Quiaca.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q829260",
+      "title": "Parque nacional Calilegua",
+      "revision": "173751294",
+      "url": "https://es.wikipedia.org/wiki/Parque_nacional_Calilegua",
+      "extract": "El parque nacional Calilegua es un área natural protegida situada sobre las faldas orientales de la sierra de Calilegua, en el sudeste de la provincia de Jujuy.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q600706",
+      "title": "Libertador General San Martín (Jujuy)",
+      "revision": "175537826",
+      "url": "https://es.wikipedia.org/wiki/Libertador_General_San_Mart%C3%ADn_(Jujuy)",
+      "extract": "Libertador General San Martín —usualmente referida como Libertador o Ledesma— es la ciudad cabecera del departamento de Ledesma, en la provincia argentina de Jujuy.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1020263",
+      "title": "San Pedro de Jujuy",
+      "revision": "174815905",
+      "url": "https://es.wikipedia.org/wiki/San_Pedro_de_Jujuy",
+      "extract": "San Pedro de Jujuy, a veces abreviada SPJ, es una ciudad argentina ubicada en la provincia de Jujuy, la segunda más poblada tras la capital provincial, San Salvador de Jujuy. Se encuentra ubicada dentro del Valle del río San Francisco de Jujuy, a 15 km de la confluencia de los ríos Grande y Lavayén que luego forman el río San Francisco. Es la cabecera del departamento San Pedro.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q1015185",
+      "title": "Valle Grande (Jujuy)",
+      "revision": "170761426",
+      "url": "https://es.wikipedia.org/wiki/Valle_Grande_(Jujuy)",
+      "extract": "Valle Grande es una localidad de la provincia de Jujuy, cabecera del departamento homónimo.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q44217",
+      "title": "San Salvador de Jujuy",
+      "revision": "174262265",
+      "url": "https://es.wikipedia.org/wiki/San_Salvador_de_Jujuy",
+      "extract": "San Salvador de Jujuy es una ciudad del noroeste argentino, cabecera del departamento Doctor Manuel Belgrano y capital y ciudad más poblada de la provincia de Jujuy. Llamada popularmente «Tacita de Plata», se encuentra ubicada en un fértil valle, en la confluencia de los ríos Grande y Xibi Xibi, rodeada de montañas que, hacia el oeste, en invierno, suelen estar cubiertas de nieve.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q55385",
+      "title": "Palpalá",
+      "revision": "164568112",
+      "url": "https://es.wikipedia.org/wiki/Palpal%C3%A1",
+      "extract": "Palpalá es una ciudad argentina, cabecera del departamento homónimo, ubicada a 13 km al sudeste de la ciudad capital de San Salvador de Jujuy y a una altitud de 1125 m s. n. m.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q6169692",
+      "title": "Yala",
+      "revision": "173911993",
+      "url": "https://es.wikipedia.org/wiki/Yala",
+      "extract": "Yala es una localidad y municipio de la provincia de Jujuy, Argentina. Se encuentra ubicada en el departamento Doctor Manuel Belgrano, a 12 km de la ciudad de San Salvador de Jujuy, con la cual se encuentra conurbada en el denominado Gran San Salvador de Jujuy.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q78803897",
+      "title": "Termas de Reyes",
+      "revision": "174791985",
+      "url": "https://es.wikipedia.org/wiki/Termas_de_Reyes",
+      "extract": "Termas de Reyes es un paraje del departamento Doctor Manuel Belgrano en la provincia de Jujuy, en el extremo norte de Argentina, a la vera del río Reyes, distante 19 kilómetros de San Salvador de Jujuy, cerca del ingreso a la Quebrada de Humahuaca. La localidad es reconocida por sus aguas termales y hoteles.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q16616407",
+      "title": "Parque provincial Potrero de Yala",
+      "revision": "168722877",
+      "url": "https://es.wikipedia.org/wiki/Parque_provincial_Potrero_de_Yala",
+      "extract": "El Parque Provincial Potrero de Yala es un área natural protegida del departamento Doctor Manuel Belgrano en la provincia de Jujuy, Argentina.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q4016103",
+      "title": "Volcán (Jujuy)",
+      "revision": "175475659",
+      "url": "https://es.wikipedia.org/wiki/Volc%C3%A1n_(Jujuy)",
+      "extract": "Volcán es una localidad del departamento Tumbaya en la provincia de Jujuy en Argentina. Se encuentra a 41,9 kilómetros de San Salvador de Jujuy, a la vera de la Ruta Nacional N.º 9. Es la primera localidad que se encuentra en el recorrido en sentido norte de la quebrada de Humahuaca, declarada en 2002 Patrimonio de la Humanidad por la UNESCO.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q2302575",
+      "title": "Tumbaya",
+      "revision": "169567536",
+      "url": "https://es.wikipedia.org/wiki/Tumbaya",
+      "extract": "Tumbaya es una localidad del departamento de Tumbaya, en la provincia argentina de Jujuy. Esta villa está a orillas del río Grande, en la Quebrada de Humahuaca.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    },
+    {
+      "id": "Q6746083",
+      "title": "Chañi",
+      "revision": "158485320",
+      "url": "https://es.wikipedia.org/wiki/Cha%C3%B1i",
+      "extract": "El cerro Chañi, más conocido como Nevado de Chañi, es el cerro más alto de los Andes jujeños. Su altitud máxima, de 5896 m s. n. m., es la mayor de la provincia argentina de Jujuy. Como otros picos elevados de la región, es visitado por alpinistas y aficionados al montañismo de todas partes del mundo.",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+    }
+  ]
+}

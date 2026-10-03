@@ -57,6 +57,48 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
     ],
   },
   {
+    title: "Lugares (datos: tipo, población, superficie, patrimonio, fundación)",
+    lines: ["Wikidata"],
+    links: [
+      {
+        label: "CC0 1.0",
+        url: "https://creativecommons.org/publicdomain/zero/1.0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://www.wikidata.org/",
+      },
+    ],
+  },
+  {
+    title: "Fotos de los lugares",
+    lines: [
+      "Wikimedia Commons — cada foto muestra su autor y licencia junto a ella",
+    ],
+    links: [
+      {
+        label: "Fuente",
+        url: "https://commons.wikimedia.org/",
+      },
+    ],
+  },
+  {
+    title: "Extractos de los lugares",
+    lines: [
+      "Wikipedia en español — texto copiado sin cambios junto a cada ficha, con enlace a la revisión",
+    ],
+    links: [
+      {
+        label: "CC BY-SA 4.0",
+        url: "https://creativecommons.org/licenses/by-sa/4.0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://es.wikipedia.org/",
+      },
+    ],
+  },
+  {
     title: "Límites departamentales",
     lines: [
       "geoBoundaries — Instituto Geográfico Nacional and UNHCR, OCHA ROLAC",

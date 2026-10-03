@@ -3,16 +3,12 @@ import type { GridSpec } from "../../geo/grid";
 import { gridToWorld, lonLatToGrid } from "../../geo";
 import type { Heightfield } from "../../terrain/heightfield";
 import type { Place } from "../../terrain/places-manifest";
+import { createPlaceCard, type PlaceCard } from "./place-card";
 import {
-  formatElevation,
-  formatLatitude,
-  formatLongitude,
-} from "../../ui/pick-panel";
-import {
-  placeRegionLabel,
-  regionSourceLabel,
-  type PlaceRegionLookup,
-} from "./place-region";
+  createPhotoLightbox,
+  type PhotoLightbox,
+} from "./photo-lightbox";
+import type { PlaceRegionLookup } from "./place-region";
 import {
   declutterLabels,
   isOccluded,
@@ -148,71 +144,19 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
 
   // Mounted DOM (set by ui.mount; absent in the headless snapshot).
   let container: HTMLElement | undefined;
-  let card: HTMLElement | undefined;
-  let cardName: HTMLElement | undefined;
-  let cardDesc: HTMLElement | undefined;
-  let cardDept: HTMLElement | undefined;
-  let cardRegion: HTMLElement | undefined;
-  let cardAlt: HTMLElement | undefined;
-  let cardLat: HTMLElement | undefined;
-  let cardLon: HTMLElement | undefined;
-  let cardAltNote: HTMLElement | undefined;
-  let cardLinks: HTMLElement | undefined;
+  let card: PlaceCard | undefined;
+  let lightbox: PhotoLightbox | undefined;
   let visibleCheckbox: HTMLInputElement | undefined;
 
   const closeCard = (): void => {
-    if (card) card.hidden = true;
+    card?.close();
+    lightbox?.close();
     selected = undefined;
   };
 
   const openCard = (marker: MarkerState): void => {
     if (!card) return;
-    const place = marker.place;
-    if (cardName) cardName.textContent = place.name;
-    if (cardDesc) {
-      cardDesc.textContent = place.description ?? "Sin descripción";
-      cardDesc.classList.toggle(
-        "place-card-desc--empty",
-        place.description === null,
-      );
-    }
-    if (cardDept) cardDept.textContent = place.department;
-    if (cardRegion && opts.regions) {
-      cardRegion.textContent = placeRegionLabel(
-        place.department,
-        opts.regions,
-      );
-    }
-    if (cardAlt) cardAlt.textContent = formatElevation(place.elevationMeters);
-    if (cardLat) cardLat.textContent = formatLatitude(place.lat);
-    if (cardLon) cardLon.textContent = formatLongitude(place.lon);
-    if (cardAltNote) {
-      cardAltNote.textContent =
-        place.elevationSource === "detail-dem"
-          ? "Altura: modelo de elevación de detalle."
-          : "Altura: modelo de elevación.";
-    }
-    if (cardLinks) {
-      cardLinks.textContent = "";
-      const doc = cardLinks.ownerDocument;
-      const wikidata = doc.createElement("a");
-      wikidata.href = place.wikidataUrl;
-      wikidata.textContent = "Ver en Wikidata";
-      const links = [wikidata];
-      if (place.eswikiUrl !== null) {
-        const wikipedia = doc.createElement("a");
-        wikipedia.href = place.eswikiUrl;
-        wikipedia.textContent = "Artículo en Wikipedia";
-        links.push(wikipedia);
-      }
-      for (const [k, link] of links.entries()) {
-        link.rel = "noopener noreferrer";
-        link.target = "_blank";
-        if (k > 0) cardLinks.appendChild(doc.createTextNode(" · "));
-        cardLinks.appendChild(link);
-      }
-    }
-    card.hidden = false;
+    card.open(marker.place);
     selected = marker;
   };
 
@@ -388,68 +332,23 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           layer.appendChild(el);
         }
 
-        // Card ("ficha"): reuses the pick-panel shell + data grid so the
-        // two panels read and behave identically, including the mobile
-        // bottom sheet.
-        const cardEl = doc.createElement("section");
-        cardEl.className = "pick-panel place-card";
-        cardEl.hidden = true;
-        cardEl.setAttribute("aria-live", "polite");
-
-        const close = doc.createElement("button");
-        close.type = "button";
-        close.className = "pick-panel-close";
-        close.textContent = "×";
-        close.setAttribute("aria-label", "Cerrar");
-        close.addEventListener("click", closeCard);
-
-        const name = doc.createElement("h2");
-        name.className = "place-card-name";
-        const desc = doc.createElement("p");
-        desc.className = "place-card-desc";
-
-        const rows = doc.createElement("dl");
-        rows.className = "pick-panel-data";
-        const row = (labelText: string): HTMLElement => {
-          const dt = doc.createElement("dt");
-          dt.textContent = labelText;
-          const dd = doc.createElement("dd");
-          rows.append(dt, dd);
-          return dd;
-        };
-        const dept = row("Departamento");
-        const region = opts.regions ? row("Región") : undefined;
-        const alt = row("Altura");
-        const lat = row("Latitud");
-        const lon = row("Longitud");
-
-        const altNote = doc.createElement("p");
-        altNote.className = "pick-panel-note";
-        const sourceNote = doc.createElement("p");
-        sourceNote.className = "pick-panel-note";
-        sourceNote.textContent =
-          "Nombre, descripción y coordenadas: Wikidata (CC0).";
-        if (opts.regions) {
-          // The credit links to the dataset's source instead of naming it
-          // in hard-coded text — title/publisher/url come from
-          // regions-jujuy.json via the lookup.
-          const regionSource = doc.createElement("a");
-          regionSource.href = opts.regions.source.url;
-          regionSource.rel = "noopener noreferrer";
-          regionSource.target = "_blank";
-          regionSource.textContent = regionSourceLabel(opts.regions.source);
-          sourceNote.append(
-            doc.createTextNode(" Región: "),
-            regionSource,
-            doc.createTextNode("."),
-          );
-        }
-        const links = doc.createElement("p");
-        links.className = "place-card-links";
-
-        cardEl.append(close, name, desc, rows, altNote, sourceNote, links);
-        layer.appendChild(cardEl);
+        // Card ("ficha") + photo lightbox: DOM components built by
+        // place-card.ts / photo-lightbox.ts. The card lives inside the
+        // click-through places layer (it opts pointer-events back in);
+        // the lightbox mounts on the overlay root, above everything.
+        const lightboxEl = createPhotoLightbox(doc);
+        const cardComponent = createPlaceCard(doc, {
+          ...(opts.regions !== undefined
+            ? { regions: opts.regions }
+            : {}),
+          onPhoto: (place, index) => {
+            lightboxEl.open(place.photos, index, place.name);
+          },
+          onDismiss: closeCard,
+        });
+        layer.appendChild(cardComponent.el);
         root.appendChild(layer);
+        root.appendChild(lightboxEl.el);
 
         // "Lugares" control: a button that expands a list with one button
         // per place (sorted by name) — the keyboard path to the same card
@@ -530,21 +429,15 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         layer.hidden = !visible;
 
         container = layer;
-        card = cardEl;
-        cardName = name;
-        cardDesc = desc;
-        cardDept = dept;
-        cardRegion = region;
-        cardAlt = alt;
-        cardLat = lat;
-        cardLon = lon;
-        cardAltNote = altNote;
-        cardLinks = links;
+        card = cardComponent;
+        lightbox = lightboxEl;
 
         return () => {
           container = undefined;
           card = undefined;
+          lightbox = undefined;
           visibleCheckbox = undefined;
+          lightboxEl.el.remove();
           layer.remove();
           control.remove();
         };

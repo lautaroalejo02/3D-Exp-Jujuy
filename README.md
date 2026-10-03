@@ -12,7 +12,7 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 - `npm run build:detail` — genera `data/build/detail/` (parches de alta resolución por sitio: satélite z14 mosaico + alturas z12 Int16 + `manifest.json`); idempotente, `--force` reconstruye. Verifica el sha256 de cada tile crudo contra `data/raw/detail/sources.json` antes de usarlo
 - `npm run verify:detail` — vuelve a descargar cada URL de `data/raw/detail/sources.json` y compara el sha256 (también contra la copia local). No escribe nada; sale con error si hay diferencias
 - `npm run build:places` — genera `data/build/places.json` (los 35 lugares de `data/raw/places/wikidata-places.json` con altura bilineal del DEM — y del DEM de detalle cuando el punto cae en un parche — y departamento del raster geoBoundaries); idempotente, imprime «up to date» si nada cambió
-- `npm run verify:places` — vuelve a consultar cada Q-id en Wikidata (secuencial, con pausa) y compara etiqueta, descripción y coordenadas contra el archivo crudo. No escribe nada; sale con error si hay diferencias
+- `npm run verify:places` — vuelve a consultar cada Q-id en Wikidata (secuencial, con pausa) y compara etiqueta, descripción y coordenadas contra el archivo crudo; además re-verifica la licencia de cada foto en Commons y que cada revisión de extracto siga existiendo en es.wikipedia. No escribe nada; sale con error si hay diferencias
 - `npm run dev` — servidor de desarrollo (sirve `data/build/` en la raíz del sitio)
 - `npm run build` — `build:data` + `build:detail` + `build:places` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
 - `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
@@ -80,10 +80,18 @@ aviso de que puede ir lenta).
   del DEM a resolución completa (y del DEM de detalle cuando el punto cae
   en un parche, con `elevationSource` que dice cuál usa la ficha),
   departamento del raster geoBoundaries («Fuera de Jujuy» si cae afuera)
-  y enlaces a Wikidata/es.wikipedia. La capa `src/features/places/` los
+  y enlaces a Wikidata/es.wikipedia. Además fusiona, por lugar, las fotos
+  de Wikimedia Commons (`commons-photos.json`; autor, licencia y enlaces
+  por foto, con `fullUrl` derivado del patrón de miniaturas y sin params
+  `utm_*`), el extracto de Wikipedia en español
+  (`wikipedia-extracts.json`, CC BY-SA 4.0, con revisión) y los datos
+  estructurados de Wikidata (`wikidata-facts.json`, CC0; años derivados
+  de los literales de tiempo). La capa `src/features/places/` los
   dibuja como marcadores DOM proyectados por cuadro, con oclusión
   aproximada contra el relieve y desempalme de etiquetas; el interruptor
-  «Lugares» los enciende/apaga.
+  «Lugares» los enciende/apaga. La ficha muestra la tira de fotos arriba
+  de la descripción (lightbox al tocarlas) y un «Ver más» con el
+  extracto y los datos.
 - `debug-alignment.png` — hillshade sobre satélite para verificar la
   registración DEM/imagen (no se publica en `dist/`).
 - `debug-province.png` — contorno de la provincia y bordes departamentales

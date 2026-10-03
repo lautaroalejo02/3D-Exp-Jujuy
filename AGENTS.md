@@ -25,7 +25,7 @@ Web educativa para secundaria: maqueta 3D del relieve real de Jujuy con imagen s
 - Si no hay fuente confiable, dejar un TODO explícito y avisar. No inventar ni completar con datos plausibles.
 - Textos en español de Argentina, claros para secundaria, sin jerga innecesaria.
 - `data/raw/` no se modifica. Todo lo derivado se genera con scripts en `scripts/` hacia `data/build/` (ignorado por git). Los scripts deben poder correrse de nuevo y dar el mismo resultado.
-- Solo datos con licencia compatible (CC BY, ODbL, dominio público). Cada fuente va en `ATTRIBUTIONS.md` y las atribuciones se ven en la página.
+- Solo datos con licencia compatible (CC BY, ODbL, dominio público, CC BY-SA (fotos de Wikimedia Commons y extractos de Wikipedia, aprobado por Lautaro el 2026-10-03), siempre con autor, licencia y enlace visibles junto al contenido). Cada fuente va en `ATTRIBUTIONS.md` y las atribuciones se ven en la página.
 - Excepción aprobada por Lautaro (2026-10-03): el PIP Jujuy (PISEAR, Ministerio de Agroindustria de la Nación) se usa con permiso para la agrupación de regiones y sus textos, citando la fuente.
 
 ## Tests y verificación

@@ -1,0 +1,471 @@
+{
+  "description": "Structured Wikidata facts (CC0): instance of, latest population with date, area km2, heritage designations, inception.",
+  "downloaded": "2026-10-03",
+  "by": "coordinator, sequential polite requests",
+  "places": [
+    {
+      "id": "Q1025405",
+      "lastrevid": 2552211574,
+      "instanceOf": [
+        "pueblo"
+      ],
+      "population": {
+        "amount": 1838,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [
+        "Lugar o Sitio Histórico Nacional"
+      ],
+      "inception": null
+    },
+    {
+      "id": "Q1056078",
+      "lastrevid": 2521598207,
+      "instanceOf": [
+        "colina"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q3843526",
+      "lastrevid": 2529607373,
+      "instanceOf": [
+        "localidad",
+        "pueblo"
+      ],
+      "population": {
+        "amount": 6906,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q604722",
+      "lastrevid": 2549164947,
+      "instanceOf": [
+        "municipio"
+      ],
+      "population": {
+        "amount": 5691,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q2062241",
+      "lastrevid": 2537370688,
+      "instanceOf": [
+        "fortaleza",
+        "yacimiento arqueológico"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [
+        "Monumento Histórico Nacional de Argentina"
+      ],
+      "inception": "+1100-00-00T00:00:00Z"
+    },
+    {
+      "id": "Q3552109",
+      "lastrevid": 2521321183,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 1510,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q1026833",
+      "lastrevid": 2549918449,
+      "instanceOf": [
+        "ciudad",
+        "municipio"
+      ],
+      "population": {
+        "amount": 15992,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [
+        "Lugar o Sitio Histórico Nacional"
+      ],
+      "inception": "+1594-00-00T00:00:00Z"
+    },
+    {
+      "id": "Q16630587",
+      "lastrevid": 2436445649,
+      "instanceOf": [
+        "cordillera"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q28061",
+      "lastrevid": 2537370904,
+      "instanceOf": [
+        "cañón",
+        "valle"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [
+        "Patrimonio de la Humanidad"
+      ],
+      "inception": null
+    },
+    {
+      "id": "Q5793997",
+      "lastrevid": 2086444662,
+      "instanceOf": [
+        "montaña"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q2893104",
+      "lastrevid": 2455533996,
+      "instanceOf": [
+        "salar"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q1388407",
+      "lastrevid": 2159259640,
+      "instanceOf": [
+        "lago"
+      ],
+      "population": null,
+      "areaKm2": 240,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q830120",
+      "lastrevid": 2159259170,
+      "instanceOf": [
+        "lago"
+      ],
+      "population": null,
+      "areaKm2": 162.24,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q55386",
+      "lastrevid": 2530496349,
+      "instanceOf": [
+        "municipio"
+      ],
+      "population": {
+        "amount": 12513,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q693381",
+      "lastrevid": 2537276297,
+      "instanceOf": [
+        "municipio",
+        "ciudad fronteriza"
+      ],
+      "population": {
+        "amount": 22211,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q1024040",
+      "lastrevid": 2503277167,
+      "instanceOf": [
+        "localidad"
+      ],
+      "population": {
+        "amount": 921,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [
+        "Lugar o Sitio Histórico Nacional"
+      ],
+      "inception": null
+    },
+    {
+      "id": "Q1495796",
+      "lastrevid": 2432470727,
+      "instanceOf": [
+        "localidad"
+      ],
+      "population": {
+        "amount": 2974,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q16589099",
+      "lastrevid": 2159258439,
+      "instanceOf": [
+        "lago"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q147206",
+      "lastrevid": 2517975808,
+      "instanceOf": [
+        "montaña"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q994862",
+      "lastrevid": 2521328333,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 622,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q1817419",
+      "lastrevid": 2492161640,
+      "instanceOf": [
+        "localidad"
+      ],
+      "population": {
+        "amount": 1007,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q1105115",
+      "lastrevid": 2488328082,
+      "instanceOf": [
+        "localidad"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q2096227",
+      "lastrevid": 2521320160,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 920,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q829260",
+      "lastrevid": 2511406391,
+      "instanceOf": [
+        "parque nacional",
+        "parque nacional de Argentina"
+      ],
+      "population": null,
+      "areaKm2": 76.3,
+      "heritage": [],
+      "inception": "+1979-07-19T00:00:00Z"
+    },
+    {
+      "id": "Q600706",
+      "lastrevid": 2503277643,
+      "instanceOf": [
+        "ciudad",
+        "municipio"
+      ],
+      "population": {
+        "amount": 48518,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": "+1899-01-01T00:00:00Z"
+    },
+    {
+      "id": "Q1020263",
+      "lastrevid": 2530442375,
+      "instanceOf": [
+        "ciudad",
+        "municipio"
+      ],
+      "population": {
+        "amount": 72063,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": 2150,
+      "heritage": [],
+      "inception": "+1883-05-25T00:00:00Z"
+    },
+    {
+      "id": "Q1015185",
+      "lastrevid": 2521319206,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 668,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q44217",
+      "lastrevid": 2547752362,
+      "instanceOf": [
+        "ciudad",
+        "municipio",
+        "gran ciudad"
+      ],
+      "population": {
+        "amount": 312446,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": 25,
+      "heritage": [],
+      "inception": "+1593-00-00T00:00:00Z"
+    },
+    {
+      "id": "Q55385",
+      "lastrevid": 2506723074,
+      "instanceOf": [
+        "ciudad",
+        "municipio"
+      ],
+      "population": {
+        "amount": 65541,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": 437,
+      "heritage": [],
+      "inception": "+1948-04-17T00:00:00Z"
+    },
+    {
+      "id": "Q6169692",
+      "lastrevid": 2521326796,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 8544,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q78803897",
+      "lastrevid": 2503487392,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q16616407",
+      "lastrevid": 2118617096,
+      "instanceOf": [],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q4016103",
+      "lastrevid": 2521321337,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 1843,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q2302575",
+      "lastrevid": 2521320280,
+      "instanceOf": [
+        "asentamiento"
+      ],
+      "population": {
+        "amount": 849,
+        "date": "+2022-00-00T00:00:00Z"
+      },
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    },
+    {
+      "id": "Q6746083",
+      "lastrevid": 2408274728,
+      "instanceOf": [
+        "montaña"
+      ],
+      "population": null,
+      "areaKm2": null,
+      "heritage": [],
+      "inception": null
+    }
+  ]
+}
