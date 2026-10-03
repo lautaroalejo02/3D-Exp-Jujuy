@@ -55,10 +55,10 @@ src/features/<nombre>/     (futuro) regiones, lugares, perfil, lluvia
 | T3 | Módulo geo + tests (TDD) | delegada (Devin) | [x] | `a571281`; 35 tests; GGA PASSED |
 | T4 | Pipeline de datos + tests de funciones puras | delegada (Devin) | [x] | `2f00286`; 82 tests; build determinista; GGA PASSED |
 | T5 | Render del terreno (vgpu), calidad default/alta, captura headless | delegada (Devin; fallback subagente Claude) | [x] | `ff30bd5`; 99 tests; snapshots OK; GGA PASSED (2º intento: altura hardcodeada y coordenada sin fuente corregidas) |
-| T6 | Cámara + controles mouse/touch | delegada (Devin) | [ ] | |
-| T7 | Picking + panel lat/lon/altura | delegada (Devin) | [ ] | |
-| T8 | Mediciones, DECISIONS.md, deploy preview, Engram | inline + verificación | [ ] | |
-| T9 | Auditoría independiente: alineación DEM↔satélite + matemática geo | delegada (Codex) | [ ] | |
+| T6 | Cámara + controles mouse/touch | delegada (Devin) | [x] | `b3172fb`; 124 tests (25 de gestos); GGA PASSED. Incidente: dos instancias de Devin corrieron en paralelo por un `&` mal encadenado; resultado revisado y coherente |
+| T7 | Picking + panel lat/lon/altura | delegada (Devin) | [x] | `cb135ee`; 139 tests; marcador verificado en captura sobre Humahuaca; DEM 2965,6 m (normal) / 2967,2 m (alta) en Wikidata Q1026833; GGA PASSED |
+| T8 | Mediciones, DECISIONS.md, deploy preview, Engram | inline + verificación | [x] | `7de8249` (Vercel); deploy https://maqueta-jujuy.vercel.app (primer deploy → producción por defecto de Vercel); DECISIONS.md |
+| T9 | Auditoría independiente: alineación DEM↔satélite + matemática geo | delegada (Codex Sol) | [x] | Sin blockers; alineación exacta y 6,2 M celdas sin diferencias. 2 hallazgos (caché del pipeline, extensión satélite/alturas) corregidos por Devin: 155 tests |
 
 ## Criterios de aceptación
 - `npm run dev` muestra la maqueta y se reconocen la Quebrada de Humahuaca y la Puna (confirmación visual de Lautaro).
@@ -72,12 +72,22 @@ src/features/<nombre>/     (futuro) regiones, lugares, perfil, lluvia
 ## RDD
 - Rango 036c136..ff30bd5 (T1–T5): medium, slice_budget_reached, 6372 líneas. Consentimiento: **declined** por Lautaro (candidate-scoped). Próxima base: ff30bd5.
 - `.atl/` excluido localmente vía `.git/info/exclude` para que el inventario de untracked quede vacío.
+- Política (Lautaro, 2026-10-03): candidatos de riesgo bajo/medio se saltean sin preguntar y se registran acá; solo se pregunta en riesgo alto.
 
-## Mediciones (T4/T5)
-- Descarga: default ~5,4 MB (satélite 2,4 + alturas 3,0); alta ~20 MB (8 + 12).
+### RDD pendiente (salteado, revisar después)
+| Candidato (target) | Rango | Riesgo | Líneas |
+|---|---|---|---|
+| `sha256:61e98…d421` | 036c136..ff30bd5 (T1–T5) | medium | 6372 |
+| `sha256:c88b9…2970` | 036c136..b3172fb (T1–T6) | medium | 7214 |
+| `sha256:10122…f524` | 036c136..cb135ee (T1–T7) | medium | 8325 |
+
+## Mediciones (T4/T5/T8)
+- Descarga medida en producción (brotli): normal ~4,9 MB (alturas 2,36 + satélite 2,49 + JS ~0,06); alta ~16,9 MB (8,83 + 7,99).
 - Error de media resolución vs completa: medio 7,45 m, p99 40,9 m, máx 501 m, 10% de celdas > 20 m.
 - GPU (terreno): default 37,6 MiB; alta 150,4 MiB; + color/depth ~7,8 MiB a 1280x800.
 - Malla: default 608x640 (2,33 M vértices/draw); alta 1216x1280 (9,32 M).
 
+- FPS en dispositivos reales: **pendiente** (entorno headless).
+
 ## Próximo paso
-T6 controles (Devin), luego T7 picking.
+Confirmación de Lautaro: visual (Quebrada y Puna), controles con touch en un celular real y FPS. Después, iteración 2 según DECISIONS.md.
