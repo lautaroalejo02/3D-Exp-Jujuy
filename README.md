@@ -7,9 +7,10 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 ## Comandos
 
 - `npm install` — instalar dependencias
-- `npm run build:data` — genera `data/build/` (alturas Int16, satélite, `terrain.json`) desde `data/raw/`; idempotente, `--force` reconstruye
+- `npm run verify:boundaries` — descarga el archivo oficial geoBoundaries ARG ADM2 (commit fijado, ~70 MB, según el `provenance` del extracto) y verifica que `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson` coincida con una re-selección en memoria (sha256 + features, geometría y propiedades). No escribe nada; sale con error si hay diferencias
+- `npm run build:data` — genera `data/build/` (alturas Int16, satélite, departamentos, `terrain.json`) desde `data/raw/`; idempotente, `--force` reconstruye. Requiere el extracto commiteado `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson`
 - `npm run dev` — servidor de desarrollo (sirve `data/build/` en la raíz del sitio)
-- `npm run build` — `build:data` + typecheck + build a `dist/` (sin `debug-alignment.png`)
+- `npm run build` — `build:data` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
 - `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
@@ -55,7 +56,22 @@ aviso de que puede ir lenta).
   celdas superan 20 m — esperable en terreno montañoso abrupto.
 - `satellite-full.jpg` (4864x5120, copia del original) y
   `satellite-half.jpg` (2432x2560, jpeg q85).
+- `departments-full.bin` (2432x2560) y `departments-half.bin` (1216x1280) —
+  índice departamental Uint8 por celda: 0 = fuera de la provincia,
+  1..16 = departamento (orden alfabético por el `shapeName` normalizado
+  de la fuente; la mitad de resolución usa mayoría del bloque 2x2). Se
+  rasterizan desde `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson`.
+- `province-sdf-full.bin` y `province-sdf-half.bin` — distancia con signo
+  al borde provincial en celdas (Int8, positiva adentro, negativa afuera,
+  clamp ±127; EDT exacta de Felzenszwalb). Sirve para dibujar el contorno
+  nítido a cualquier zoom.
+- `departments.json` — índice → nombre tal como figura en la fuente
+  (`shapeName`, p. ej. «Yaví»), atribución y licencia (geoBoundaries
+  gbOpen ARG ADM2, CC BY 3.0 IGO).
 - `terrain.json` — manifiesto con grillas, hashes sha256, estadísticas de
-  elevación y el error de reconstrucción.
+  elevación, el error de reconstrucción y el bbox de la provincia
+  (lon/lat y celdas por nivel).
 - `debug-alignment.png` — hillshade sobre satélite para verificar la
   registración DEM/imagen (no se publica en `dist/`).
+- `debug-province.png` — contorno de la provincia y bordes departamentales
+  sobre el satélite, para verificación visual (no se publica en `dist/`).

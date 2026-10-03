@@ -26,6 +26,10 @@ Lautaro (2026-10-03), al ver la v1 en el celular: "pensé que iba a ver algo com
    - "Departamento" en el panel de picking.
    - Atribución de límites visible en la UI.
 
+## Decisiones
+- **Extracto en `data/raw/` como entrada fija.** `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson` es una selección de 16 features del archivo oficial (~70 MB), con la geometría y las propiedades sin modificar, y con su procedencia adentro (URL fija, commit `9469f09`, sha256 del archivo completo, regla de selección). Está commiteado como entrada cruda fija: ningún script escribe en `data/raw/`. `npm run verify:boundaries` descarga el oficial, vuelve a extraer en memoria y verifica que coincida con el archivo commiteado. Así se cumple `AGENTS.md` sin excepciones y no hay que descargar 70 MB en cada build.
+- **Nombres de departamentos:** se publican tal como vienen en la fuente (`shapeName`, por ejemplo "Yaví"). La lista del brief solo se usa para verificar que estén los 16.
+
 ## Criterios de aceptación
 - En la vista inicial (desktop y celular vertical) se reconoce la forma de la provincia, resaltada.
 - Los nombres de los departamentos salen de la fuente; nada escrito a mano.
@@ -35,7 +39,7 @@ Lautaro (2026-10-03), al ver la v1 en el celular: "pensé que iba a ver algo com
 ## Checklist
 | ID | Tarea | Ruta | Estado | Evidencia |
 |---|---|---|---|---|
-| P1 | Datos de límites + rasterizado + SDF | delegada (Devin, worktree aparte) | [ ] | en curso |
+| P1 | Datos de límites + rasterizado + SDF | delegada (Devin, worktree aparte) | [x] | `88212e3` (rama feat/maqueta-base-t11a, mergeada); 196 tests; verify:boundaries OK (sha256 y 16/16 idénticos); GGA PASSED al 3º intento (nombres a mano → shapeName; script que escribía en data/raw → verify-only; atribución visible) |
 | P2 | Render del contorno + encuadre + UI | delegada (Devin) | [ ] | |
 
 ## Próximo paso

@@ -40,6 +40,47 @@ export interface ReconstructionError {
   readonly fractionOver20Meters: number;
 }
 
+/**
+ * Department index raster encoding: one byte per cell, row-major.
+ * 0 = outside the province, 1..16 = department (index order is
+ * departments.json's, which is alphabetical by normalized source
+ * name — the geoBoundaries shapeName).
+ */
+export const DEPARTMENT_INDEX_ENCODING = {
+  format: "uint8",
+  layout: "row-major",
+  semantics: "department-index",
+} as const;
+export type DepartmentIndexEncoding = typeof DEPARTMENT_INDEX_ENCODING;
+
+/**
+ * Signed distance to the province boundary in grid cells, Int8 row-major:
+ * positive inside the province, negative outside, clamped to +/-127.
+ */
+export const PROVINCE_SDF_ENCODING = {
+  format: "int8",
+  layout: "row-major",
+  units: "cells",
+  clamp: 127,
+} as const;
+export type ProvinceSdfEncoding = typeof PROVINCE_SDF_ENCODING;
+
+/** Department index raster + province SDF for one quality level. */
+export interface DepartmentsLevel {
+  readonly index: TerrainFileEntry & {
+    readonly grid: GridSpec;
+    readonly encoding: DepartmentIndexEncoding;
+  };
+  readonly sdf: TerrainFileEntry & {
+    readonly encoding: ProvinceSdfEncoding;
+  };
+  /**
+   * Inclusive cell bounds [minI, minJ, maxI, maxJ] of the province mask on
+   * this level's grid.
+   */
+  readonly provinceBBoxGrid: readonly [number, number, number, number];
+}
+
 export interface TerrainLevel {
   readonly heights: TerrainFileEntry & {
     readonly grid: GridSpec;
@@ -49,6 +90,8 @@ export interface TerrainLevel {
     readonly reconstructionError?: ReconstructionError;
   };
   readonly satellite: TerrainFileEntry & { readonly grid: GridSpec };
+  /** Present since pipeline v3; absent in manifests built before it. */
+  readonly departments?: DepartmentsLevel;
 }
 
 export interface TerrainManifest {
@@ -63,9 +106,23 @@ export interface TerrainManifest {
     readonly default: TerrainLevel;
     readonly high: TerrainLevel;
   };
+  /**
+   * Department/province boundary data (departments.json plus, per level,
+   * the index raster and SDF). Present since pipeline v3.
+   */
+  readonly boundaries?: {
+    readonly file: TerrainFileEntry;
+    /**
+     * Province extent [west, south, east, north] in degrees: the union of
+     * the 16 department polygons, computed from the source vectors.
+     */
+    readonly provinceBBoxLonLat: readonly [number, number, number, number];
+  };
   readonly sources: {
     readonly dem: TerrainFileEntry & { readonly path: string };
     readonly satellite: TerrainFileEntry & { readonly path: string };
+    /** Present since pipeline v3. */
+    readonly boundaries?: TerrainFileEntry & { readonly path: string };
     readonly attribution: string;
   };
 }

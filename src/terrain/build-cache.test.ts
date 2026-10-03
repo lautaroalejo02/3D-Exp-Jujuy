@@ -5,9 +5,10 @@ import { checkBuildCache, type CacheFileState } from "./build-cache";
 import type { TerrainManifest } from "./manifest";
 
 const EXPECTED = {
-  pipelineVersion: 2,
+  pipelineVersion: 3,
   demSha256: "d".repeat(64),
   satelliteSha256: "s".repeat(64),
+  boundariesSha256: "b".repeat(64),
 };
 
 const SPEC: GridSpec = {
@@ -24,6 +25,11 @@ const OUTPUTS: Record<string, CacheFileState> = {
   "satellite-half.jpg": { bytes: 20, sha256: "b".repeat(64) },
   "heights-full.bin": { bytes: 18, sha256: "c".repeat(64) },
   "satellite-full.jpg": { bytes: 40, sha256: "e".repeat(64) },
+  "departments-half.bin": { bytes: 9, sha256: "f".repeat(64) },
+  "province-sdf-half.bin": { bytes: 9, sha256: "1".repeat(64) },
+  "departments-full.bin": { bytes: 9, sha256: "2".repeat(64) },
+  "province-sdf-full.bin": { bytes: 9, sha256: "3".repeat(64) },
+  "departments.json": { bytes: 100, sha256: "4".repeat(64) },
 };
 
 function stubManifest(): TerrainManifest {
@@ -52,6 +58,34 @@ function stubManifest(): TerrainManifest {
     sha256: OUTPUTS[file]?.sha256 ?? "",
     grid: SPEC,
   });
+  const dept = (
+    indexFile: string,
+    sdfFile: string,
+  ): NonNullable<TerrainManifest["levels"]["default"]["departments"]> => ({
+    index: {
+      file: indexFile,
+      bytes: OUTPUTS[indexFile]?.bytes ?? 0,
+      sha256: OUTPUTS[indexFile]?.sha256 ?? "",
+      grid: SPEC,
+      encoding: {
+        format: "uint8",
+        layout: "row-major",
+        semantics: "department-index",
+      },
+    },
+    sdf: {
+      file: sdfFile,
+      bytes: OUTPUTS[sdfFile]?.bytes ?? 0,
+      sha256: OUTPUTS[sdfFile]?.sha256 ?? "",
+      encoding: {
+        format: "int8",
+        layout: "row-major",
+        units: "cells",
+        clamp: 127,
+      },
+    },
+    provinceBBoxGrid: [0, 0, 2, 2],
+  });
   return {
     schemaVersion: 1,
     pipelineVersion: EXPECTED.pipelineVersion,
@@ -59,11 +93,21 @@ function stubManifest(): TerrainManifest {
       default: {
         heights: entry("heights-half.bin"),
         satellite: sat("satellite-half.jpg"),
+        departments: dept("departments-half.bin", "province-sdf-half.bin"),
       },
       high: {
         heights: entry("heights-full.bin"),
         satellite: sat("satellite-full.jpg"),
+        departments: dept("departments-full.bin", "province-sdf-full.bin"),
       },
+    },
+    boundaries: {
+      file: {
+        file: "departments.json",
+        bytes: OUTPUTS["departments.json"]?.bytes ?? 0,
+        sha256: OUTPUTS["departments.json"]?.sha256 ?? "",
+      },
+      provinceBBoxLonLat: [-67, -25, -64, -21],
     },
     sources: {
       dem: {
@@ -78,12 +122,18 @@ function stubManifest(): TerrainManifest {
         bytes: 1,
         sha256: EXPECTED.satelliteSha256,
       },
+      boundaries: {
+        file: "bounds.geojson",
+        path: "data/raw/bounds.geojson",
+        bytes: 1,
+        sha256: EXPECTED.boundariesSha256,
+      },
       attribution: "see ATTRIBUTIONS.md",
     },
   };
 }
 
-/** All four outputs on disk, matching the manifest records. */
+/** All outputs on disk, matching the manifest records. */
 function allPresent(): (file: string) => CacheFileState | undefined {
   return (file) => OUTPUTS[file];
 }
@@ -123,6 +173,35 @@ describe("checkBuildCache", () => {
     });
     expect(verdict).toMatchObject({ upToDate: false });
     if (!verdict.upToDate) expect(verdict.reason).toMatch(/satellite/);
+  });
+
+  it("rebuilds when the boundaries input hash changed", () => {
+    const verdict = check(stubManifest(), allPresent(), {
+      ...EXPECTED,
+      boundariesSha256: "0".repeat(64),
+    });
+    expect(verdict).toMatchObject({ upToDate: false });
+    if (!verdict.upToDate) expect(verdict.reason).toMatch(/boundaries/);
+  });
+
+  it("rebuilds when a departments output is missing", () => {
+    const verdict = check(stubManifest(), (file) =>
+      file === "departments-half.bin" ? undefined : OUTPUTS[file],
+    );
+    expect(verdict).toMatchObject({ upToDate: false });
+    if (!verdict.upToDate) {
+      expect(verdict.reason).toMatch(/departments-half\.bin/);
+    }
+  });
+
+  it("rebuilds when departments.json is missing", () => {
+    const verdict = check(stubManifest(), (file) =>
+      file === "departments.json" ? undefined : OUTPUTS[file],
+    );
+    expect(verdict).toMatchObject({ upToDate: false });
+    if (!verdict.upToDate) {
+      expect(verdict.reason).toMatch(/departments\.json/);
+    }
   });
 
   it("rebuilds when the pipeline version changed", () => {
