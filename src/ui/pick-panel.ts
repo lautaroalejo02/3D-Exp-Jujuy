@@ -8,6 +8,7 @@ import {
   departmentNameAt,
   type DepartmentsData,
 } from "../terrain/departments";
+import { departmentIndexAt } from "../terrain/regions";
 
 /**
  * Pick info panel: shows the latitude, longitude and DEM elevation of the
@@ -73,6 +74,11 @@ export const OUTSIDE_JUJUY = "Fuera de Jujuy";
 export interface PickPanelDepartments {
   readonly data: DepartmentsData;
   readonly hitSpec: GridSpec;
+  /**
+   * Region display name per department raster value (element 0 =
+   * outside), from departmentToRegionNames — adds the "Región" row.
+   */
+  readonly regionNames?: readonly (string | undefined)[];
 }
 
 const MISS_HINT = "Tocá o hacé clic sobre el relieve";
@@ -87,6 +93,7 @@ export function createPickPanelLayer(
     readonly lon: HTMLElement;
     readonly alt: HTMLElement;
     readonly dept: HTMLElement | undefined;
+    readonly region: HTMLElement | undefined;
     readonly dataRows: HTMLElement;
     readonly note: HTMLElement;
     readonly hint: HTMLElement;
@@ -107,6 +114,11 @@ export function createPickPanelLayer(
       const [di, dj] = globalPixelToGrid(departments.data.grid, px, py);
       els.dept.textContent =
         departmentNameAt(departments.data, di, dj) ?? OUTSIDE_JUJUY;
+      if (els.region && departments.regionNames) {
+        const deptIndex = departmentIndexAt(departments.data, di, dj);
+        els.region.textContent =
+          departments.regionNames[deptIndex] ?? OUTSIDE_JUJUY;
+      }
     }
     els.dataRows.hidden = false;
     els.note.hidden = false;
@@ -158,6 +170,7 @@ export function createPickPanelLayer(
         const lon = row("Longitud");
         const alt = row("Altura");
         const dept = departments ? row("Departamento") : undefined;
+        const region = departments?.regionNames ? row("Región") : undefined;
 
         const note = doc.createElement("p");
         note.className = "pick-panel-note";
@@ -174,7 +187,7 @@ export function createPickPanelLayer(
 
         panel.append(close, dataRows, note, hint);
         root.appendChild(panel);
-        els = { panel, lat, lon, alt, dept, dataRows, note, hint };
+        els = { panel, lat, lon, alt, dept, region, dataRows, note, hint };
         return () => {
           els = undefined;
           panel.remove();

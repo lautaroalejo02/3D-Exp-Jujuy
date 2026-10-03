@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "title": "PIP Jujuy — Programa de Inclusión Socio-Económica en Áreas Rurales (PISEAR)",
+    "publisher": "Ministerio de Agroindustria de la Nación",
+    "url": "https://www.magyp.gob.ar/sitio/areas/pisear/institucional/docs/_archivos/000005_PIP%20Jujuy.pdf"
+  },
+  "regions": [
+    {
+      "id": "puna",
+      "name": "Puna",
+      "departments": [
+        "Yaví",
+        "Santa Catalina",
+        "Rinconada",
+        "Cochinoca",
+        "Susques"
+      ],
+      "quote": "Comprende los departamentos Yavi, Santa Catalina, Rinconada, Cochinoca, Susques, y parte del departamento Humahuaca.",
+      "nuance": "y parte del departamento Humahuaca",
+      "description": {
+        "text": "Una meseta alta que supera los 3.500 m s. n. m., con picos como el Nevado de Chañi y salpicada por salinas, como el Salar de Cauchari y Salinas Grandes.",
+        "quote": "La región del altiplano o Puna puede caracterizarse como una meseta alta que supera los 3500msnm, seccionada por una serie de montañas que contienen picos de hasta 5900m de altura, como el Nevado de Chañi y salpicada por salinas, como el Salar de Cauchari y Salinas Grandes."
+      }
+    },
+    {
+      "id": "quebrada",
+      "name": "Quebrada",
+      "departments": ["Tumbaya", "Tilcara", "Humahuaca"],
+      "quote": "Está conformada por los departamentos Tumbaya, Tilcara y Humahuaca, aunque el territorio de los mismos excede a lo que definimos como Quebrada.",
+      "nuance": "aunque el territorio de los mismos excede a lo que definimos como Quebrada",
+      "description": {
+        "text": "Es una vía de circulación natural: en sus estrechos valles prospera la agricultura bajo riego. La Quebrada de Humahuaca fue declarada Patrimonio Cultural y Natural de la Humanidad por la Unesco.",
+        "quote": "Esta región es una vía de circulación natural, en sus estrechos valles prospera la actividad agrícola bajo riego, especialmente hortalizas que abastecen el mercado provincial, la floricultura, la cría de ganado ovino y caprino. Fue declarada en 2003 Patrimonio Cultural y Natural de la Humanidad por la Unesco, razón por la cual en los últimos años se ha incrementado considerablemente la actividad turística en la región."
+      }
+    },
+    {
+      "id": "valles",
+      "name": "Valles",
+      "departments": [
+        "Palpalá",
+        "Dr. Manuel Belgrano",
+        "San Antonio",
+        "El Carmen"
+      ],
+      "quote": "Comprende los departamentos Palpalá, Dr. Manuel Belgrano, San Antonio y El Carmen.",
+      "description": {
+        "text": "Acá está San Salvador de Jujuy, la capital de la provincia. Es un valle húmedo, de clima templado en invierno y cálido en verano.",
+        "quote": "En los Valles Templados se encuentra San Salvador de Jujuy, la capital de la provincia y comprende los departamentos de Dr. Manuel Belgrano, Palpalá, El Carmen y San Antonio. Su superficie representa apenas el 7% de la superficie provincial. Está ubicada en la zona de transición entre los climas áridos y subtropicales, se caracteriza por ser un valle húmedo de clima templado en invierno pero suficientemente cálido en verano, con precipitaciones anuales de entre 500 y 1200 milímetros."
+      }
+    },
+    {
+      "id": "yungas",
+      "name": "Yungas (Ramal)",
+      "departments": [
+        "Ledesma",
+        "San Pedro",
+        "Santa Bárbara",
+        "Valle Grande"
+      ],
+      "quote": "Incluye los departamentos Ledesma, San Pedro, Santa Bárbara y Valle Grande.",
+      "description": {
+        "text": "Zona cálida y húmeda, de clima subtropical: en su falda occidental está la selva de altura o yungas, donde cae la mayor cantidad de precipitaciones.",
+        "quote": "Esta región intermedia culmina en la falda occidental en la selva de altura o yungas donde se descarga la mayor cantidad de precipitaciones. Esta región denominada Valles Cálidos se caracteriza por ser una zona cálida y húmeda, de clima subtropical que se eleva entre 500 y 1500msnm, con picos máximos de 3000m y recibe en promedio 900mm de precipitaciones anuales."
+      }
+    }
+  ]
+}

@@ -4,15 +4,17 @@
 // src/geo gridToWorld: X east, Z south, Y up, km of ground distance,
 // Y = elevation / 1000 * exaggeration.
 //
-// OVERLAY SLOT: `overlayTex` + `params.overlayOpacity` are reserved for
-// future feature layers (e.g. regions tinting the terrain). The default
-// binding is a 1x1 transparent texture; fragments do
-// `mix(lit, overlay.rgb * light, overlay.a * overlayOpacity)` so an
-// overlay can recolor terrain without changing this shader's structure.
+// OVERLAY SLOT: `overlayTex` + `params.overlayOpacity` tint the terrain.
+// The regions layer binds an RGBA raster on the department-index grid:
+// region color with alpha>0 inside Jujuy, fully transparent outside, so
+// `mix(lit, overlay.rgb * light, overlay.a * overlayOpacity)` recolors
+// the terrain inside the province only, and `params.regionBorders` draws
+// thin lines where neighboring inside texels change color. The default
+// binding is a 1x1 transparent texture (the mix is a no-op).
 //
 // PROVINCE MASK: `deptIndexTex` holds the department index per raster cell
-// (0 = outside Jujuy, 1..16 = departments — it is what future regions map
-// to) and `provinceSdfTex` holds the signed distance to the province
+// (0 = outside Jujuy, 1..16 = departments — what the regions overlay is
+// baked from) and `provinceSdfTex` holds the signed distance to the province
 // boundary in cells (positive inside), both as r8unorm: the index is the
 // raw byte (decode *255) and the SDF is biased by 127 (decode *255 - 127).
 // The SDF drives the "outside Jujuy" dimming and a screen-space outline
@@ -36,6 +38,7 @@ struct Params {
   dimStrength: f32,    // 0..1: how strongly outside terrain is dimmed
   outlinePx: f32,      // province outline width in physical pixels
   deptBorders: f32,    // 1 = thin department borders; 0 = off
+  regionBorders: f32,  // 1 = thin region borders; 0 = off
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -164,6 +167,34 @@ struct VertexOut {
       c != textureLoad(deptIndexTex, texel - vec2i(0, 1), 0).r;
     if (border) {
       rgb = mix(rgb, vec3f(1.0), 0.45 * inside);
+    }
+  }
+
+  // Region borders (off by default): the overlay holds one color per
+  // region with alpha>0 only inside Jujuy, so a texel whose inside
+  // neighbors differ in color sits on a region boundary. Transparent
+  // neighbors are outside the province — that edge belongs to the
+  // outline, so no border is drawn there.
+  if (params.regionBorders > 0.001) {
+    let texel = vec2i(clamp(
+      floor(in.uv * params.deptGridSize),
+      vec2f(0.0),
+      params.deptGridSize - 1.0,
+    ));
+    let c = textureLoad(overlayTex, texel, 0);
+    if (c.a > 0.0) {
+      let e = textureLoad(overlayTex, texel + vec2i(1, 0), 0);
+      let w = textureLoad(overlayTex, texel - vec2i(1, 0), 0);
+      let s = textureLoad(overlayTex, texel + vec2i(0, 1), 0);
+      let n = textureLoad(overlayTex, texel - vec2i(0, 1), 0);
+      let border =
+        (e.a > 0.0 && any(e.rgb != c.rgb)) ||
+        (w.a > 0.0 && any(w.rgb != c.rgb)) ||
+        (s.a > 0.0 && any(s.rgb != c.rgb)) ||
+        (n.a > 0.0 && any(n.rgb != c.rgb));
+      if (border) {
+        rgb = mix(rgb, vec3f(0.12, 0.11, 0.13), 0.8);
+      }
     }
   }
 

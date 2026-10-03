@@ -45,8 +45,8 @@ export interface TerrainLayerShaders {
  * Department index raster + province SDF for the loaded quality level
  * (from loadDepartments). Their grid covers the same ground extent as the
  * height grid — the shader samples both through the satellite UV. The
- * department index is what future region overlays will map to; the SDF
- * drives the outside dimming and the province outline.
+ * SDF drives the outside dimming and the province outline; the index is
+ * what the regions overlay is baked from.
  */
 export interface ProvinceMask {
   readonly grid: { readonly width: number; readonly height: number };
@@ -54,6 +54,17 @@ export interface ProvinceMask {
   readonly index: Uint8Array;
   /** Signed distance to the boundary in cells, Int8, + inside / - outside. */
   readonly sdf: Int8Array;
+}
+
+/**
+ * RGBA raster for the shader's overlay slot, on the province-mask grid
+ * (buildRegionOverlay): region color with alpha>0 inside the province,
+ * transparent outside. Bound to overlayTex; overlayOpacity is the tint
+ * strength and regionBorders draws the thin region boundaries.
+ */
+export interface RegionOverlay {
+  readonly grid: { readonly width: number; readonly height: number };
+  readonly rgba: Uint8Array;
 }
 
 export interface TerrainLayerOptions {
@@ -80,6 +91,15 @@ export interface TerrainLayerOptions {
   readonly dimStrength?: number;
   /** Thin department borders inside the province; default off. */
   readonly showDepartmentBorders?: boolean;
+  /**
+   * Region tint raster (see RegionOverlay). When absent, the overlay slot
+   * gets the 1x1 transparent fallback and setRegionsVisible is a no-op.
+   */
+  readonly regionOverlay?: RegionOverlay;
+  /** Start with the region tint and borders visible; default off. */
+  readonly showRegions?: boolean;
+  /** Region tint strength 0..1 (the overlayOpacity uniform, default .55). */
+  readonly regionTintStrength?: number;
   /** Province outline width in CSS px (default 2). */
   readonly outlineCssPx?: number;
   /**
@@ -99,6 +119,8 @@ export interface TerrainLayerOptions {
 export interface TerrainLayer extends Layer {
   /** Update the vertical exaggeration uniform (slider callback). */
   setVerticalExaggeration(value: number): void;
+  /** Toggle the region tint + borders (the "Regiones" UI toggle). */
+  setRegionsVisible(visible: boolean): void;
   /** Vertex count of the generated mesh draw call. */
   readonly vertexCount: number;
   readonly meshSize: MeshSize;
@@ -125,6 +147,7 @@ interface TerrainParamsValue {
   dimStrength: number;
   outlinePx: number;
   deptBorders: number;
+  regionBorders: number;
 }
 
 const IDENTITY_MAT4 = [
@@ -169,6 +192,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     mesh.height,
   ]);
   const vertexCount = (mesh.width - 1) * (mesh.height - 1) * 6;
+  const regionTintStrength = opts.regionTintStrength ?? 0.55;
 
   const params: TerrainParamsValue = {
     ...gridUniforms,
@@ -179,10 +203,11 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     exaggeration: opts.verticalExaggeration ?? DEFAULT_VERTICAL_EXAGGERATION,
     ambient: opts.ambient ?? 0.42,
     lightStrength: opts.lightStrength ?? 0.85,
-    overlayOpacity: 1,
+    overlayOpacity: opts.showRegions ? regionTintStrength : 0,
     dimStrength: opts.dimStrength ?? 0.55,
     outlinePx: opts.outlineCssPx ?? 2,
     deptBorders: opts.showDepartmentBorders ? 1 : 0,
+    regionBorders: opts.showRegions ? 1 : 0,
   };
 
   let heightsBuffer: ReturnType<typeof storage> | undefined;
@@ -247,21 +272,28 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       uploadSatellite(gpu, satelliteTex, opts.satellite);
       generateMipmaps(gpu, opts.shaders.mipmap, satelliteTex);
 
-      // Overlay slot for future layers (regions tint, …): 1x1 transparent
-      // by default so the shader's mix() is a no-op until a real overlay
-      // is bound.
+      // Overlay slot: the regions tint raster when provided, else a 1x1
+      // transparent fallback so the shader's mix() is a no-op.
+      const overlay = opts.regionOverlay;
       overlayTex = texture(gpu, {
         kind: "2d",
-        size: [1, 1],
+        size: overlay ? [overlay.grid.width, overlay.grid.height] : [1, 1],
         format: "rgba8unorm",
         usage: ["texture_binding", "copy_dst"],
         label: "terrain-overlay",
       });
       gpu.gpu.queue.writeTexture(
         { texture: overlayTex.gpu },
-        new Uint8Array([0, 0, 0, 0]),
-        { bytesPerRow: 4, rowsPerImage: 1 },
-        [1, 1],
+        // buildRegionOverlay allocates a plain ArrayBuffer; narrow the
+        // wider ArrayBufferLike generic for writeTexture.
+        overlay
+          ? (overlay.rgba as Uint8Array<ArrayBuffer>)
+          : new Uint8Array([0, 0, 0, 0]),
+        {
+          bytesPerRow: overlay ? overlay.grid.width * 4 : 4,
+          rowsPerImage: overlay ? overlay.grid.height : 1,
+        },
+        overlay ? [overlay.grid.width, overlay.grid.height] : [1, 1],
       );
 
       // Province mask, uploaded once. Both textures are r8unorm: the
@@ -350,6 +382,20 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       opts.onExaggeration?.(value);
     },
 
+    setRegionsVisible(visible: boolean): void {
+      if (!opts.regionOverlay) return;
+      params.overlayOpacity = visible ? regionTintStrength : 0;
+      params.regionBorders = visible ? 1 : 0;
+      // Immediate partial uniform update, like setVerticalExaggeration;
+      // the caller requests a frame so the change shows right away.
+      terrainDraw?.set({
+        params: {
+          overlayOpacity: params.overlayOpacity,
+          regionBorders: params.regionBorders,
+        },
+      });
+    },
+
     getGpuMemoryReport(): GpuMemoryReport {
       const sat = opts.satellite;
       const maskCells = opts.provinceMask
@@ -364,7 +410,15 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           label: `heights storage buffer ${spec.width}x${spec.height} f32`,
           bytes: spec.width * spec.height * 4,
         },
-        { label: "overlay texture 1x1", bytes: 4 },
+        opts.regionOverlay
+          ? {
+              label: `regions overlay texture ${opts.regionOverlay.grid.width}x${opts.regionOverlay.grid.height} rgba8unorm`,
+              bytes:
+                opts.regionOverlay.grid.width *
+                opts.regionOverlay.grid.height *
+                4,
+            }
+          : { label: "overlay texture 1x1", bytes: 4 },
         {
           label: `department index texture ${opts.provinceMask?.grid.width ?? 1}x${opts.provinceMask?.grid.height ?? 1} r8unorm`,
           bytes: maskCells,
@@ -375,7 +429,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
         {
           label: "terrain uniforms (approx)",
-          bytes: 64 + 6 * 8 + 11 * 4,
+          bytes: 64 + 6 * 8 + 12 * 4,
           estimate: true,
         },
       ]);
