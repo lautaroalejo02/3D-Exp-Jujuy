@@ -30,6 +30,8 @@ export function checkBuildCache(
     readonly pipelineVersion: number;
     readonly demSha256: string;
     readonly satelliteSha256: string;
+    /** sha256 of the extracted departments GeoJSON (pipeline v3+). */
+    readonly boundariesSha256: string;
   },
   fileState: (file: string) => CacheFileState | undefined,
 ): BuildCacheVerdict {
@@ -54,12 +56,22 @@ export function checkBuildCache(
         `${String(m.pipelineVersion)}, pipeline is ${expected.pipelineVersion})`,
     );
   }
+  // Only reachable on a v3+ manifest, which always records the boundaries
+  // input — a missing entry here means the file was hand-edited.
+  if (m.sources?.boundaries?.sha256 !== expected.boundariesSha256) {
+    return fail("boundaries input hash changed");
+  }
 
   const entries: readonly (TerrainFileEntry | undefined)[] = [
     m.levels?.default?.heights,
     m.levels?.default?.satellite,
+    m.levels?.default?.departments?.index,
+    m.levels?.default?.departments?.sdf,
     m.levels?.high?.heights,
     m.levels?.high?.satellite,
+    m.levels?.high?.departments?.index,
+    m.levels?.high?.departments?.sdf,
+    m.boundaries?.file,
   ];
   const checked = new Set<string>();
   for (const entry of entries) {

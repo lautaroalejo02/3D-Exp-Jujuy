@@ -42,6 +42,22 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
       },
     ],
   },
+  {
+    title: "Límites departamentales",
+    lines: [
+      "geoBoundaries — Instituto Geográfico Nacional and UNHCR, OCHA ROLAC",
+    ],
+    links: [
+      {
+        label: "CC BY 3.0 IGO",
+        url: "https://creativecommons.org/licenses/by/3.0/igo/",
+      },
+      {
+        label: "Fuente",
+        url: "https://www.geoboundaries.org/api/current/gbOpen/ARG/ADM2/",
+      },
+    ],
+  },
 ];
 
 const COLLAPSED_BELOW_PX = 640;
