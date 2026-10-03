@@ -57,6 +57,10 @@ Pedido de Lautaro (2026-10-03), textual en lo esencial:
   - el overlay `?debug=1` muestra los milisegundos del recálculo.
 - **Parches de detalle:** usan la misma textura (resolución base). Sombras finas dentro del parche quedan como mejora posterior, si hace falta.
 
+### Sombras durante el play (decisión tras medir)
+- Durante el play o al arrastrar el slider se recalcula en calidad interactiva (unos 304×320 y 48 pasos). Al pausar o soltar se refina a la calidad del dispositivo.
+- No se recalcula si el sol se movió menos de 0,25°.
+
 ### Posición solar
 - Algoritmo de NOAA (ecuaciones de Spencer/NOAA: declinación, ecuación del tiempo, ángulo horario, elevación y azimut), con corrección por refracción.
 - Zona horaria de Argentina: UTC−3, sin horario de verano.
@@ -80,5 +84,5 @@ Pedido de Lautaro (2026-10-03), textual en lo esencial:
 | ID | Tarea | Ruta | Estado | Evidencia |
 |---|---|---|---|---|
 | S1 | Menú + sheets + Explorar + panel lateral + harness | delegada (Devin, worktree isonade-menu) | [x] | 476 tests; harness de Playwright con WebGPU real (Chrome con SwiftShader); correcciones S1b (encuadre según el espacio libre que deja la interfaz, agrupación de marcadores, sheet minimizado limpio, sin nombre duplicado, fly-to con contexto) y S1c (al abrir una ficha, Explorar se minimiza y la ficha queda a media pantalla); capturas en data/build/ui-shots |
-| S2a | Motor del Sol (solar + sombras + luz) | delegada (Devin, worktree isonade-sol) | [ ] | |
+| S2a | Motor del Sol (solar + sombras + luz) | delegada (Devin, worktree isonade-sol) | [x] | `9610830` (rebaseado sobre el menú); 441 tests; NOAA con error máximo de 0,43°; recálculo de sombras headless: celular 608×640/64 pasos = 23 ms, escritorio 1216×1280/128 pasos = 103 ms; +1,5/5,9 MiB; capturas sun-quebrada-sunset/noon |
 | S2b | Sheet del Sol sobre el menú | delegada | [ ] | |

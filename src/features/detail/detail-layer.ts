@@ -116,6 +116,13 @@ export interface DetailLayerOptions {
   readonly ambient?: number;
   readonly lightStrength?: number;
   /**
+   * Base-resolution sun-shadow texture (the terrain layer's engine
+   * output), bound on every site draw — the getter runs inside the
+   * async loader, after the terrain layer has initialized. Absent: a
+   * 1x1 fully-lit fallback is bound.
+   */
+  readonly shadowTexture?: () => Texture;
+  /**
    * Fires once per site when its GPU resources finish creating — the
    * app should request a frame (dirty tracker) and refresh any GPU
    * memory readout. Runs on the loader task, never inside update/draw.
@@ -140,6 +147,14 @@ export interface DetailLayerOptions {
 }
 
 export interface DetailLayer extends Layer {
+  /** Push the sun light — same convention as TerrainLayer.setSun. */
+  setSun(
+    direction: readonly [number, number, number],
+    color: readonly [number, number, number],
+    ambient: readonly [number, number, number],
+  ): void;
+  /** Fade the cast-shadow term in or out (same flag as the terrain). */
+  setShadowsEnabled(enabled: boolean): void;
   getGpuMemoryReport(): GpuMemoryReport;
   /**
    * Resolves when every queued/in-flight site load has settled (ready or
@@ -155,8 +170,10 @@ export interface DetailLayer extends Layer {
 interface DetailParamsValue extends TerrainGridUniforms {
   viewProjection: number[];
   exaggeration: number;
-  ambient: number;
-  lightStrength: number;
+  sunColor: number[];
+  ambientColor: number[];
+  sunDir: number[];
+  shadowStrength: number;
   biasNdc: number;
   edgeFade: number;
   patchToBaseK: readonly [number, number];
@@ -260,8 +277,20 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         ...gridUniforms,
         viewProjection: [...IDENTITY_MAT4],
         exaggeration: opts.verticalExaggeration(),
-        ambient: opts.ambient ?? 0.42,
-        lightStrength: opts.lightStrength ?? 0.85,
+        // Same default light as the terrain: NW 45 deg, grey direct,
+        // grey ambient — the shipped look until the sun mode drives it.
+        sunColor: [
+          opts.lightStrength ?? 0.85,
+          opts.lightStrength ?? 0.85,
+          opts.lightStrength ?? 0.85,
+        ],
+        ambientColor: [
+          opts.ambient ?? 0.42,
+          opts.ambient ?? 0.42,
+          opts.ambient ?? 0.42,
+        ],
+        sunDir: [-0.5, 0.7071067811865476, -0.5],
+        shadowStrength: 0,
         biasNdc: DETAIL_DEPTH_BIAS_NDC,
         edgeFade: DETAIL_EDGE_FADE,
         patchToBaseK: toBase.k,
@@ -321,6 +350,32 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
   };
 
   let gpuRef: Gpu | undefined;
+  let fallbackShadowTex: Texture | undefined;
+
+  // Layer-level sun state: shared by every site draw. Written into each
+  // runtime's params on setSun/setShadowsEnabled so a draw created later
+  // (async site load) picks up the current values automatically.
+  const sun: {
+    direction: readonly [number, number, number];
+    color: readonly [number, number, number];
+    ambient: readonly [number, number, number];
+    shadowsEnabled: boolean;
+  } = {
+    direction: [-0.5, 0.7071067811865476, -0.5],
+    color: [
+      opts.lightStrength ?? 0.85,
+      opts.lightStrength ?? 0.85,
+      opts.lightStrength ?? 0.85,
+    ],
+    ambient: [opts.ambient ?? 0.42, opts.ambient ?? 0.42, opts.ambient ?? 0.42],
+    shadowsEnabled: false,
+  };
+  const applySunTo = (rt: SiteRuntime): void => {
+    rt.params.sunDir = [...sun.direction];
+    rt.params.sunColor = [...sun.color];
+    rt.params.ambientColor = [...sun.ambient];
+    rt.params.shadowStrength = sun.shadowsEnabled ? 1 : 0;
+  };
 
   /**
    * Creates every GPU resource one site needs (heights storage, satellite
@@ -357,6 +412,13 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
 
     const vertexCount =
       (rt.params.meshSize[0] - 1) * (rt.params.meshSize[1] - 1) * 6;
+    // The site's uniforms must already carry the layer's current sun
+    // state — the params object was seeded with defaults at creation.
+    applySunTo(rt);
+    const shadowTex = opts.shadowTexture?.() ?? fallbackShadowTex;
+    if (!shadowTex) {
+      throw new Error("detail layer used before init()");
+    }
     return {
       heights,
       satellite,
@@ -374,6 +436,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
           heights,
           baseHeights: opts.baseSurface.heights(),
           satelliteTex: satellite,
+          shadowTex,
           linearSampler: sampler(gpu, {
             minFilter: "linear",
             magFilter: "linear",
@@ -455,6 +518,21 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
       // the scheduled loader — see the module comment. A camera that
       // never approaches a patch should not pay ~28 MiB for it.
       gpuRef = ctx.gpu;
+      // 1x1 fully-lit shadow fallback for site draws when the app does
+      // not provide the terrain's shadow texture.
+      fallbackShadowTex = texture(ctx.gpu, {
+        kind: "2d",
+        size: [1, 1],
+        format: "rgba8unorm",
+        usage: ["texture_binding", "copy_dst"],
+        label: "detail-shadow-fallback",
+      });
+      ctx.gpu.gpu.queue.writeTexture(
+        { texture: fallbackShadowTex.gpu },
+        new Uint8Array([255, 255, 255, 255]),
+        { bytesPerRow: 4, rowsPerImage: 1 },
+        [1, 1],
+      );
     },
 
     update(state: LayerState): void {
@@ -495,6 +573,33 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     draw(pass: FramePass): void {
       for (const rt of runtimes) {
         if (rt.visible && rt.gpu) pass.draw(rt.gpu.draw);
+      }
+    },
+
+    setSun(direction, color, ambient): void {
+      sun.direction = direction;
+      sun.color = color;
+      sun.ambient = ambient;
+      for (const rt of runtimes) {
+        applySunTo(rt);
+        rt.gpu?.draw.set({
+          params: {
+            sunDir: rt.params.sunDir,
+            sunColor: rt.params.sunColor,
+            ambientColor: rt.params.ambientColor,
+          },
+        });
+      }
+    },
+
+    setShadowsEnabled(enabled: boolean): void {
+      if (enabled === sun.shadowsEnabled) return;
+      sun.shadowsEnabled = enabled;
+      for (const rt of runtimes) {
+        applySunTo(rt);
+        rt.gpu?.draw.set({
+          params: { shadowStrength: rt.params.shadowStrength },
+        });
       }
     },
 

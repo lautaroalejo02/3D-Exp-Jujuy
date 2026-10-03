@@ -53,6 +53,7 @@ import { formatBytes, type GpuMemoryEntry } from "./render/gpu-memory";
 import mipmapShader from "./render/mipmap.wgsl";
 import presentShader from "./render/present.wgsl";
 import { createSceneRenderer } from "./render/scene-renderer";
+import shadowShader from "./sun/shadow.wgsl";
 import {
   loadDepartments,
   type DepartmentsData,
@@ -569,6 +570,11 @@ async function main(): Promise<void> {
     mesh: plan.mesh,
     verticalExaggeration,
     detailPatches: patchRects,
+    // Cast-shadow engine (compute march over the heights buffer). It
+    // stays inert — shadows off, default NW light — until the sun mode
+    // (S2b) calls setSun/setShadowsEnabled; the recompute runs only when
+    // the sun direction or exaggeration changes.
+    shadows: { shader: shadowShader, plan: plan.shadows },
     provinceMask: {
       grid: data.departments.grid,
       index: data.departments.index,
@@ -616,6 +622,9 @@ async function main(): Promise<void> {
     sites: detailSites,
     shaders: { detail: detailShader, mipmap: mipmapShader },
     verticalExaggeration: () => verticalExaggeration,
+    // Patches sample the base-resolution shadow texture at their world
+    // position (the getter runs in the async loader, after terrain.init).
+    shadowTexture: () => terrain.shadowTexture(),
     // The loader finished creating a site's GPU resources off the frame
     // loop — repaint so the patch appears, and refresh the overlay's GPU
     // memory total (it now includes the site).
@@ -682,6 +691,9 @@ async function main(): Promise<void> {
     minElevationMeters: data.heightfield.min,
     verticalExaggeration: () => verticalExaggeration,
     shader: dioramaShader,
+    // Walls pick the same cast shadows as the terrain; bound lazily in
+    // update() — the diorama inits before the terrain owns the texture.
+    shadowTexture: () => terrain.shadowTexture(),
   });
   const layers: readonly Layer[] = [
     diorama,
@@ -957,6 +969,9 @@ async function main(): Promise<void> {
           get memoryBytes() {
             return gpuMemoryBytes();
           },
+          // Same story: the value appears once a sun update triggers the
+          // engine's first recompute.
+          shadowMs: () => terrain.shadowMs(),
         })
       : undefined;
   if (debugOverlay) {

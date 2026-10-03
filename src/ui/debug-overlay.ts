@@ -28,6 +28,8 @@ export interface DebugOverlayInfo {
   readonly dpr: () => number;
   /** Total GPU memory reported by the app, in bytes. */
   readonly memoryBytes: number;
+  /** Milliseconds of the last sun-shadow recompute — live getter. */
+  readonly shadowMs?: () => number | undefined;
 }
 
 export interface DebugOverlay {
@@ -66,6 +68,7 @@ export function createDebugOverlay(
       ? "FPS: — (en reposo)"
       : `FPS (en movimiento): ${snap.fps === undefined ? "—" : Math.round(snap.fps)}`;
     const [w, h] = info.canvasSize();
+    const shadowMs = info.shadowMs?.();
     el.textContent = [
       fpsLine,
       `ms CPU por frame: ${snap.cpuMs === undefined ? "—" : formatMs(snap.cpuMs)}`,
@@ -73,6 +76,7 @@ export function createDebugOverlay(
       `malla: ${info.mesh.width}×${info.mesh.height} · dpr: ${info.dpr().toFixed(2)}`,
       `canvas: ${w}×${h} px`,
       `gpu: ${formatBytes(info.memoryBytes)}`,
+      `sombras: ${shadowMs === undefined ? "—" : `${formatMs(shadowMs)} ms`}`,
     ].join("\n");
   };
 

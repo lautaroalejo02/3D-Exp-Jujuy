@@ -39,6 +39,24 @@ export interface DeviceProfileInputs {
   readonly deviceMemoryGb?: number;
 }
 
+/**
+ * Shadow-texture budget for the sun engine (src/sun/shadow-engine.ts):
+ * texels in the shadow map aligned to the height grid, and ray-march
+ * steps per texel. Desktop marches the full-res grid footprint; mobile
+ * halves it so one recompute stays cheap on a phone.
+ */
+export interface ShadowPlan {
+  readonly width: number;
+  readonly height: number;
+  readonly steps: number;
+}
+
+export function planShadows(profile: DeviceProfile): ShadowPlan {
+  return profile === "desktop"
+    ? { width: 1216, height: 1280, steps: 128 }
+    : { width: 608, height: 640, steps: 64 };
+}
+
 export interface RenderPlan {
   readonly profile: DeviceProfile;
   /** Mesh vertices for the terrain layer. */
@@ -47,6 +65,8 @@ export interface RenderPlan {
   readonly dprMax: number;
   /** True when ?calidad=alta runs on a phone — show the warning. */
   readonly warnHighQuality: boolean;
+  /** Shadow texture resolution + march steps for this profile. */
+  readonly shadows: ShadowPlan;
 }
 
 /** `?perfil=movil|escritorio` — manual override, wins over detection. */
@@ -85,12 +105,14 @@ export function planRender(
   quality: TerrainQuality,
   heightSpec: { readonly width: number; readonly height: number },
 ): RenderPlan {
+  const shadows = planShadows(profile);
   if (profile === "desktop") {
     return {
       profile,
       mesh: { width: half(heightSpec.width), height: half(heightSpec.height) },
       dprMax: DESKTOP_DPR_MAX,
       warnHighQuality: false,
+      shadows,
     };
   }
   return {
@@ -101,5 +123,6 @@ export function planRender(
     },
     dprMax: MOBILE_DPR_MAX,
     warnHighQuality: quality === "high",
+    shadows,
   };
 }

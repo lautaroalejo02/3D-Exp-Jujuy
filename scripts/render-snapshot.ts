@@ -30,6 +30,14 @@
  *                          city (task A1 — one of the three new sites)
  * - regions.png            overview with the regions layer ON: the four
  *                          PIP Jujuy regions tinted with thin borders
+ * - sun-quebrada-sunset.png  quebrada framing, winter solstice ~18:00
+ *                          local — low WNW sun, long cast shadows
+ * - sun-quebrada-noon.png  same framing at 12:30 local — high sun
+ * - sun-overview-morning.png overview framing, winter solstice ~09:00
+ *                          local — low ENE sun from the right of frame
+ *
+ * The run also prints the sun-shadow recompute time (submit → GPU done)
+ * for both shadow-quality plans, desktop and mobile.
  *
  * Data is read from data/build (run `npm run build:data` and
  * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
@@ -45,7 +53,7 @@ import { decode as decodeJpeg } from "jpeg-js";
 import { PNG } from "pngjs";
 import { frame, init, target } from "vgpu/node";
 
-import { planRender } from "../src/app/device-profile";
+import { planRender, planShadows } from "../src/app/device-profile";
 import type { Layer } from "../src/app/layers";
 import { OrbitCamera } from "../src/camera/camera";
 import { bboxOnGrid, overviewCamera } from "../src/camera/framing";
@@ -78,7 +86,8 @@ import {
 } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
 import { loadPlaces, type PlacesDoc } from "../src/terrain/places-manifest";
-import { createDioramaLayer } from "../src/terrain/diorama";
+import { createDioramaLayer, type DioramaLayer } from "../src/terrain/diorama";
+import { argentinaLocalToUtc, sunLook } from "../src/sun/solar";
 import {
   buildDepartmentToRegion,
   buildRegionOverlay,
@@ -89,6 +98,7 @@ import {
   DEFAULT_VERTICAL_EXAGGERATION,
   type MeshSize,
   type ProvinceMask,
+  type TerrainLayer,
 } from "../src/terrain/terrain-layer";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
@@ -127,6 +137,14 @@ const SALINAS_GRANDES = { lon: -65.894441666667, lat: -23.63325 } as const;
  * data/raw/places/osm-coordinates.json records.
  */
 const PURMAMARCA = { lon: -65.4992167, lat: -23.74655 } as const;
+
+/**
+ * Solar reference point for the sun shots: San Salvador de Jujuy — the
+ * same coordinate the solar unit tests are checked against (Wikidata
+ * P625 of Q44295). The sun direction is practically constant across the
+ * province, so one coordinate drives every sun shot.
+ */
+const JUJUY_SOLAR = { lat: -24.1856, lon: -65.2994 } as const;
 
 /**
  * FetchLike over data/build/: lets the headless script reuse the same
@@ -230,7 +248,7 @@ async function main(): Promise<void> {
     rgba: buildRegionOverlay(provinceMask.index, deptToRegion, regionsData),
   };
 
-  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl, dioramaWgsl] =
+  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl, dioramaWgsl, shadowWgsl] =
     await Promise.all([
       resolveWgsl(join("terrain", "terrain.wgsl")),
       resolveWgsl(join("render", "mipmap.wgsl")),
@@ -238,6 +256,7 @@ async function main(): Promise<void> {
       resolveWgsl(join("features", "pick-marker", "pick-marker.wgsl")),
       resolveWgsl(join("features", "detail", "detail.wgsl")),
       resolveWgsl(join("terrain", "diorama.wgsl")),
+      resolveWgsl(join("sun", "shadow.wgsl")),
     ]);
 
   const gpu = await init();
@@ -318,7 +337,11 @@ async function main(): Promise<void> {
     heightfield.spec,
   );
 
-  const makeTerrain = (mesh?: MeshSize, pixelRatio?: () => number) =>
+  const makeTerrain = (
+    mesh?: MeshSize,
+    pixelRatio?: () => number,
+    shadows?: { readonly shader: string; readonly plan: ReturnType<typeof planShadows> },
+  ) =>
     createTerrainLayer({
       heightfield,
       satellite: {
@@ -334,6 +357,7 @@ async function main(): Promise<void> {
       regionOverlay,
       ...(mesh !== undefined ? { mesh } : {}),
       ...(pixelRatio !== undefined ? { pixelRatio } : {}),
+      ...(shadows !== undefined ? { shadows } : {}),
     });
   const terrain = makeTerrain();
   terrain.init({ gpu });
@@ -409,18 +433,55 @@ async function main(): Promise<void> {
   // Diorama surroundings: sky + walls + slab, drawn first so its backdrop
   // sits behind the terrain. One per mesh variant — the walls follow the
   // mesh edge resolution.
-  const makeDiorama = (t: ReturnType<typeof makeTerrain>) =>
+  const makeDiorama = (t: TerrainLayer) =>
     createDioramaLayer({
       grid: t.gridUniforms,
       heights: () => t.baseHeightsStorage(),
       minElevationMeters: heightfield.min,
       verticalExaggeration: () => EXAGGERATION,
       shader: dioramaWgsl,
+      shadowTexture: () => t.shadowTexture(),
     });
   const diorama = makeDiorama(terrain);
   diorama.init({ gpu });
   const mobileDiorama = makeDiorama(mobileTerrain);
   mobileDiorama.init({ gpu });
+
+  // Sun shots get their own terrain+diorama pair with the shadow engine
+  // at the DESKTOP quality plan — leaving the shared `terrain` on the
+  // shipped default look so the other snapshots are untouched. The
+  // mobile-plan engine is created only to time its recompute.
+  const sunTerrain = makeTerrain(undefined, undefined, {
+    shader: shadowWgsl,
+    plan: planShadows("desktop"),
+  });
+  sunTerrain.init({ gpu });
+  const sunDiorama = makeDiorama(sunTerrain);
+  sunDiorama.init({ gpu });
+  const sunMobileTerrain = makeTerrain(undefined, undefined, {
+    shader: shadowWgsl,
+    plan: planShadows("mobile"),
+  });
+  sunMobileTerrain.init({ gpu });
+
+  /**
+   * Push one sun instant into the sun layers and wait for the shadow
+   * recompute to finish on the GPU — the shots render after this, so the
+   * visibility texture is current (it is a plain texture when sampled).
+   */
+  const applySun = async (
+    utc: Date,
+    t: TerrainLayer,
+    d: DioramaLayer,
+  ): Promise<void> => {
+    const look = sunLook(utc, JUJUY_SOLAR.lat, JUJUY_SOLAR.lon);
+    t.setSun(look.direction, look.sunColor, look.ambientColor);
+    t.setShadowsEnabled(true);
+    d.setSun(look.direction, look.sunColor, look.ambientColor);
+    d.setShadowsEnabled(true);
+    d.setSkyTint(look.skyTint);
+    await t.shadowSettled();
+  };
 
   // Pick marker at Humahuaca for the third snapshot: the hit is built like
   // the app's tap path produces it (grid coords + DEM elevation), then the
@@ -591,6 +652,8 @@ async function main(): Promise<void> {
     scene: ReturnType<typeof createSceneRenderer>;
     output: ReturnType<typeof target>;
     size: readonly [number, number];
+    /** Runs before the layer updates (sun shots push their instant here). */
+    prepare?: () => Promise<void>;
     drawExtras?: (png: PNG, camera: OrbitCamera) => void;
   }[] = [
     {
@@ -631,6 +694,53 @@ async function main(): Promise<void> {
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],
+    },
+    // Sun engine (task S2a): winter solstice 2026-06-21 at two hours.
+    // 18:00 local is ~44 min before sunset — a ~8 deg sun from the WNW
+    // throwing long shadows; 12:30 is the ~41 deg midday sun.
+    {
+      name: "sun-quebrada-sunset",
+      camera: quebradaCamera(),
+      layers: [sunDiorama, sunTerrain],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+      prepare: () =>
+        applySun(
+          argentinaLocalToUtc(2026, 6, 21, 18, 0),
+          sunTerrain,
+          sunDiorama,
+        ),
+    },
+    {
+      name: "sun-quebrada-noon",
+      camera: quebradaCamera(),
+      layers: [sunDiorama, sunTerrain],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+      prepare: () =>
+        applySun(
+          argentinaLocalToUtc(2026, 6, 21, 12, 30),
+          sunTerrain,
+          sunDiorama,
+        ),
+    },
+    {
+      name: "sun-overview-morning",
+      camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
+        region: provinceRegion,
+      }),
+      layers: [sunDiorama, sunTerrain],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+      prepare: () =>
+        applySun(
+          argentinaLocalToUtc(2026, 6, 21, 9, 0),
+          sunTerrain,
+          sunDiorama,
+        ),
     },
     {
       name: "regions",
@@ -750,6 +860,7 @@ async function main(): Promise<void> {
 
   mkdirSync(OUT_DIR, { recursive: true });
   for (const shot of shots) {
+    await shot.prepare?.();
     // The discard mask must match THIS shot's layers: a shot without the
     // detail layer would otherwise inherit the previous shot's mask and
     // leave a hole in the base terrain.
@@ -784,6 +895,32 @@ async function main(): Promise<void> {
     const path = join(OUT_DIR, `${shot.name}.png`);
     writeFileSync(path, PNG.sync.write(png));
     console.log(`wrote ${path}`);
+  }
+
+  // Shadow-engine cost evidence for both quality plans (task S2a): the
+  // desktop plan ran with the sun shots; run one recompute on the mobile
+  // plan here so both timings print.
+  {
+    const look = sunLook(
+      argentinaLocalToUtc(2026, 6, 21, 18, 0),
+      JUJUY_SOLAR.lat,
+      JUJUY_SOLAR.lon,
+    );
+    sunMobileTerrain.setSun(look.direction, look.sunColor, look.ambientColor);
+    sunMobileTerrain.setShadowsEnabled(true);
+    await sunMobileTerrain.shadowSettled();
+    const fmt = (v: number | undefined): string =>
+      v === undefined ? "n/a" : `${v.toFixed(1)} ms`;
+    const desktopPlan = planShadows("desktop");
+    const mobilePlan = planShadows("mobile");
+    console.log(
+      `sun-shadow recompute (desktop ${desktopPlan.width}x${desktopPlan.height}, ` +
+        `${desktopPlan.steps} steps): ${fmt(sunTerrain.shadowMs())}`,
+    );
+    console.log(
+      `sun-shadow recompute (mobile ${mobilePlan.width}x${mobilePlan.height}, ` +
+        `${mobilePlan.steps} steps): ${fmt(sunMobileTerrain.shadowMs())}`,
+    );
   }
 
   gpu.dispose();

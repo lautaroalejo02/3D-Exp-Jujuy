@@ -11,6 +11,7 @@ import {
 } from "vgpu";
 
 import type { Layer, LayerContext, LayerState } from "../app/layers";
+import type { ShadowPlan } from "../app/device-profile";
 import {
   buildGpuMemoryReport,
   mipLevelCount,
@@ -18,6 +19,7 @@ import {
   type GpuMemoryReport,
 } from "../render/gpu-memory";
 import { generateMipmaps } from "../render/mipmap";
+import { createShadowEngine, type ShadowEngine } from "../sun/shadow-engine";
 import { createTerrainControls } from "../ui/controls";
 import {
   MAX_DETAIL_PATCHES,
@@ -91,6 +93,16 @@ export interface TerrainLayerOptions {
   readonly ambient?: number;
   readonly lightStrength?: number;
   /**
+   * Cast-shadow engine (src/sun/shadow-engine.ts): creates the shadow
+   * texture + compute march over the heights buffer, re-dispatched only
+   * when the sun direction or exaggeration changes. Absent: a 1x1
+   * fully-lit texture is bound and setShadowsEnabled is a visual no-op.
+   */
+  readonly shadows?: {
+    readonly shader: string | ShaderSource;
+    readonly plan: ShadowPlan;
+  };
+  /**
    * Boundary rasters for the province mask. When absent, 1x1 fallbacks are
    * bound instead: SDF deep-inside and index 0 everywhere, so the mask
    * terms are no-ops.
@@ -158,6 +170,25 @@ export interface TerrainLayer extends Layer {
    * the terrain.
    */
   setDetailPatchMask(activeIds: ReadonlySet<string>): void;
+  /**
+   * Push the sun light: `direction` is the unit vector TO the sun in
+   * world space (X east, Y up, Z south), `color` the direct light tint,
+   * `ambient` the ambient (sky) light. Triggers a shadow recompute when
+   * shadows are enabled and the direction changed.
+   */
+  setSun(
+    direction: readonly [number, number, number],
+    color: readonly [number, number, number],
+    ambient: readonly [number, number, number],
+  ): void;
+  /** Fade the cast-shadow term in (the sun mode is on) or out. */
+  setShadowsEnabled(enabled: boolean): void;
+  /** The shadow visibility texture (or the 1x1 lit fallback). */
+  shadowTexture(): Texture;
+  /** Milliseconds of the last shadow recompute, if it ran. */
+  shadowMs(): number | undefined;
+  /** Resolves when the last shadow recompute finished on the GPU. */
+  shadowSettled(): Promise<void>;
   getGpuMemoryReport(): GpuMemoryReport;
 }
 
@@ -176,8 +207,14 @@ interface TerrainParamsValue {
   cellScale: number;
   cellKm: number;
   exaggeration: number;
-  ambient: number;
-  lightStrength: number;
+  /** Direct light tint; defaults to grey so the old look is unchanged. */
+  sunColor: number[];
+  /** Ambient light color; defaults to grey. */
+  ambientColor: number[];
+  /** Unit vector TO the sun (X east, Y up, Z south); default NW 45 deg. */
+  sunDir: number[];
+  /** 0 = ignore shadowTex (default), 1 = full cast shadows. */
+  shadowStrength: number;
   overlayOpacity: number;
   dimStrength: number;
   outlinePx: number;
@@ -255,8 +292,12 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       ? [opts.provinceMask.grid.width, opts.provinceMask.grid.height]
       : [1, 1],
     exaggeration: opts.verticalExaggeration ?? DEFAULT_VERTICAL_EXAGGERATION,
-    ambient: opts.ambient ?? 0.42,
-    lightStrength: opts.lightStrength ?? 0.85,
+    // Default light reproduces the long-standing cartographic look:
+    // NW 45 deg sun, grey direct and grey ambient.
+    sunColor: [opts.lightStrength ?? 0.85, opts.lightStrength ?? 0.85, opts.lightStrength ?? 0.85],
+    ambientColor: [opts.ambient ?? 0.42, opts.ambient ?? 0.42, opts.ambient ?? 0.42],
+    sunDir: [-0.5, 0.7071067811865476, -0.5],
+    shadowStrength: 0,
     overlayOpacity: opts.showRegions ? regionTintStrength : 0,
     dimStrength: opts.dimStrength ?? 0.55,
     outlinePx: opts.outlineCssPx ?? 2,
@@ -275,6 +316,9 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
   let overlayTex: Texture | undefined;
   let deptIndexTex: Texture | undefined;
   let provinceSdfTex: Texture | undefined;
+  let shadowTex: Texture | undefined;
+  let shadowEngine: ShadowEngine | undefined;
+  let shadowsEnabled = false;
   let terrainDraw: Draw | undefined;
 
   const layer: TerrainLayer = {
@@ -401,6 +445,33 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         mask ? [mask.grid.width, mask.grid.height] : [1, 1],
       );
 
+      // Cast shadows: the engine owns the visibility texture + the
+      // compute march over the same heights buffer. Without the option a
+      // 1x1 fully-lit texture is bound and the shader term stays a no-op
+      // (shadowStrength starts at 0 either way).
+      if (opts.shadows) {
+        shadowEngine = createShadowEngine(gpu, heightsBuffer, {
+          grid: gridUniforms,
+          shader: opts.shadows.shader,
+          plan: opts.shadows.plan,
+        });
+        shadowTex = shadowEngine.texture;
+      } else {
+        shadowTex = texture(gpu, {
+          kind: "2d",
+          size: [1, 1],
+          format: "rgba8unorm",
+          usage: ["texture_binding", "copy_dst"],
+          label: "sun-shadow-fallback",
+        });
+        gpu.gpu.queue.writeTexture(
+          { texture: shadowTex.gpu },
+          new Uint8Array([255, 255, 255, 255]),
+          { bytesPerRow: 4, rowsPerImage: 1 },
+          [1, 1],
+        );
+      }
+
       terrainDraw = draw(gpu, {
         shader: opts.shaders.terrain,
         label: "terrain",
@@ -419,6 +490,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           overlayTex,
           deptIndexTex,
           provinceSdfTex,
+          shadowTex,
         },
       });
     },
@@ -447,7 +519,61 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       // Immediate uniform update; the next frame's update() would push it
       // anyway, but this keeps the slider responsive outside the loop.
       terrainDraw?.set({ params: { exaggeration: value } });
+      // The shadow march runs over drawn heights — exaggeration is an
+      // input, so a change re-dispatches the pass (when shadows are on).
+      if (shadowsEnabled) {
+        shadowEngine?.update(
+          params.sunDir as [number, number, number],
+          value,
+        );
+      }
       opts.onExaggeration?.(value);
+    },
+
+    setSun(direction, color, ambient): void {
+      params.sunDir = [...direction];
+      params.sunColor = [...color];
+      params.ambientColor = [...ambient];
+      terrainDraw?.set({
+        params: {
+          sunDir: params.sunDir,
+          sunColor: params.sunColor,
+          ambientColor: params.ambientColor,
+        },
+      });
+      if (shadowsEnabled) {
+        shadowEngine?.update(direction, params.exaggeration);
+      }
+    },
+
+    setShadowsEnabled(enabled: boolean): void {
+      if (enabled === shadowsEnabled) return;
+      shadowsEnabled = enabled;
+      params.shadowStrength = enabled ? 1 : 0;
+      terrainDraw?.set({ params: { shadowStrength: params.shadowStrength } });
+      if (enabled) {
+        // First activation (or re-activation after the inputs moved)
+        // triggers the march; the engine itself dedupes identical inputs.
+        shadowEngine?.update(
+          params.sunDir as [number, number, number],
+          params.exaggeration,
+        );
+      }
+    },
+
+    shadowTexture(): Texture {
+      if (!shadowTex) {
+        throw new Error("terrain layer used before init()");
+      }
+      return shadowTex;
+    },
+
+    shadowMs(): number | undefined {
+      return shadowEngine?.lastShadowMs;
+    },
+
+    shadowSettled(): Promise<void> {
+      return shadowEngine?.whenSettled() ?? Promise.resolve();
     },
 
     gridUniforms,
@@ -518,14 +644,21 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           label: `province SDF texture ${opts.provinceMask?.grid.width ?? 1}x${opts.provinceMask?.grid.height ?? 1} r8unorm`,
           bytes: maskCells,
         },
+        opts.shadows
+          ? {
+              label: `sun shadow texture ${opts.shadows.plan.width}x${opts.shadows.plan.height} rgba8unorm`,
+              bytes:
+                opts.shadows.plan.width * opts.shadows.plan.height * 4,
+            }
+          : { label: "sun shadow fallback texture 1x1", bytes: 4 },
         {
           label: "terrain uniforms (approx)",
           // Params (terrain.wgsl) at natural WGSL alignment: mat4x4f
           // (64 B) + cameraPos vec3f (12 B + 4 B pad) + 6 vec2f (48 B)
-          // + 13 f32 (52 B) = 180 B of scalars, the patch rect array
-          // aligned at 192 B (MAX_DETAIL_PATCHES x vec4f = 128 B), then
-          // patchRectCount + tail pad → 336 B.
-          bytes: 336,
+          // + 4 f32 (16 B) + 3 vec3f (48 B) + 8 f32 (32 B) = 224 B, the
+          // patch rect array (MAX_DETAIL_PATCHES x vec4f = 128 B), then
+          // patchRectCount + tail pad → ~368 B.
+          bytes: 368,
           estimate: true,
         },
       ]);

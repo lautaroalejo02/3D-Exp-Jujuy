@@ -1,10 +1,13 @@
 import {
   draw,
+  sampler,
+  texture,
   type Draw,
   type FramePass,
   type Gpu,
   type ShaderSource,
   type StorageBuffer,
+  type Texture,
 } from "vgpu";
 
 import type { Layer, LayerContext, LayerState } from "../app/layers";
@@ -59,6 +62,24 @@ export interface DioramaLayerOptions {
   readonly shader: string | ShaderSource;
   readonly ambient?: number;
   readonly lightStrength?: number;
+  /**
+   * Sun-shadow visibility texture (the terrain layer's engine output),
+   * bound on the wall draw. Absent: a 1x1 fully-lit fallback is bound.
+   */
+  readonly shadowTexture?: () => Texture;
+}
+
+export interface DioramaLayer extends Layer {
+  /** Push the sun light — same convention as TerrainLayer.setSun. */
+  setSun(
+    direction: readonly [number, number, number],
+    color: readonly [number, number, number],
+    ambient: readonly [number, number, number],
+  ): void;
+  /** Fade the wall shadow term in or out (same flag as the terrain). */
+  setShadowsEnabled(enabled: boolean): void;
+  /** Multiplicative tint on the sky gradient (vec3(1) = neutral). */
+  setSkyTint(tint: readonly [number, number, number]): void;
 }
 
 interface DioramaParamsValue {
@@ -78,12 +99,15 @@ interface DioramaParamsValue {
   shadowKm: number;
   hazeStart: number;
   hazeEnd: number;
-  ambient: number;
-  lightStrength: number;
+  sunColor: number[];
+  ambientColor: number[];
+  sunDir: number[];
+  shadowStrength: number;
 }
 
 interface SkyParamsValue {
   upView: number[];
+  sunTint: number[];
   tanHalfFov: number;
   aspect: number;
 }
@@ -110,11 +134,13 @@ export function dioramaVertexPlan(
   return { vertexCount: wallVertices, slabVertexCount: 30 };
 }
 
-export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
+export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
   const { vertexCount: wallVertices, slabVertexCount } = dioramaVertexPlan(
     opts.grid.meshSize,
   );
 
+  const ambient = opts.ambient ?? 0.42;
+  const lightStrength = opts.lightStrength ?? 0.85;
   const params: DioramaParamsValue = {
     viewProjection: [...IDENTITY_MAT4],
     cameraPos: [0, 0, 0],
@@ -132,10 +158,19 @@ export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
     shadowKm: SHADOW_KM,
     hazeStart: 0,
     hazeEnd: 1,
-    ambient: opts.ambient ?? 0.42,
-    lightStrength: opts.lightStrength ?? 0.85,
+    // Same default light as the terrain: NW 45 deg sun, grey direct and
+    // grey ambient — the shipped look until the sun mode drives it.
+    sunColor: [lightStrength, lightStrength, lightStrength],
+    ambientColor: [ambient, ambient, ambient],
+    sunDir: [-0.5, 0.7071067811865476, -0.5],
+    shadowStrength: 0,
   };
-  const sky: SkyParamsValue = { upView: [0, 1, 0], tanHalfFov: 1, aspect: 1 };
+  const sky: SkyParamsValue = {
+    upView: [0, 1, 0],
+    sunTint: [1, 1, 1],
+    tanHalfFov: 1,
+    aspect: 1,
+  };
 
   let skyDraw: Draw | undefined;
   let wallDraw: Draw | undefined;
@@ -157,6 +192,24 @@ export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
         depth: false,
         set: { sky },
       });
+      // Shadow texture for the wall draw: the terrain's engine output.
+      // The terrain layer inits after this one (draw order = init order:
+      // the sky must be first), so the getter runs lazily on the first
+      // update — the same deferred-bind pattern as `heights` — and this
+      // 1x1 fully-lit fallback keeps the binding valid until then.
+      const fallbackShadowTex = texture(gpu, {
+        kind: "2d",
+        size: [1, 1],
+        format: "rgba8unorm",
+        usage: ["texture_binding", "copy_dst"],
+        label: "diorama-shadow-fallback",
+      });
+      gpu.gpu.queue.writeTexture(
+        { texture: fallbackShadowTex.gpu },
+        new Uint8Array([255, 255, 255, 255]),
+        { bytesPerRow: 4, rowsPerImage: 1 },
+        [1, 1],
+      );
       wallDraw = draw(gpu, {
         shader: opts.shader,
         entry: { vertex: "vs_wall", fragment: "fs_wall" },
@@ -164,7 +217,14 @@ export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
         vertices: wallVertices,
         cull: "none",
         depth: { compare: "greater", write: true }, // reversed-Z
-        set: { params },
+        set: {
+          params,
+          shadowTex: fallbackShadowTex,
+          linearSampler: sampler(gpu, {
+            minFilter: "linear",
+            magFilter: "linear",
+          }),
+        },
       });
       slabDraw = draw(gpu, {
         shader: opts.shader,
@@ -180,10 +240,13 @@ export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
     update(state: LayerState): void {
       if (!wallDraw || !slabDraw || !skyDraw) return;
       if (!heightsBound) {
-        // Deferred bind: the terrain layer owns the buffer and inits after
-        // this layer (the sky must draw first). Binding a vgpu resource is
-        // not GPU allocation — the draw itself was created once in init().
+        // Deferred binds: the terrain layer owns the buffer (and the
+        // shadow texture) and inits after this layer — the sky must draw
+        // first. Binding a vgpu resource is not GPU allocation — the
+        // draw itself was created once in init().
         wallDraw.set({ heights: opts.heights() });
+        const shadowTex = opts.shadowTexture?.();
+        if (shadowTex) wallDraw.set({ shadowTex });
         heightsBound = true;
       }
       const exaggeration = opts.verticalExaggeration();
@@ -216,6 +279,29 @@ export function createDioramaLayer(opts: DioramaLayerOptions): Layer {
       if (skyDraw) pass.draw(skyDraw);
       if (slabDraw) pass.draw(slabDraw);
       if (wallDraw) pass.draw(wallDraw);
+    },
+
+    setSun(direction, color, ambient): void {
+      params.sunDir = [...direction];
+      params.sunColor = [...color];
+      params.ambientColor = [...ambient];
+      const partial = {
+        sunDir: params.sunDir,
+        sunColor: params.sunColor,
+        ambientColor: params.ambientColor,
+      };
+      wallDraw?.set({ params: partial });
+      slabDraw?.set({ params: partial });
+    },
+
+    setShadowsEnabled(enabled: boolean): void {
+      params.shadowStrength = enabled ? 1 : 0;
+      wallDraw?.set({ params: { shadowStrength: params.shadowStrength } });
+    },
+
+    setSkyTint(tint): void {
+      sky.sunTint = [...tint];
+      skyDraw?.set({ sky: { sunTint: sky.sunTint } });
     },
   };
 }

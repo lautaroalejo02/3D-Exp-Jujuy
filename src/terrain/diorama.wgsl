@@ -35,12 +35,15 @@ struct DioramaParams {
   shadowKm: f32,      // contact-shadow ring width in km
   hazeStart: f32,     // distance in km where the haze starts
   hazeEnd: f32,       // distance in km where the haze saturates
-  ambient: f32,
-  lightStrength: f32,
+  sunColor: vec3f,    // direct light tint (same uniforms as terrain.wgsl)
+  ambientColor: vec3f,
+  sunDir: vec3f,      // TO the sun (X east, Y up, Z south)
+  shadowStrength: f32, // 0 = shadows off, 1 = walls sample shadowTex
 }
 
 struct SkyParams {
   upView: vec3f,    // world up direction in view space (viewMatrix column 1)
+  sunTint: vec3f,   // multiplicative tint on the whole gradient (day: 1)
   tanHalfFov: f32,  // tan(fovY / 2)
   aspect: f32,
 }
@@ -48,9 +51,8 @@ struct SkyParams {
 @group(0) @binding(0) var<uniform> params: DioramaParams;
 @group(0) @binding(1) var<uniform> sky: SkyParams;
 @group(0) @binding(2) var<storage, read> heights: array<f32>;
-
-// Same sun as terrain.wgsl so walls, slab and surface are lit consistently.
-const SUN_DIR = vec3f(-0.5, 0.70710678, -0.5);
+@group(0) @binding(3) var shadowTex: texture_2d<f32>;
+@group(0) @binding(4) var linearSampler: sampler;
 
 // Sky palette: a soft blue at the top fading to a pale warm haze at the
 // horizon, and a calm slate below it — the neutral backdrop the maqueta
@@ -131,7 +133,9 @@ struct SkyOut {
   let pitch = dot(rd, sky.upView);
   var col = mix(SKY_FLOOR, SKY_HORIZON, smoothstep(-0.6, -0.04, pitch));
   col = mix(col, SKY_ZENITH, smoothstep(0.02, 0.55, pitch));
-  return vec4f(col, 1.0);
+  // Sun tint: warm near the horizon at low sun, dark at night; neutral
+  // (vec3(1)) for the default daytime look.
+  return vec4f(col * sky.sunTint, 1.0);
 }
 
 // -------------------------------------------------------------- walls ---
@@ -141,6 +145,7 @@ struct WallOut {
   @location(0) depthFrac: f32,
   @location(1) world: vec3f,
   @location(2) @interpolate(flat) edge: u32,
+  @location(3) uv: vec2f,
 }
 
 @vertex fn vs_wall(@builtin(vertex_index) vi: u32) -> WallOut {
@@ -180,6 +185,9 @@ struct WallOut {
   out.depthFrac = f32(drop);
   out.world = world;
   out.edge = edge;
+  // Grid UV of the wall's top edge — same mapping as terrain.wgsl's
+  // satellite UV — so the fragment can sample the sun-shadow texture.
+  out.uv = (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize;
   return out;
 }
 
@@ -188,8 +196,16 @@ struct WallOut {
   if (in.edge == 1u) { normal = vec3f(0.0, 0.0, 1.0); }
   else if (in.edge == 2u) { normal = vec3f(-1.0, 0.0, 0.0); }
   else if (in.edge == 3u) { normal = vec3f(1.0, 0.0, 0.0); }
-  let diffuse = max(dot(normal, SUN_DIR), 0.0);
-  let light = params.ambient + params.lightStrength * diffuse;
+  // The wall shares its edge cell's cast-shadow visibility with the
+  // terrain surface it hangs from (shadowStrength fades the term like
+  // in the terrain shader).
+  let visibility = mix(
+    1.0,
+    textureSample(shadowTex, linearSampler, in.uv).r,
+    params.shadowStrength,
+  );
+  let diffuse = max(dot(normal, params.sunDir), 0.0);
+  let light = params.ambientColor + params.sunColor * diffuse * visibility;
 
   // Alternating strata: every other band carries a slightly different
   // tone, with a thin darker seam between them.
@@ -261,8 +277,8 @@ struct SlabOut {
     if (in.rim == 2u) { normal = vec3f(0.0, 0.0, 1.0); }
     else if (in.rim == 3u) { normal = vec3f(-1.0, 0.0, 0.0); }
     else if (in.rim == 4u) { normal = vec3f(1.0, 0.0, 0.0); }
-    let diffuse = max(dot(normal, SUN_DIR), 0.0);
-    let light = params.ambient + params.lightStrength * diffuse;
+    let diffuse = max(dot(normal, params.sunDir), 0.0);
+    let light = params.ambientColor + params.sunColor * diffuse;
     col = SLAB_RIM * light;
   } else {
     // Contact shadow: darken the slab where it sits under the block,

@@ -56,8 +56,10 @@ struct Params {
   cellScale: f32,     // global px per height-grid cell
   cellKm: f32,        // ground km per height-grid cell
   exaggeration: f32,
-  ambient: f32,
-  lightStrength: f32,
+  sunColor: vec3f,    // direct light tint (same uniforms as terrain.wgsl)
+  ambientColor: vec3f,
+  sunDir: vec3f,      // TO the sun (X east, Y up, Z south)
+  shadowStrength: f32, // 0 = shadows off, 1 = sample the base shadow tex
   biasNdc: f32,       // clip-z offset in units of clip w (toward the camera)
   edgeFade: f32,      // uv band at each border that geomorphs into the base
   // baseGridCoord = (patchGridCoord + 0.5) * patchToBaseK + patchToBaseC,
@@ -85,9 +87,10 @@ struct Params {
 // The base terrain's own heights buffer, shared — the geomorph target is
 // the surface the base shader draws, read from the same data.
 @group(0) @binding(4) var<storage, read> baseHeights: array<f32>;
-
-// Same sun as the base terrain: azimuth 315 deg (NW), elevation 45 deg.
-const SUN_DIR = vec3f(-0.5, 0.70710678, -0.5);
+// The base-resolution sun-shadow texture (src/sun/shadow.wgsl), sampled
+// at the fragment's position on the base grid — fine shadows inside the
+// patch's own DEM are a possible later improvement.
+@group(0) @binding(5) var shadowTex: texture_2d<f32>;
 
 // Bilinear sample of a row-major heights buffer at fractional grid
 // coords, clamped to the borders (same convention as raster.bilinearSample).
@@ -278,8 +281,18 @@ struct VertexOut {
   let sz = dhz * params.exaggeration / (2.0 * cellMeters);
   let normal = normalize(vec3f(-sx, 1.0, -sz));
 
-  let diffuse = max(dot(normal, SUN_DIR), 0.0);
-  let light = params.ambient + params.lightStrength * diffuse;
+  // Cast shadows at base resolution: the shadow texture is aligned to
+  // the BASE grid, so the fragment's base-grid coords map to its UV
+  // (cell centers at +0.5, same convention as terrain.wgsl).
+  let baseUv = (bg + vec2f(0.5)) / params.baseGridSize;
+  let visibility = mix(
+    1.0,
+    textureSample(shadowTex, linearSampler, baseUv).r,
+    params.shadowStrength,
+  );
+
+  let diffuse = max(dot(normal, params.sunDir), 0.0);
+  let light = params.ambientColor + params.sunColor * diffuse * visibility;
   let rgb = textureSample(satelliteTex, linearSampler, in.uv).rgb * light;
 
   // Opaque: the base is discarded under the whole patch, so there is no

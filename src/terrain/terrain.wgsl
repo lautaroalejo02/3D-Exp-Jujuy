@@ -27,6 +27,16 @@
 // height and geomorphs onto this surface at the border (detail.wgsl), so
 // the base would only poke through it otherwise. A site that is merely
 // in range but still loading has no rect — the base keeps showing.
+//
+// SUN + SHADOWS: the light comes from uniforms (params.sunDir TO the sun
+// in world space, params.sunColor/ambientColor) and `shadowTex` holds a
+// per-footprint soft visibility factor from the compute march in
+// src/sun/shadow.wgsl — same UV space as the satellite image. direct =
+// sunColor * max(dot(N,L),0) * visibility. `shadowStrength` fades the
+// sampled visibility in (0 = ignore the texture, the sun-less default
+// look). The default uniforms reproduce the old cartographic light:
+// sunDir NW 45 deg, grey sunColor, grey ambient — nothing changes
+// visually until the sun mode drives them.
 
 struct Params {
   viewProjection: mat4x4f,
@@ -41,8 +51,10 @@ struct Params {
   cellScale: f32,    // global px per height-grid cell
   cellKm: f32,       // ground km per height-grid cell
   exaggeration: f32,
-  ambient: f32,
-  lightStrength: f32,
+  sunColor: vec3f,
+  ambientColor: vec3f,
+  sunDir: vec3f,
+  shadowStrength: f32, // 0 = shadows off (default), 1 = sample shadowTex
   overlayOpacity: f32,
   dimStrength: f32,    // 0..1: how strongly outside terrain is dimmed
   outlinePx: f32,      // province outline width in physical pixels
@@ -65,11 +77,7 @@ struct Params {
 @group(0) @binding(4) var overlayTex: texture_2d<f32>;
 @group(0) @binding(5) var deptIndexTex: texture_2d<f32>;
 @group(0) @binding(6) var provinceSdfTex: texture_2d<f32>;
-
-// Sun direction TO the sun in world space (X east, Y up, Z south).
-// Cartographic convention: azimuth 315 deg (north-west), elevation 45 deg.
-// east = sin(az)*cos(el) = -0.5, up = sin(el) ~= 0.7071, south = -cos(az)*cos(el) = -0.5.
-const SUN_DIR = vec3f(-0.5, 0.70710678, -0.5);
+@group(0) @binding(7) var shadowTex: texture_2d<f32>;
 
 // Outside-province dimming: how much color is pulled toward luminance and
 // the extra darkening applied on top, before `dimStrength` scales the mix.
@@ -163,8 +171,17 @@ struct VertexOut {
   let sz = dhz * params.exaggeration / (2.0 * cellMeters);
   let normal = normalize(vec3f(-sx, 1.0, -sz));
 
-  let diffuse = max(dot(normal, SUN_DIR), 0.0);
-  let light = params.ambient + params.lightStrength * diffuse;
+  // Cast shadows: soft visibility computed toward the sun, sampled in the
+  // same UV space as the satellite image. shadowStrength fades the term
+  // in so the default (sun-less) look is untouched.
+  let visibility = mix(
+    1.0,
+    textureSample(shadowTex, linearSampler, in.uv).r,
+    params.shadowStrength,
+  );
+
+  let diffuse = max(dot(normal, params.sunDir), 0.0);
+  let light = params.ambientColor + params.sunColor * diffuse * visibility;
   let base = textureSample(satelliteTex, linearSampler, in.uv).rgb;
   var rgb = base * light;
 
