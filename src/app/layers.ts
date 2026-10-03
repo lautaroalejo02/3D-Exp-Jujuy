@@ -38,6 +38,8 @@ export interface PickHit {
   readonly grid: readonly [number, number];
   /** Geographic position: [longitude, latitude] in degrees. */
   readonly lonLat: readonly [number, number];
+  /** DEM height at the hit in meters, without vertical exaggeration. */
+  readonly elevationMeters: number;
 }
 
 /** Optional DOM contribution a layer can mount into the overlay root. */
@@ -50,6 +52,10 @@ export interface Layer {
   init(ctx: LayerContext): void;
   update(state: LayerState, dt: number): void;
   draw(pass: FramePass): void;
-  onPick?(hit: PickHit): void;
+  /**
+   * Terrain pick result for a tap/click; `undefined` means the pointer hit
+   * the sky (layers should clear any pick state they show).
+   */
+  onPick?(hit: PickHit | undefined): void;
   readonly ui?: LayerUi;
 }

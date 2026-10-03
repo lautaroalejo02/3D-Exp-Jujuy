@@ -4,6 +4,10 @@ import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
 import { overviewCamera } from "./camera/framing";
 import { attachCameraInput } from "./camera/input";
+import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
+import markerShader from "./features/pick-marker/pick-marker.wgsl";
+import { metersPerGridCell } from "./geo";
+import { intersectHeightfield, screenToRay } from "./picking/ray";
 import { formatBytes } from "./render/gpu-memory";
 import mipmapShader from "./render/mipmap.wgsl";
 import presentShader from "./render/present.wgsl";
@@ -18,6 +22,7 @@ import { createTerrainLayer } from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
+import { createPickPanelLayer } from "./ui/pick-panel";
 
 /** Initial vertical exaggeration of the relief (adjustable with the UI slider). */
 const INITIAL_VERTICAL_EXAGGERATION = 2.5;
@@ -72,6 +77,11 @@ function mountAttributions(overlay: HTMLElement): void {
 interface TerrainData {
   readonly heightfield: Awaited<ReturnType<typeof loadHeightfield>>;
   readonly satellite: SatelliteImage;
+  /**
+   * Mean reconstruction error of the downsampled level, meters. Only the
+   * default quality reports one; shown in the pick panel's precision note.
+   */
+  readonly meanAbsErrorMeters?: number;
 }
 
 async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
@@ -99,6 +109,7 @@ async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
       width: bitmap.width,
       height: bitmap.height,
     },
+    meanAbsErrorMeters: level.heights.reconstructionError?.meanAbsErrorMeters,
   };
 }
 
@@ -169,15 +180,30 @@ async function main(): Promise<void> {
     renderer.resize([width, height]);
   });
 
+  let verticalExaggeration = INITIAL_VERTICAL_EXAGGERATION;
   const terrain = createTerrainLayer({
     heightfield: data.heightfield,
     satellite: data.satellite,
     shaders: { terrain: terrainShader, mipmap: mipmapShader },
     quality,
-    verticalExaggeration: INITIAL_VERTICAL_EXAGGERATION,
+    verticalExaggeration,
+    onExaggeration: (v) => {
+      verticalExaggeration = v;
+    },
   });
-  terrain.init({ gpu });
-  const layers: readonly Layer[] = [terrain];
+  // The marker re-anchors to the surface with the live exaggeration, so it
+  // tracks the terrain when the slider moves.
+  const pickMarker = createPickMarkerLayer({
+    spec: data.heightfield.spec,
+    shader: markerShader,
+    verticalExaggeration: () => verticalExaggeration,
+  });
+  const pickPanel = createPickPanelLayer({
+    cellSizeMeters: metersPerGridCell(data.heightfield.spec),
+    meanAbsErrorMeters: data.meanAbsErrorMeters,
+  });
+  const layers: readonly Layer[] = [terrain, pickMarker, pickPanel];
+  for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
 
   const camera = overviewCamera(
@@ -190,8 +216,22 @@ async function main(): Promise<void> {
   );
   attachCameraInput(canvas, {
     camera,
-    // Picking lands in the next task; for now taps are only logged.
-    onTap: (point) => console.debug("tap", point),
+    onTap: (point) => {
+      const ray = screenToRay(
+        camera,
+        point.x,
+        point.y,
+        canvas.clientWidth,
+        canvas.clientHeight,
+      );
+      const hit = intersectHeightfield(
+        ray,
+        data.heightfield,
+        verticalExaggeration,
+      );
+      // A miss (sky) dispatches undefined so layers clear pick state.
+      for (const layer of layers) layer.onPick?.(hit);
+    },
   });
   const appClock = clock(gpu);
 

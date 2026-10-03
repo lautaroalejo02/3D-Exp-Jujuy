@@ -128,6 +128,55 @@
         align-self: flex-start;
         color: #8fc1ff;
       }
+      .pick-panel {
+        position: absolute;
+        right: 0.5rem;
+        bottom: 0.5rem;
+        max-width: min(16rem, calc(100vw - 1rem));
+        padding: 0.55rem 0.75rem;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.85);
+        font-size: 0.8rem;
+        color: #d7dae0;
+      }
+      .pick-panel-close {
+        position: absolute;
+        top: 0.1rem;
+        right: 0.25rem;
+        border: none;
+        background: none;
+        color: #9aa3b2;
+        font-size: 1rem;
+        line-height: 1;
+        padding: 0.35rem;
+        cursor: pointer;
+      }
+      .pick-panel-close:hover {
+        color: #e8e9eb;
+      }
+      .pick-panel [hidden] {
+        display: none;
+      }
+      .pick-panel-data {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.1rem 0.6rem;
+        margin: 0 1rem 0 0;
+      }
+      .pick-panel-data dt {
+        color: #9aa3b2;
+      }
+      .pick-panel-data dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        text-align: right;
+      }
+      .pick-panel-note,
+      .pick-panel-hint {
+        margin: 0.4rem 0 0;
+        font-size: 0.68rem;
+        color: #9aa3b2;
+      }
       @media (max-width: 640px) {
         .attributions {
           font-size: 0.66rem;

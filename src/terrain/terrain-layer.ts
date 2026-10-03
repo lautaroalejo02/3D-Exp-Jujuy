@@ -49,6 +49,11 @@ export interface TerrainLayerOptions {
   readonly verticalExaggeration?: number;
   readonly ambient?: number;
   readonly lightStrength?: number;
+  /**
+   * Called whenever the exaggeration changes (slider or setter), so the
+   * app can keep other layers (e.g. the pick marker) in sync.
+   */
+  readonly onExaggeration?: (value: number) => void;
 }
 
 export interface TerrainLayer extends Layer {
@@ -241,6 +246,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       // Immediate uniform update; the next frame's update() would push it
       // anyway, but this keeps the slider responsive outside the loop.
       terrainDraw?.set({ params: { exaggeration: value } });
+      opts.onExaggeration?.(value);
     },
 
     getGpuMemoryReport(): GpuMemoryReport {

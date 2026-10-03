@@ -4,8 +4,9 @@
  * vgpu's Node adapter (Dawn) into offscreen targets, then writes PNGs to
  * data/build/snapshots/:
  *
- * - overview.png  the app's initial view (whole grid, from the south-east)
- * - quebrada.png  Humahuaca (see HUMAHUACA) from ~60 km, looking north
+ * - overview.png           the app's initial view (whole grid, from the south-east)
+ * - quebrada.png           Humahuaca (see HUMAHUACA) from ~60 km, looking north
+ * - quebrada-marker.png    same framing with the pick marker at Humahuaca
  *
  * Data is read from data/build (run `npm run build:data` first). The JPEG is
  * decoded with jpeg-js (the browser uses createImageBitmap instead); .wgsl
@@ -20,8 +21,11 @@ import { decode as decodeJpeg } from "jpeg-js";
 import { PNG } from "pngjs";
 import { frame, init, target } from "vgpu/node";
 
+import type { Layer } from "../src/app/layers";
 import { OrbitCamera } from "../src/camera/camera";
 import { overviewCamera } from "../src/camera/framing";
+import { createPickMarkerLayer } from "../src/features/pick-marker/pick-marker";
+import { lonLatToGrid } from "../src/geo/grid";
 import { lonLatToWorld } from "../src/geo/world";
 import { createSceneRenderer } from "../src/render/scene-renderer";
 import { decodeHeightsLE } from "../src/terrain/encoding";
@@ -79,10 +83,11 @@ async function main(): Promise<void> {
     );
   }
 
-  const [terrainWgsl, mipmapWgsl, presentWgsl] = await Promise.all([
+  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl] = await Promise.all([
     resolveWgsl(join("terrain", "terrain.wgsl")),
     resolveWgsl(join("render", "mipmap.wgsl")),
     resolveWgsl(join("render", "present.wgsl")),
+    resolveWgsl(join("features", "pick-marker", "pick-marker.wgsl")),
   ]);
 
   const gpu = await init();
@@ -106,45 +111,84 @@ async function main(): Promise<void> {
   });
   terrain.init({ gpu });
 
-  const shots: { name: string; camera: OrbitCamera }[] = [
+  // Pick marker at Humahuaca for the third snapshot: the hit is built like
+  // the app's tap path produces it (grid coords + DEM elevation), then the
+  // layer's onPick consumes it through the Layer extension point.
+  const pickMarker = createPickMarkerLayer({
+    spec: heightfield.spec,
+    shader: markerWgsl,
+    verticalExaggeration: () => EXAGGERATION,
+  });
+  pickMarker.init({ gpu });
+  {
+    const elevationMeters = heightfield.heightAtLonLat(
+      HUMAHUACA.lon,
+      HUMAHUACA.lat,
+    );
+    if (elevationMeters === undefined) {
+      throw new Error("HUMAHUACA falls outside the loaded heightfield");
+    }
+    const grid = lonLatToGrid(heightfield.spec, HUMAHUACA.lon, HUMAHUACA.lat);
+    const world = lonLatToWorld(
+      heightfield.spec,
+      HUMAHUACA.lon,
+      HUMAHUACA.lat,
+      { elevationMeters, verticalExaggeration: EXAGGERATION },
+    );
+    pickMarker.onPick({
+      world,
+      grid,
+      lonLat: [HUMAHUACA.lon, HUMAHUACA.lat],
+      elevationMeters,
+    });
+  }
+
+  const quebradaCamera = (): OrbitCamera => {
+    const elevationMeters =
+      heightfield.heightAtLonLat(HUMAHUACA.lon, HUMAHUACA.lat) ?? 0;
+    const target3 = lonLatToWorld(heightfield.spec, HUMAHUACA.lon, HUMAHUACA.lat, {
+      elevationMeters,
+      verticalExaggeration: EXAGGERATION,
+    });
+    // Camera south of the target (azimuth 0) looking north.
+    return new OrbitCamera({
+      target: target3,
+      distanceKm: 60,
+      azimuthDeg: 0,
+      elevationDeg: 55,
+      fovDeg: 45,
+      aspect: WIDTH / HEIGHT,
+      nearKm: 0.2,
+      minDistanceKm: 5,
+    });
+  };
+
+  const shots: { name: string; camera: OrbitCamera; layers: Layer[] }[] = [
     {
       name: "overview",
       camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, {
         maxElevationMeters: heightfield.max,
         verticalExaggeration: EXAGGERATION,
       }),
+      layers: [terrain],
     },
+    { name: "quebrada", camera: quebradaCamera(), layers: [terrain] },
     {
-      name: "quebrada",
-      camera: (() => {
-        const elevationMeters =
-          heightfield.heightAtLonLat(HUMAHUACA.lon, HUMAHUACA.lat) ?? 0;
-        const target3 = lonLatToWorld(heightfield.spec, HUMAHUACA.lon, HUMAHUACA.lat, {
-          elevationMeters,
-          verticalExaggeration: EXAGGERATION,
-        });
-        // Camera south of the target (azimuth 0) looking north.
-        return new OrbitCamera({
-          target: target3,
-          distanceKm: 60,
-          azimuthDeg: 0,
-          elevationDeg: 55,
-          fovDeg: 45,
-          aspect: WIDTH / HEIGHT,
-          nearKm: 0.2,
-          minDistanceKm: 5,
-        });
-      })(),
+      name: "quebrada-marker",
+      camera: quebradaCamera(),
+      layers: [terrain, pickMarker],
     },
   ];
 
   mkdirSync(OUT_DIR, { recursive: true });
   for (const shot of shots) {
-    terrain.update(
-      { time: 0, viewport: [WIDTH, HEIGHT], camera: shot.camera },
-      0,
-    );
-    frame(gpu, (f) => renderer.renderFrame(f, output, [terrain]));
+    for (const layer of shot.layers) {
+      layer.update(
+        { time: 0, viewport: [WIDTH, HEIGHT], camera: shot.camera },
+        0,
+      );
+    }
+    frame(gpu, (f) => renderer.renderFrame(f, output, shot.layers));
     const pixels = await output.color.read({ mipLevel: 0, region: "all" });
     const png = new PNG({ width: WIDTH, height: HEIGHT });
     png.data.set(pixels);
