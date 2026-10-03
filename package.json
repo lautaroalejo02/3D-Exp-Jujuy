@@ -6,9 +6,11 @@
   "description": "Maqueta 3D del relieve de Jujuy (WebGPU + vgpu)",
   "scripts": {
     "dev": "vite",
-    "build": "npm run build:data && tsc --noEmit && vite build && node scripts/prune-dist.mjs",
+    "build": "npm run build:data && npm run build:detail && tsc --noEmit && vite build && node scripts/prune-dist.mjs",
     "build:data": "tsx scripts/build-data.ts",
+    "build:detail": "tsx scripts/build-detail.ts",
     "verify:boundaries": "tsx scripts/verify-boundaries.ts",
+    "verify:detail": "tsx scripts/verify-detail.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.scripts.json",
     "test": "vitest run",
     "check:wgsl": "node scripts/check-wgsl.mjs",

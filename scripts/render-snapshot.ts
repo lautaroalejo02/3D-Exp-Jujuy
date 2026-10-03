@@ -11,10 +11,15 @@
  * - salinas.png            Salinas Grandes (see SALINAS_GRANDES), the salt
  *                          flat straddling the Salta border — checks the
  *                          outside dimming keeps it readable in color
+ * - hornocal.png           Hornocal patch drawn (camera within threshold)
+ * - hornocal-base.png      identical framing without the patch layer —
+ *                          the before/after evidence for the feature
+ * - salinas-detail.png     Salinas Grandes patch drawn
  *
- * Data is read from data/build (run `npm run build:data` first). The JPEG is
- * decoded with jpeg-js (the browser uses createImageBitmap instead); .wgsl
- * files are resolved with @vgpu/wgsl/runtime resolveShader.
+ * Data is read from data/build (run `npm run build:data` and
+ * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
+ * browser uses createImageBitmap instead); .wgsl files are resolved with
+ * @vgpu/wgsl/runtime resolveShader.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -29,12 +34,26 @@ import { planRender } from "../src/app/device-profile";
 import type { Layer } from "../src/app/layers";
 import { OrbitCamera } from "../src/camera/camera";
 import { bboxOnGrid, overviewCamera } from "../src/camera/framing";
+import {
+  createDetailLayer,
+  type DetailLayer,
+  type DetailSiteData,
+} from "../src/features/detail/detail-layer";
 import { createPickMarkerLayer } from "../src/features/pick-marker/pick-marker";
 import { lonLatToGrid } from "../src/geo/grid";
 import { lonLatToWorld } from "../src/geo/world";
 import { createSceneRenderer } from "../src/render/scene-renderer";
+import {
+  assertDetailSatelliteSize,
+  loadDetailManifest,
+  loadDetailSite,
+  type DetailSite,
+} from "../src/terrain/detail-manifest";
 import { decodeHeightsLE } from "../src/terrain/encoding";
-import { Heightfield } from "../src/terrain/heightfield";
+import {
+  Heightfield,
+  type FetchResponseLike,
+} from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
 import {
   createTerrainLayer,
@@ -69,6 +88,38 @@ const HUMAHUACA = { lon: -65.35048, lat: -23.20544 } as const;
  * https://www.wikidata.org/wiki/Q2893104
  */
 const SALINAS_GRANDES = { lon: -65.894441666667, lat: -23.63325 } as const;
+
+/**
+ * FetchLike over data/build/: lets the headless script reuse the same
+ * manifest/site loaders the browser runs (detail/manifest.json and the
+ * per-site payloads).
+ */
+const fileFetch = (url: string): Promise<FetchResponseLike> => {
+  const path = join(BUILD_DIR, url);
+  if (!existsSync(path)) {
+    return Promise.resolve({
+      ok: false,
+      status: 404,
+      json: () => Promise.resolve(undefined),
+      arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)),
+    });
+  }
+  const bytes = readFileSync(path);
+  return Promise.resolve({
+    ok: true,
+    status: 200,
+    json: () => Promise.resolve(JSON.parse(bytes.toString("utf8")) as unknown),
+    // Buffer's underlying ArrayBuffer can be pooled — slice to the exact
+    // file bytes.
+    arrayBuffer: () =>
+      Promise.resolve(
+        bytes.buffer.slice(
+          bytes.byteOffset,
+          bytes.byteOffset + bytes.byteLength,
+        ) as ArrayBuffer,
+      ),
+  });
+};
 
 async function resolveWgsl(file: string): Promise<string> {
   const resolved = await resolveShader({
@@ -120,12 +171,14 @@ async function main(): Promise<void> {
     );
   }
 
-  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl] = await Promise.all([
-    resolveWgsl(join("terrain", "terrain.wgsl")),
-    resolveWgsl(join("render", "mipmap.wgsl")),
-    resolveWgsl(join("render", "present.wgsl")),
-    resolveWgsl(join("features", "pick-marker", "pick-marker.wgsl")),
-  ]);
+  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl] =
+    await Promise.all([
+      resolveWgsl(join("terrain", "terrain.wgsl")),
+      resolveWgsl(join("render", "mipmap.wgsl")),
+      resolveWgsl(join("render", "present.wgsl")),
+      resolveWgsl(join("features", "pick-marker", "pick-marker.wgsl")),
+      resolveWgsl(join("features", "detail", "detail.wgsl")),
+    ]);
 
   const gpu = await init();
   const renderer = createSceneRenderer(gpu, {
@@ -165,6 +218,84 @@ async function main(): Promise<void> {
     });
   const terrain = makeTerrain();
   terrain.init({ gpu });
+
+  // Detail patches (data/build/detail/). Site coordinates come from the
+  // manifest — the same sourced values the app loads — never hand-written.
+  let detailLayer: DetailLayer | undefined;
+  const detailSiteData = new Map<string, DetailSiteData>();
+  if (existsSync(join(BUILD_DIR, "detail", "manifest.json"))) {
+    const detailManifest = await loadDetailManifest(fileFetch);
+    const sites: DetailSiteData[] = await Promise.all(
+      detailManifest.sites.map(async (site) => {
+        const payload = await loadDetailSite(site, fileFetch, "detail/");
+        const img = decodeJpeg(payload.satelliteBytes, {
+          formatAsRGBA: true,
+          useTArray: true,
+          maxMemoryUsageInMB: 256,
+        });
+        assertDetailSatelliteSize(site, img.width, img.height);
+        const data: DetailSiteData = {
+          site,
+          heightfield: payload.heightfield,
+          satellite: {
+            kind: "rgba",
+            pixels: img.data,
+            width: img.width,
+            height: img.height,
+          },
+        };
+        detailSiteData.set(site.id, data);
+        return data;
+      }),
+    );
+    detailLayer = createDetailLayer({
+      baseSpec: heightfield.spec,
+      sites,
+      shaders: { detail: detailWgsl, mipmap: mipmapWgsl },
+      verticalExaggeration: () => EXAGGERATION,
+    });
+    detailLayer.init({ gpu });
+  } else {
+    console.warn(
+      "data/build/detail/manifest.json missing — detail snapshots " +
+        "skipped (run npm run build:detail)",
+    );
+  }
+
+  /**
+   * Camera framed on a detail site's sourced coordinates, close enough to
+   * be within the patch draw threshold (distance factor must stay below
+   * the layer's DETAIL_DRAW_DISTANCE_FACTOR).
+   */
+  const detailCamera = (
+    siteId: string,
+    azimuthDeg: number,
+    elevationDeg: number,
+    distanceFactor = 1.6,
+  ): OrbitCamera => {
+    const data = detailSiteData.get(siteId);
+    if (!data) {
+      throw new Error(`detail site "${siteId}" not in the manifest`);
+    }
+    const site: DetailSite = data.site;
+    const elevationMeters =
+      data.heightfield.heightAtLonLat(site.lon, site.lat) ?? 0;
+    const target3 = lonLatToWorld(heightfield.spec, site.lon, site.lat, {
+      elevationMeters,
+      verticalExaggeration: EXAGGERATION,
+    });
+    return new OrbitCamera({
+      target: target3,
+      distanceKm: Math.max(site.sizeKm[0], site.sizeKm[1]) * distanceFactor,
+      azimuthDeg,
+      elevationDeg,
+      fovDeg: 45,
+      aspect: WIDTH / HEIGHT,
+      nearKm: 0.2,
+      minDistanceKm: 5,
+    });
+  };
+
   // The portrait shot uses the mobile profile's mesh, like a phone would.
   const mobileTerrain = makeTerrain(
     planRender("mobile", "default", heightfield.spec).mesh,
@@ -316,12 +447,59 @@ async function main(): Promise<void> {
       output,
       size: [WIDTH, HEIGHT],
     },
+    // Detail patch evidence: before/after on Hornocal, plus the Salinas
+    // patch. Skipped entirely when data/build/detail/ is missing.
+    ...(detailLayer
+      ? ([
+          {
+            name: "hornocal",
+            camera: detailCamera("hornocal", 20, 45),
+            layers: [terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          {
+            name: "hornocal-base",
+            camera: detailCamera("hornocal", 20, 45),
+            layers: [terrain],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          {
+            name: "salinas-detail",
+            camera: detailCamera("salinas-grandes", 300, 50),
+            layers: [terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+        ] satisfies {
+          name: string;
+          camera: OrbitCamera;
+          layers: Layer[];
+          scene: ReturnType<typeof createSceneRenderer>;
+          output: ReturnType<typeof target>;
+          size: readonly [number, number];
+        }[])
+      : []),
   ];
 
   mkdirSync(OUT_DIR, { recursive: true });
   for (const shot of shots) {
     for (const layer of shot.layers) {
       layer.update(
+        { time: 0, viewport: shot.size, camera: shot.camera },
+        0,
+      );
+    }
+    // The detail layer's update() only enqueues GPU work for an async
+    // loader (resources are never created inside update/draw). Await it,
+    // then update once more so the just-created draws get their uniforms.
+    if (detailLayer && shot.layers.includes(detailLayer)) {
+      await detailLayer.whenSettled();
+      detailLayer.update(
         { time: 0, viewport: shot.size, camera: shot.camera },
         0,
       );

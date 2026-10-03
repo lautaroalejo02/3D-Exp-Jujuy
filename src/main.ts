@@ -18,11 +18,17 @@ import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
 import { bboxOnGrid, overviewCamera } from "./camera/framing";
 import { attachCameraInput } from "./camera/input";
+import { detailSatelliteDivisor } from "./features/detail/detail-load";
+import {
+  createDetailLayer,
+  type DetailSiteData,
+} from "./features/detail/detail-layer";
+import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
 import { metersPerGridCell } from "./geo";
 import { intersectHeightfield, screenToRay } from "./picking/ray";
-import { formatBytes } from "./render/gpu-memory";
+import { formatBytes, type GpuMemoryEntry } from "./render/gpu-memory";
 import mipmapShader from "./render/mipmap.wgsl";
 import presentShader from "./render/present.wgsl";
 import { createSceneRenderer } from "./render/scene-renderer";
@@ -30,6 +36,12 @@ import {
   loadDepartments,
   type DepartmentsData,
 } from "./terrain/departments";
+import {
+  assertDetailSatelliteSize,
+  loadDetailManifest,
+  loadDetailSite,
+  type DetailSite,
+} from "./terrain/detail-manifest";
 import {
   loadHeightfield,
   loadTerrainManifest,
@@ -159,6 +171,91 @@ async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
   };
 }
 
+/**
+ * Downsample one site's satellite bitmap by `divisor` (2 on mobile) once
+ * on the CPU: drawImage into a half-size OffscreenCanvas and take a new
+ * ImageBitmap out of it. Chosen over a mip-chain downsample, which would
+ * still allocate a transient full-size level-0 texture; over
+ * createImageBitmap's resize options, which not every WebGPU browser
+ * honors. Keeps the "bitmap" upload path; on any failure falls back to
+ * the full-size bitmap — the patch still renders, it just costs the
+ * full ~28 MiB instead of ~7 MiB.
+ */
+function downsampleDetailSatellite(
+  site: DetailSite,
+  full: ImageBitmap,
+  divisor: number,
+): SatelliteImage {
+  if (divisor <= 1) {
+    return {
+      kind: "bitmap",
+      bitmap: full,
+      width: full.width,
+      height: full.height,
+    };
+  }
+  const width = Math.floor(full.width / divisor);
+  const height = Math.floor(full.height / divisor);
+  try {
+    const canvas = new OffscreenCanvas(width, height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("OffscreenCanvas 2d context unavailable");
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(full, 0, 0, width, height);
+    const bitmap = canvas.transferToImageBitmap();
+    if (bitmap.width !== width || bitmap.height !== height) {
+      throw new Error(
+        `downsampled to ${bitmap.width}x${bitmap.height}, expected ` +
+          `${width}x${height}`,
+      );
+    }
+    full.close();
+    return { kind: "bitmap", bitmap, width, height };
+  } catch (error) {
+    console.warn(
+      `detail ${site.id}: half-resolution satellite unavailable, ` +
+        `uploading full resolution`,
+      error,
+    );
+    return {
+      kind: "bitmap",
+      bitmap: full,
+      width: full.width,
+      height: full.height,
+    };
+  }
+}
+
+/**
+ * Detail patches are additive: if their data is missing or unreadable the
+ * app still runs without them (logged), so older data/build outputs keep
+ * working. Site payloads are decoded up front; their GPU resources are
+ * created lazily by the layer on first approach.
+ */
+async function fetchDetailSites(
+  satelliteDivisor: number,
+): Promise<DetailSiteData[]> {
+  const manifest = await loadDetailManifest((url) => fetch(url));
+  return Promise.all(
+    manifest.sites.map(async (site) => {
+      const payload = await loadDetailSite(site, (url) => fetch(url));
+      const bitmap = await createImageBitmap(
+        new Blob([payload.satelliteBytes]),
+      );
+      assertDetailSatelliteSize(site, bitmap.width, bitmap.height);
+      return {
+        site,
+        heightfield: payload.heightfield,
+        satellite: downsampleDetailSatellite(
+          site,
+          bitmap,
+          satelliteDivisor,
+        ),
+      };
+    }),
+  );
+}
+
 function selectedQuality(search: string): TerrainQuality {
   return new URLSearchParams(search).get("calidad") === "alta"
     ? "high"
@@ -191,9 +288,34 @@ async function main(): Promise<void> {
   };
 
   const quality = selectedQuality(window.location.search);
+
+  // Device profile: ?perfil=movil|escritorio wins; otherwise detect from the
+  // pointer, screen size and device memory hint. Mobile gets a smaller
+  // terrain mesh, a lower DPR cap and half-resolution detail patches.
+  // Decided before the fetches: the detail decode needs it.
+  const profile =
+    profileOverrideFromSearch(window.location.search) ??
+    selectDeviceProfile({
+      coarsePointer:
+        window.matchMedia?.("(pointer: coarse)").matches ?? false,
+      smallerSideCssPx: Math.min(
+        window.screen?.width ?? window.innerWidth,
+        window.screen?.height ?? window.innerHeight,
+      ),
+      deviceMemoryGb: (navigator as { deviceMemory?: number }).deviceMemory,
+    });
+
   let data: TerrainData;
+  let detailSites: DetailSiteData[] = [];
   try {
-    data = await fetchTerrainData(quality);
+    [data, detailSites] = await Promise.all([
+      fetchTerrainData(quality),
+      fetchDetailSites(detailSatelliteDivisor(profile)).catch((error: unknown) => {
+        // Non-fatal: the maqueta still works without the detail patches.
+        console.warn("detail patches unavailable", error);
+        return [] as DetailSiteData[];
+      }),
+    ]);
   } catch (error) {
     fail(
       "No se pudieron descargar los datos del relieve.",
@@ -213,20 +335,6 @@ async function main(): Promise<void> {
     return;
   }
 
-  // Device profile: ?perfil=movil|escritorio wins; otherwise detect from the
-  // pointer, screen size and device memory hint. Mobile gets a smaller
-  // terrain mesh and a lower DPR cap.
-  const profile =
-    profileOverrideFromSearch(window.location.search) ??
-    selectDeviceProfile({
-      coarsePointer:
-        window.matchMedia?.("(pointer: coarse)").matches ?? false,
-      smallerSideCssPx: Math.min(
-        window.screen?.width ?? window.innerWidth,
-        window.screen?.height ?? window.innerHeight,
-      ),
-      deviceMemoryGb: (navigator as { deviceMemory?: number }).deviceMemory,
-    });
   const plan = planRender(profile, quality, data.heightfield.spec);
 
   const dirty = createDirtyTracker();
@@ -286,7 +394,20 @@ async function main(): Promise<void> {
     },
     { data: data.departments, hitSpec: data.heightfield.spec },
   );
-  const layers: readonly Layer[] = [terrain, pickMarker, pickPanel];
+  const detail = createDetailLayer({
+    baseSpec: data.heightfield.spec,
+    sites: detailSites,
+    shaders: { detail: detailShader, mipmap: mipmapShader },
+    verticalExaggeration: () => verticalExaggeration,
+    // The loader finished creating a site's GPU resources off the frame
+    // loop — repaint so the patch appears, and refresh the overlay's GPU
+    // memory total (it now includes the site).
+    onSiteReady: () => {
+      debugOverlay?.refresh();
+      requestFrame();
+    },
+  });
+  const layers: readonly Layer[] = [terrain, detail, pickMarker, pickPanel];
   for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
 
@@ -332,16 +453,20 @@ async function main(): Promise<void> {
   });
   const appClock = clock(gpu);
 
-  const memoryReport = {
-    entries: [
-      ...renderer.gpuMemoryEntries(),
-      ...terrain.getGpuMemoryReport().entries,
-    ],
-  };
-  const totalBytes = memoryReport.entries.reduce((s, e) => s + e.bytes, 0);
+  // Detail patches are counted too, but only once the async loader has
+  // created their resources — the total grows as the camera approaches
+  // each site (~28 MiB on desktop, ~7 MiB on mobile).
+  const gpuMemoryEntries = (): GpuMemoryEntry[] => [
+    ...renderer.gpuMemoryEntries(),
+    ...terrain.getGpuMemoryReport().entries,
+    ...detail.getGpuMemoryReport().entries,
+  ];
+  const gpuMemoryBytes = (): number =>
+    gpuMemoryEntries().reduce((s, e) => s + e.bytes, 0);
   console.info(
-    `GPU memory (${quality}, ${profile}): ${formatBytes(totalBytes)} total\n` +
-      memoryReport.entries
+    `GPU memory (${quality}, ${profile}): ${formatBytes(gpuMemoryBytes())} ` +
+      `total (detail patches add to this as their sites load)\n` +
+      gpuMemoryEntries()
         .map((e) => `  ${e.estimate ? "~" : " "}${e.label}: ${formatBytes(e.bytes)}`)
         .join("\n"),
   );
@@ -354,7 +479,11 @@ async function main(): Promise<void> {
           mesh: plan.mesh,
           canvasSize: () => canvasSurface.size,
           dpr: () => canvasSurface.dpr,
-          memoryBytes: totalBytes,
+          // Getter, not a snapshot: the overlay re-reads it on every
+          // paint, so the figure grows as detail sites come online.
+          get memoryBytes() {
+            return gpuMemoryBytes();
+          },
         })
       : undefined;
   if (debugOverlay) {

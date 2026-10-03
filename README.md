@@ -9,8 +9,10 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 - `npm install` — instalar dependencias
 - `npm run verify:boundaries` — descarga el archivo oficial geoBoundaries ARG ADM2 (commit fijado, ~70 MB, según el `provenance` del extracto) y verifica que `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson` coincida con una re-selección en memoria (sha256 + features, geometría y propiedades). No escribe nada; sale con error si hay diferencias
 - `npm run build:data` — genera `data/build/` (alturas Int16, satélite, departamentos, `terrain.json`) desde `data/raw/`; idempotente, `--force` reconstruye. Requiere el extracto commiteado `data/raw/geoBoundaries-ARG-ADM2-jujuy.geojson`
+- `npm run build:detail` — genera `data/build/detail/` (parches de alta resolución por sitio: satélite z14 mosaico + alturas z12 Int16 + `manifest.json`); idempotente, `--force` reconstruye. Verifica el sha256 de cada tile crudo contra `data/raw/detail/sources.json` antes de usarlo
+- `npm run verify:detail` — vuelve a descargar cada URL de `data/raw/detail/sources.json` y compara el sha256 (también contra la copia local). No escribe nada; sale con error si hay diferencias
 - `npm run dev` — servidor de desarrollo (sirve `data/build/` en la raíz del sitio)
-- `npm run build` — `build:data` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
+- `npm run build` — `build:data` + `build:detail` + typecheck + build a `dist/` (sin las imágenes `debug-*.png`)
 - `npm run typecheck` — `tsc --noEmit` (app + `scripts/` vía `tsconfig.scripts.json`)
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
@@ -75,3 +77,24 @@ aviso de que puede ir lenta).
   registración DEM/imagen (no se publica en `dist/`).
 - `debug-province.png` — contorno de la provincia y bordes departamentales
   sobre el satélite, para verificación visual (no se publica en `dist/`).
+
+`npm run build:detail` produce `data/build/detail/`:
+
+- `detail/<sitio>/satellite.jpg` — mosaico Sentinel-2 cloudless 2016 (EOX,
+  `s2cloudless_3857`, z14 ~9 m/px) de 2304x2304 por sitio, jpeg q85.
+- `detail/<sitio>/heights.bin` — DEM Terrarium z12 (~35 m/px) recortado a
+  la extensión exacta del mosaico satelital, 576x576 Int16-LE en metros.
+- `detail/manifest.json` — por sitio: id, nombre, fuente Wikidata, grillas,
+  tamaños y sha256 de los archivos, estadísticas de elevación, tamaño en km
+  y `liftMeters` (elevación uniforme que la capa aplica para que el parche
+  gane el test de profundidad sobre el terreno base).
+
+La capa `src/features/detail/` dibuja cada parche solo cuando la cámara
+está a menos de ~4× el tamaño del parche. Los recursos GPU de cada sitio
+(~28 MiB; ~7 MiB en perfil móvil, que sube el satélite a media resolución)
+se crean una sola vez, en una tarea aparte fuera del loop de render,
+disparada cuando la cámara entra en el umbral (`update()` solo detecta y
+encola; la máquina de estados por sitio está en `detail-load.ts`). Mientras
+carga se ve el terreno base; si falla, el sitio se desactiva con un aviso
+en consola. La memoria GPU reportada (consola y `?debug=1`) solo cuenta los
+sitios ya creados — el total crece a medida que se acerca la cámara.
