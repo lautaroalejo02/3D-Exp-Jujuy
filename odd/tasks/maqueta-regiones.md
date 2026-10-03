@@ -32,6 +32,9 @@ Están en la propia fuente y no hay que esconderlos:
 ### Caracterizaciones
 Las caracterizaciones por región salen de la sección introductoria del mismo PIP Jujuy, por ejemplo: "La región del altiplano o Puna puede caracterizarse como una meseta alta que supera los 3500msnm…". En la implementación se citan textualmente o se parafrasean de cerca con la fuente al lado. No se agregan números que no estén en la fuente.
 
+## Licencia
+El PIP Jujuy es un documento oficial público sin licencia abierta declarada. Lautaro aprobó su uso con permiso el 2026-10-03 para la agrupación de regiones y sus textos, citando la fuente. La excepción quedó registrada en `AGENTS.md` ("Datos y contenido educativo") y en `ATTRIBUTIONS.md`. Esto también habilita la fila "Región" en las fichas de lugares, que la tarea maqueta-lugares había dejado afuera por la licencia.
+
 ## Alcance (propuesto)
 1. Tabla departamento → región como dato con fuente (`data/raw/regions-jujuy.json`, escrita a mano a partir de las citas de arriba, con la URL y la cita por región). Validación contra los 16 nombres de la fuente de límites.
 2. Pipeline: índice de región por celda, derivado del índice de departamentos.

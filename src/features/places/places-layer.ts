@@ -9,6 +9,11 @@ import {
   formatLongitude,
 } from "../../ui/pick-panel";
 import {
+  placeRegionLabel,
+  regionSourceLabel,
+  type PlaceRegionLookup,
+} from "./place-region";
+import {
   declutterLabels,
   isOccluded,
   MARKER_LIFT_METERS,
@@ -86,6 +91,12 @@ export interface PlacesLayerOptions {
      */
     readonly surfaceMarginMeters?: () => number;
   };
+  /**
+   * Department → region lookup for the card's "Región" row (the same
+   * regionNames LUT the pick panel uses). When absent the card omits
+   * the row.
+   */
+  readonly regions?: PlaceRegionLookup;
 }
 
 interface MarkerState {
@@ -141,6 +152,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
   let cardName: HTMLElement | undefined;
   let cardDesc: HTMLElement | undefined;
   let cardDept: HTMLElement | undefined;
+  let cardRegion: HTMLElement | undefined;
   let cardAlt: HTMLElement | undefined;
   let cardLat: HTMLElement | undefined;
   let cardLon: HTMLElement | undefined;
@@ -165,6 +177,12 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
       );
     }
     if (cardDept) cardDept.textContent = place.department;
+    if (cardRegion && opts.regions) {
+      cardRegion.textContent = placeRegionLabel(
+        place.department,
+        opts.regions,
+      );
+    }
     if (cardAlt) cardAlt.textContent = formatElevation(place.elevationMeters);
     if (cardLat) cardLat.textContent = formatLatitude(place.lat);
     if (cardLon) cardLon.textContent = formatLongitude(place.lon);
@@ -400,6 +418,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
           return dd;
         };
         const dept = row("Departamento");
+        const region = opts.regions ? row("Región") : undefined;
         const alt = row("Altura");
         const lat = row("Latitud");
         const lon = row("Longitud");
@@ -410,6 +429,21 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         sourceNote.className = "pick-panel-note";
         sourceNote.textContent =
           "Nombre, descripción y coordenadas: Wikidata (CC0).";
+        if (opts.regions) {
+          // The credit links to the dataset's source instead of naming it
+          // in hard-coded text — title/publisher/url come from
+          // regions-jujuy.json via the lookup.
+          const regionSource = doc.createElement("a");
+          regionSource.href = opts.regions.source.url;
+          regionSource.rel = "noopener noreferrer";
+          regionSource.target = "_blank";
+          regionSource.textContent = regionSourceLabel(opts.regions.source);
+          sourceNote.append(
+            doc.createTextNode(" Región: "),
+            regionSource,
+            doc.createTextNode("."),
+          );
+        }
         const links = doc.createElement("p");
         links.className = "place-card-links";
 
@@ -500,6 +534,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         cardName = name;
         cardDesc = desc;
         cardDept = dept;
+        cardRegion = region;
         cardAlt = alt;
         cardLat = lat;
         cardLon = lon;

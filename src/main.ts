@@ -416,6 +416,9 @@ async function main(): Promise<void> {
       data.regions,
     ),
   };
+  // Region name per department raster value — shared by the pick panel
+  // and the place cards' "Región" row.
+  const regionNames = departmentToRegionNames(deptToRegion, data.regions);
 
   let verticalExaggeration = DEFAULT_VERTICAL_EXAGGERATION;
 
@@ -522,7 +525,7 @@ async function main(): Promise<void> {
     {
       data: data.departments,
       hitSpec: data.heightfield.spec,
-      regionNames: departmentToRegionNames(deptToRegion, data.regions),
+      regionNames,
     },
   );
   const detail = createDetailLayer({
@@ -563,6 +566,11 @@ async function main(): Promise<void> {
     occlusion: {
       heightfield: data.heightfield,
       surfaceMarginMeters: drawnSurfaceMarginMeters,
+    },
+    regions: {
+      departments: data.departments.departments,
+      regionNames,
+      source: data.regions.source,
     },
   });
   const layers: readonly Layer[] = [
