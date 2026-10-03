@@ -44,6 +44,23 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
     ],
   },
   {
+    title: "Imagen y relieve de detalle (parches HD)",
+    lines: [
+      "Sentinel-2 cloudless - https://s2maps.eu by EOX IT Services GmbH (Contains modified Copernicus Sentinel data 2016)",
+      "Terrain Tiles (Mapzen / AWS Open Data, formato Terrarium)",
+    ],
+    links: [
+      {
+        label: "CC BY 4.0",
+        url: "https://creativecommons.org/licenses/by/4.0/",
+      },
+      {
+        label: "Fuente DEM",
+        url: "https://github.com/tilezen/joerd/blob/master/docs/attribution.md",
+      },
+    ],
+  },
+  {
     title: "Lugares (nombres, descripciones)",
     lines: ["Wikidata"],
     links: [

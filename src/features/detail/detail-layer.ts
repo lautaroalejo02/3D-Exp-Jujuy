@@ -32,6 +32,11 @@ import type { Heightfield } from "../../terrain/heightfield";
 import type { SatelliteImage } from "../../terrain/satellite";
 import type { TerrainGridUniforms } from "../../terrain/terrain-uniforms";
 import {
+  chooseDetailEvictions,
+  detailPatchInFrustum,
+  selectLiveDetailPatches,
+} from "./detail-budget";
+import {
   cameraInDrawDistance,
   nextDetailSiteStatus,
   type DetailSiteStatus,
@@ -67,19 +72,26 @@ import {
  * changes, in the same runtimes order the CPU picking twin
  * (detail-pick.ts) sees.
  *
- * LAZY GPU ALLOCATION, OUTSIDE THE FRAME LOOP (task D1b): a site's
+ * LAZY DATA + GPU, OUTSIDE THE FRAME LOOP (tasks D1b, H1): a site's
+ * payload (heights + satellite, decoded by the caller's loadSite) is
+ * fetched ONLY when the site is selected for drawing — in draw distance
+ * AND in the camera frustum AND inside the live budget — and its GPU
  * resources (~28 MiB of texture + storage, ~7 MiB on mobile) are created
- * exactly once, but never inside update()/draw() — both run on the
- * frameLoop callback stack, where the layers contract forbids resource
- * creation. update() only runs the pure per-site state machine
- * (detail-load.ts): when the camera enters the draw distance the site
- * goes idle -> requested and is pushed onto a queue. A loader task —
- * scheduled with setTimeout(0) by default, so it runs off the frameLoop
- * stack — creates storage/texture/sampler/draw + mipmaps in its own
- * try/catch: a failure warns and marks the site "failed" (disabled) for
- * the session instead of reaching the app's render-error handler, and
- * the base terrain keeps showing underneath while a site loads. The app
- * gets onSiteReady so it can dirty a frame once the patch can draw.
+ * by a loader task scheduled off the frameLoop callback stack. update()
+ * never creates GPU resources: it runs the pure selection policy
+ * (detail-budget.ts), pushes newly selected sites onto a queue as
+ * "requested" and sweeps evictions.
+ *
+ * THE BUDGET (task H1): at most opts.maxLivePatches sites hold resources
+ * at once (mobile 3, desktop 8 — DETAIL_LIVE_PATCH_BUDGET). When a job
+ * needs room it evicts the farthest/least-recently-used non-selected
+ * resident first: its texture and storage are destroyed, its decoded
+ * payload is dropped, its status returns to "idle" and it reloads
+ * lazily if selected again. A site that fails to load marks itself
+ * "failed" (disabled) for the session instead of reaching the app's
+ * render-error handler; the base terrain keeps showing underneath while
+ * a site loads. The app gets onSiteReady so it can dirty a frame once
+ * the patch can draw.
  */
 
 /** CPU-side data for one site: decoded heights + satellite image. */
@@ -109,7 +121,24 @@ export interface DetailLayerOptions {
     readonly grid: TerrainGridUniforms;
     heights(): StorageBuffer;
   };
-  readonly sites: readonly DetailSiteData[];
+  /**
+   * The manifest's site entries — positions, grids and sizes only. No
+   * payload is decoded at startup: heights/satellite bytes are fetched
+   * through `loadSite` the first time a site is selected.
+   */
+  readonly sites: readonly DetailSite[];
+  /**
+   * Fetch + decode one site's payload (heights.bin + satellite.jpg).
+   * Runs inside the scheduled loader, never on the frameLoop stack.
+   */
+  readonly loadSite: (site: DetailSite) => Promise<DetailSiteData>;
+  /**
+   * Live-resource cap: how many sites may hold GPU resources (or a
+   * decoded payload) at once — DETAIL_LIVE_PATCH_BUDGET for the device
+   * profile. Must not exceed MAX_DETAIL_PATCHES, the shader's
+   * arbitration array size.
+   */
+  readonly maxLivePatches: number;
   readonly shaders: DetailLayerShaders;
   /** Live vertical exaggeration (the value the terrain slider drives). */
   readonly verticalExaggeration: () => number;
@@ -124,18 +153,27 @@ export interface DetailLayerOptions {
   readonly shadowTexture?: () => Texture;
   /**
    * Fires once per site when its GPU resources finish creating — the
-   * app should request a frame (dirty tracker) and refresh any GPU
+   * app should request a frame (dirty tracker), register the site's
+   * pick data (it carries the decoded heightfield) and refresh any GPU
    * memory readout. Runs on the loader task, never inside update/draw.
    */
-  readonly onSiteReady?: (site: DetailSite) => void;
+  readonly onSiteReady?: (site: DetailSite, data: DetailSiteData) => void;
+  /**
+   * Fires when a site is evicted by the memory budget: its GPU
+   * resources are already destroyed and its payload dropped, so the
+   * app should drop any per-site CPU state it kept (pick data).
+   * May fire inside update() (eviction sweep) or on the loader task
+   * (making room for a new patch).
+   */
+  readonly onSiteEvicted?: (siteId: string) => void;
   /**
    * Fires whenever the set of COVERING sites changes — a site covers
-   * while it is loaded AND inside its draw distance, which is exactly
+   * while it is drawn: selected AND resources live, which is exactly
    * when the base terrain may discard fragments under it. The app gates
-   * the base-terrain mask on this so a site that is merely in range but
-   * still loading, or loaded but out of range, never punches a hole.
-   * May fire inside update() (visibility edge) or on the loader task
-   * (load finished while in range).
+   * the base-terrain mask on this so a site that is merely selected but
+   * still loading, or loaded but no longer selected, never punches a
+   * hole. May fire inside update() (selection edge) or on the loader
+   * task (load finished while selected).
    */
   readonly onCoveringChange?: (siteIds: readonly string[]) => void;
   /**
@@ -211,11 +249,13 @@ function emptySlotCenters(): number[][] {
 interface SiteGpuResources {
   readonly heights: StorageBuffer;
   readonly satellite: Texture;
+  /** Satellite texture size — kept for the memory report after upload. */
+  readonly satelliteSize: readonly [number, number];
   readonly draw: Draw;
 }
 
 interface SiteRuntime {
-  readonly data: DetailSiteData;
+  readonly site: DetailSite;
   readonly params: DetailParamsValue;
   /** Full outer extent in base grid coords: [i0, j0, i1, j1]. */
   readonly baseRect: readonly [number, number, number, number];
@@ -223,12 +263,26 @@ interface SiteRuntime {
   readonly baseCenter: readonly [number, number];
   /** Patch center in base-world km on the ground plane: [x, z]. */
   readonly centerWorld: readonly [number, number];
+  /** Patch ground half-size in km: [halfX east, halfZ south]. */
+  readonly halfKm: readonly [number, number];
+  /** Drawn elevation range of the patch in km before exaggeration. */
+  readonly elevationKm: readonly [number, number];
   /** Camera distance below which the patch is drawn, in km. */
   readonly drawDistanceKm: number;
   /** Lazy-load state machine position (detail-load.ts). */
   status: DetailSiteStatus;
-  /** True while the camera is inside the site's draw distance. */
+  /**
+   * Selected for drawing this update: in draw distance, in the frustum
+   * and inside the live budget (detail-budget.ts).
+   */
+  wanted: boolean;
+  /** True while the patch may draw: wanted AND resources exist. */
   visible: boolean;
+  /** Ground-plane camera distance from the last update, km. */
+  distanceKm: number;
+  /** Update tick when the site was last selected (eviction LRU leg). */
+  lastUsed: number;
+  data?: DetailSiteData;
   gpu?: SiteGpuResources;
 }
 
@@ -259,8 +313,8 @@ function uploadSatellite(gpu: Gpu, tex: Texture, image: SatelliteImage): void {
 }
 
 export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
-  const runtimes: SiteRuntime[] = opts.sites.map((data) => {
-    const spec = data.heightfield.spec;
+  const runtimes: SiteRuntime[] = opts.sites.map((site) => {
+    const spec = site.heights.grid;
     // Mesh one vertex per height cell plus the closing border vertex:
     // interior vertices land on cell borders, preserving the full z12
     // detail (~35 m) — the point of the patch.
@@ -272,7 +326,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     const toBase = patchBaseGridMap(spec, opts.baseSpec);
     const [pcx, pcy] = gridCenterGlobalPixel(spec);
     return {
-      data,
+      site,
       params: {
         ...gridUniforms,
         viewProjection: [...IDENTITY_MAT4],
@@ -307,11 +361,28 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
       baseRect: detailPatchRectBaseGrid(spec, opts.baseSpec),
       baseCenter: detailPatchCenterBaseGrid(spec, opts.baseSpec),
       centerWorld: patchGlobalPixelToWorld(gridUniforms, pcx, pcy),
-      drawDistanceKm: detailDrawDistanceKm(data.site.sizeKm),
+      halfKm: [site.sizeKm[0] / 2, site.sizeKm[1] / 2],
+      elevationKm: [
+        site.heights.elevation.minMeters / 1000,
+        site.heights.elevation.maxMeters / 1000,
+      ],
+      drawDistanceKm: detailDrawDistanceKm(site.sizeKm),
       status: "idle",
+      wanted: false,
       visible: false,
+      distanceKm: Infinity,
+      lastUsed: 0,
     };
   });
+  if (opts.maxLivePatches > MAX_DETAIL_PATCHES) {
+    // The shader's patchRects/patchCenters arbitration arrays are sized
+    // MAX_DETAIL_PATCHES — a larger budget would draw patches without
+    // overlap arbitration. Fail loudly at construction instead.
+    throw new Error(
+      `maxLivePatches ${opts.maxLivePatches} exceeds the shader's ` +
+        `${MAX_DETAIL_PATCHES}-patch arbitration limit`,
+    );
+  }
 
   /**
    * Rewrite the Voronoi arbitration uniforms on every runtime from the
@@ -383,16 +454,18 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
    * caller owns the try/catch, so this stays a straight-line build.
    */
   const createSiteGpuResources = (gpu: Gpu, rt: SiteRuntime): SiteGpuResources => {
-    const heights = storage(
-      gpu,
-      rt.data.heightfield.data.byteLength,
-      "read",
-    );
+    const data = rt.data;
+    if (!data) {
+      throw new Error(
+        `detail site ${rt.site.id}: payload missing at resource creation`,
+      );
+    }
+    const heights = storage(gpu, data.heightfield.data.byteLength, "read");
     // Heightfield.data is Float32Array<ArrayBufferLike>-typed; the decode
     // path allocates a plain ArrayBuffer — narrow for writeBuffer.
-    heights.write(rt.data.heightfield.data as Float32Array<ArrayBuffer>);
+    heights.write(data.heightfield.data as Float32Array<ArrayBuffer>);
 
-    const sat = rt.data.satellite;
+    const sat = data.satellite;
     const satellite = texture(gpu, {
       kind: "2d",
       size: [sat.width, sat.height],
@@ -405,7 +478,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         // required by copyExternalImageToTexture (browser bitmap path)
         "render_attachment",
       ],
-      label: `detail-satellite-${rt.data.site.id}`,
+      label: `detail-satellite-${rt.site.id}`,
     });
     uploadSatellite(gpu, satellite, sat);
     generateMipmaps(gpu, opts.shaders.mipmap, satellite);
@@ -422,9 +495,10 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     return {
       heights,
       satellite,
+      satelliteSize: [sat.width, sat.height],
       draw: draw(gpu, {
         shader: opts.shaders.detail,
-        label: `detail-${rt.data.site.id}`,
+        label: `detail-${rt.site.id}`,
         vertices: vertexCount,
         cull: "none",
         // Reversed-Z like the base terrain; the shared border line is
@@ -447,16 +521,81 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     };
   };
 
+  /**
+   * vgpu's StorageBuffer facade does not expose destroy() in its public
+   * type — the internal handle (RingStorageBuffer) does, and the docs
+   * bless the early-free path ("destroyed by gpu.dispose() — or earlier,
+   * by hand, through the internal handle", storage.d.ts). Narrow cast to
+   * reach it; Texture.destroy() is public already.
+   */
+  const destroyStorage = (buffer: StorageBuffer): void => {
+    (buffer as StorageBuffer & { destroy(): void }).destroy();
+  };
+
+  /**
+   * Release one site's resources: destroy the texture + storage, drop
+   * the decoded payload, back to "idle". Called by the budget logic —
+   * never for a wanted site (the victim choice already excludes those).
+   * Safe wherever it runs: WebGPU defers destroyed resources until any
+   * in-flight submission that bound them finishes, and the evicted site
+   * is not visible so the next encoded pass never references it.
+   */
+  const evict = (rt: SiteRuntime): void => {
+    if (rt.gpu) destroyStorage(rt.gpu.heights);
+    rt.gpu?.satellite.destroy();
+    rt.gpu = undefined;
+    rt.data = undefined;
+    rt.visible = false;
+    rt.status = nextDetailSiteStatus(rt.status, "release");
+    opts.onSiteEvicted?.(rt.site.id);
+  };
+
+  /**
+   * Sites currently holding resources — GPU buffers and/or a decoded
+   * payload — as eviction candidates.
+   */
+  const residents = (): SiteRuntime[] =>
+    runtimes.filter(
+      (rt) =>
+        (rt.gpu !== undefined || rt.data !== undefined) &&
+        rt.status !== "requested" &&
+        rt.status !== "loading",
+    );
+
+  /**
+   * Free slots so the budget holds: evict non-wanted residents, farthest
+   * then least-recently-used first (chooseDetailEvictions). The requester
+   * already counts as a resident once its payload is in, and wanted
+   * sites are never victims.
+   */
+  const makeRoom = (): void => {
+    const excess = residents().length - opts.maxLivePatches;
+    if (excess <= 0) return;
+    for (const id of chooseDetailEvictions(
+      residents().map((rt) => ({
+        id: rt.site.id,
+        distanceKm: rt.distanceKm,
+        lastUsed: rt.lastUsed,
+        wanted: rt.wanted,
+      })),
+      excess,
+    )) {
+      const victim = runtimes.find((rt) => rt.site.id === id);
+      if (victim) evict(victim);
+    }
+  };
+
   // The async loader queue. update() — inside the frameLoop callback —
   // only appends "requested" sites here; the scheduled flush does all
-  // GPU work off that stack (see the module comment).
+  // fetch + GPU work off that stack (see the module comment).
   const pendingLoads: SiteRuntime[] = [];
   let flushScheduled = false;
+  let inFlight = 0;
   const settleWaiters = new Set<() => void>();
   const schedule = opts.schedule ?? ((task: () => void) => setTimeout(task, 0));
 
   const notifySettledIfIdle = (): void => {
-    if (flushScheduled || pendingLoads.length > 0) return;
+    if (flushScheduled || pendingLoads.length > 0 || inFlight > 0) return;
     for (const resolve of settleWaiters) resolve();
     settleWaiters.clear();
   };
@@ -465,26 +604,49 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     flushScheduled = false;
     let rt: SiteRuntime | undefined;
     while ((rt = pendingLoads.shift()) !== undefined) {
-      rt.status = nextDetailSiteStatus(rt.status, "load-start");
-      try {
-        if (!gpuRef) {
-          throw new Error("detail layer used before init()");
-        }
-        rt.gpu = createSiteGpuResources(gpuRef, rt);
-        rt.status = nextDetailSiteStatus(rt.status, "load-ok");
-        opts.onSiteReady?.(rt.data.site);
-      } catch (error) {
-        // Never the global render-error handler: a broken patch disables
-        // itself and the base terrain simply keeps rendering.
-        rt.status = nextDetailSiteStatus(rt.status, "load-fail");
-        console.warn(`detail patch ${rt.data.site.id} disabled`, error);
+      if (rt.status !== "requested") continue; // released while queued
+      if (!rt.wanted) {
+        // Unselected between enqueue and flush: nothing was fetched or
+        // created yet — straight back to idle.
+        rt.status = nextDetailSiteStatus(rt.status, "release");
+        continue;
       }
+      const job = rt;
+      inFlight++;
+      void (async () => {
+        try {
+          if (!gpuRef) {
+            throw new Error("detail layer used before init()");
+          }
+          job.status = nextDetailSiteStatus(job.status, "load-start");
+          job.data ??= await opts.loadSite(job.site);
+          if (!job.wanted) {
+            // Unselected while fetching: keep the decoded payload as a
+            // warm entry — the update() sweep bounds it by the budget —
+            // but skip the GPU work entirely.
+            job.status = nextDetailSiteStatus(job.status, "load-ok");
+            return;
+          }
+          makeRoom();
+          job.gpu = createSiteGpuResources(gpuRef, job);
+          job.status = nextDetailSiteStatus(job.status, "load-ok");
+          opts.onSiteReady?.(job.site, job.data);
+        } catch (error) {
+          // Never the global render-error handler: a broken patch
+          // disables itself and the base terrain simply keeps rendering.
+          job.status = nextDetailSiteStatus(job.status, "load-fail");
+          console.warn(`detail patch ${job.site.id} disabled`, error);
+        } finally {
+          inFlight--;
+          // A site that just became ready (or failed, or was released)
+          // while selected changes the covering set; report before
+          // resolving waiters so the base mask is already right when
+          // whenSettled() resolves.
+          syncCovering();
+          notifySettledIfIdle();
+        }
+      })();
     }
-    // A site that just became ready (or failed) while the camera is in
-    // range changes the covering set; report before resolving waiters so
-    // the base mask is already right when whenSettled() resolves.
-    syncCovering();
-    notifySettledIfIdle();
   };
 
   /** Queue a freshly "requested" site for the async loader. */
@@ -496,19 +658,22 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     }
   };
 
-  // The sites whose patches currently cover the base terrain (loaded AND
-  // in draw distance) — the same condition draw() uses. Reported to the
-  // app so the base-terrain discard mask tracks it exactly.
+  // The sites whose patches currently cover the base terrain (drawn:
+  // selected AND resources live) — the same condition draw() uses.
+  // Reported to the app so the base-terrain discard mask tracks it
+  // exactly.
   let coveringKey = "";
   const syncCovering = (): void => {
     const ids = runtimes
       .filter((rt) => rt.visible && rt.gpu !== undefined)
-      .map((rt) => rt.data.site.id);
+      .map((rt) => rt.site.id);
     const key = ids.join(",");
     if (key === coveringKey) return;
     coveringKey = key;
     opts.onCoveringChange?.(ids);
   };
+
+  let updateTick = 0;
 
   return {
     id: "detail",
@@ -536,26 +701,81 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     },
 
     update(state: LayerState): void {
+      updateTick++;
       const eye = state.camera.eye();
       const viewProjection = state.camera.viewProjectionMatrix();
       const exaggeration = opts.verticalExaggeration();
+
+      // Selection: in draw distance AND inside the frustum, nearest
+      // first, capped at the profile's live budget (detail-budget.ts).
       for (const rt of runtimes) {
-        rt.visible = cameraInDrawDistance(
-          eye[0],
-          eye[2],
-          rt.centerWorld[0],
-          rt.centerWorld[1],
-          rt.drawDistanceKm,
+        rt.distanceKm = Math.hypot(
+          eye[0] - rt.centerWorld[0],
+          eye[2] - rt.centerWorld[1],
         );
-        if (!rt.visible) continue;
-        // Detection only: the idle -> requested edge queues the site for
-        // the off-stack loader; every later in-range frame is a no-op.
-        const previous = rt.status;
-        rt.status = nextDetailSiteStatus(rt.status, "camera-in-range");
-        if (previous === "idle" && rt.status === "requested") {
+      }
+      const candidates = runtimes
+        .filter((rt) =>
+          cameraInDrawDistance(
+            eye[0],
+            eye[2],
+            rt.centerWorld[0],
+            rt.centerWorld[1],
+            rt.drawDistanceKm,
+          ),
+        )
+        .map((rt) => ({
+          id: rt.site.id,
+          distanceKm: rt.distanceKm,
+          inFrustum: detailPatchInFrustum(
+            viewProjection,
+            rt.centerWorld[0],
+            rt.centerWorld[1],
+            rt.halfKm[0],
+            rt.halfKm[1],
+            rt.elevationKm[0] * exaggeration,
+            rt.elevationKm[1] * exaggeration,
+          ),
+        }));
+      const wanted = new Set(
+        selectLiveDetailPatches(candidates, opts.maxLivePatches),
+      );
+      for (const rt of runtimes) {
+        rt.wanted = wanted.has(rt.site.id);
+        rt.visible = rt.wanted;
+        if (rt.wanted) rt.lastUsed = updateTick;
+        // Detection only: the selected edge queues the site for the
+        // off-stack loader; every later selected frame is a no-op.
+        if (
+          rt.wanted &&
+          rt.gpu === undefined &&
+          (rt.status === "idle" || rt.status === "ready")
+        ) {
+          rt.status = nextDetailSiteStatus(rt.status, "camera-in-range");
           enqueueLoad(rt);
         }
       }
+
+      // Budget sweep: transient overruns (a load finished after its site
+      // left the selection) release the farthest/least-recently-used
+      // non-wanted residents.
+      const occupied = residents();
+      const excess = occupied.length - opts.maxLivePatches;
+      if (excess > 0) {
+        for (const id of chooseDetailEvictions(
+          occupied.map((rt) => ({
+            id: rt.site.id,
+            distanceKm: rt.distanceKm,
+            lastUsed: rt.lastUsed,
+            wanted: rt.wanted,
+          })),
+          excess,
+        )) {
+          const victim = runtimes.find((rt) => rt.site.id === id);
+          if (victim) evict(victim);
+        }
+      }
+
       // The covering set just settled for this frame; arbitration
       // uniforms go out with the same draw.set batch.
       refreshArbitration();
@@ -565,7 +785,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         rt.params.exaggeration = exaggeration;
         rt.gpu.draw.set({ params: rt.params });
       }
-      // Visibility edges flip the covering set even without any load —
+      // Selection edges flip the covering set even without any load —
       // the base terrain must discard exactly while a patch is drawn.
       syncCovering();
     },
@@ -604,7 +824,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     },
 
     whenSettled(): Promise<void> {
-      if (!flushScheduled && pendingLoads.length === 0) {
+      if (!flushScheduled && pendingLoads.length === 0 && inFlight === 0) {
         return Promise.resolve();
       }
       return new Promise((resolve) => {
@@ -613,20 +833,21 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     },
 
     getGpuMemoryReport(): GpuMemoryReport {
-      // Only sites whose resources actually exist are reported — the
-      // total grows as the camera approaches new patches.
+      // Only sites whose GPU resources actually exist are reported —
+      // the total grows as the camera approaches new patches and falls
+      // when the budget evicts one.
       const entries: GpuMemoryEntry[] = [];
       for (const rt of runtimes) {
         if (!rt.gpu) continue;
-        const spec = rt.data.heightfield.spec;
-        const sat = rt.data.satellite;
+        const spec = rt.site.heights.grid;
+        const [satW, satH] = rt.gpu.satelliteSize;
         entries.push(
           {
-            label: `detail ${rt.data.site.id} satellite ${sat.width}x${sat.height} rgba8unorm + mips`,
-            bytes: textureBytesWithMips(sat.width, sat.height, 4),
+            label: `detail ${rt.site.id} satellite ${satW}x${satH} rgba8unorm + mips`,
+            bytes: textureBytesWithMips(satW, satH, 4),
           },
           {
-            label: `detail ${rt.data.site.id} heights ${spec.width}x${spec.height} f32`,
+            label: `detail ${rt.site.id} heights ${spec.width}x${spec.height} f32`,
             bytes: spec.width * spec.height * 4,
           },
         );

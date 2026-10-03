@@ -7,12 +7,15 @@ import type { DeviceProfile } from "../../app/device-profile";
  * GPU resources for a patch may never be created inside update()/draw()
  * (the render-pass rule in src/app/layers.ts) nor at init (~28 MiB per site
  * the camera may never approach). The compromise: update() only DETECTS
- * that the camera entered the site's draw distance and transitions the
- * site to "requested"; a separately scheduled task performs the actual
- * "load-start" -> "loading" -> "ready" | "failed" transition while
- * creating the resources. "failed" is terminal — a site that could not
- * build its resources is disabled for the session and the base terrain
- * keeps rendering in its place.
+ * that the site was selected for drawing (in range, in frustum, inside
+ * the live budget — detail-budget.ts) and transitions it to "requested";
+ * a separately scheduled task performs the actual "load-start" ->
+ * "loading" -> "ready" | "failed" transition while fetching the payload
+ * and creating the resources. "failed" is terminal — a site that could
+ * not load or build its resources is disabled for the session and the
+ * base terrain keeps rendering in its place. "release" drops a site's
+ * payload/GPU resources back to "idle" — the eviction path of the
+ * memory budget; a released site simply re-requests when selected again.
  */
 export type DetailSiteStatus =
   | "idle"
@@ -25,12 +28,15 @@ export type DetailSiteEvent =
   | "camera-in-range"
   | "load-start"
   | "load-ok"
-  | "load-fail";
+  | "load-fail"
+  | "release";
 
 /**
  * Reduce one site status by an event. Out-of-order or repeated events are
  * no-ops, which keeps the caller simple: update() can fire
- * "camera-in-range" every frame and only the idle->requested edge acts.
+ * "camera-in-range" every frame and only the idle->requested edge (or the
+ * ready->requested edge, when a warm site needs its GPU resources back)
+ * acts.
  */
 export function nextDetailSiteStatus(
   status: DetailSiteStatus,
@@ -38,13 +44,17 @@ export function nextDetailSiteStatus(
 ): DetailSiteStatus {
   switch (event) {
     case "camera-in-range":
-      return status === "idle" ? "requested" : status;
+      // ready re-requested: payload is cached, the job only recreates
+      // the GPU side (it runs on the same queue either way).
+      return status === "idle" || status === "ready" ? "requested" : status;
     case "load-start":
       return status === "requested" ? "loading" : status;
     case "load-ok":
       return status === "loading" ? "ready" : status;
     case "load-fail":
       return status === "loading" ? "failed" : status;
+    case "release":
+      return status === "requested" || status === "ready" ? "idle" : status;
   }
 }
 

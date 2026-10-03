@@ -66,7 +66,7 @@ struct Params {
   // coords; only the first patchRectCount slots are valid. Fixed literal
   // size — vgpu rejects symbolic array lengths. Must match
   // MAX_DETAIL_PATCHES in src/terrain/detail-grids.ts.
-  patchRects: array<vec4f, 16>,
+  patchRects: array<vec4f, 8>,
   patchRectCount: f32,
 }
 

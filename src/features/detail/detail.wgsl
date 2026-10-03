@@ -73,8 +73,8 @@ struct Params {
   // patchCount of them; patchIndex is this draw's slot. Fixed literal
   // sizes — vgpu rejects symbolic array lengths; must match
   // MAX_DETAIL_PATCHES in src/terrain/detail-grids.ts.
-  patchRects: array<vec4f, 16>,
-  patchCenters: array<vec4f, 16>,
+  patchRects: array<vec4f, 8>,
+  patchCenters: array<vec4f, 8>,
   patchCount: f32,
   patchIndex: f32,
   splitBand: f32,   // seam geomorph width in base grid cells

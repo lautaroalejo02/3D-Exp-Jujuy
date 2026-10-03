@@ -1,7 +1,8 @@
 /**
  * Verifies the detail-patch raw tiles (data/raw/detail/<site>/) against
- * their recorded sources — both data/raw/detail/sources.json and
- * sources-2.json (the second batch: san-salvador, humahuaca, tilcara):
+ * their recorded sources — data/raw/detail/sources.json, sources-2.json
+ * (the second batch: san-salvador, humahuaca, tilcara) and
+ * sources-3.json (the third batch: the 23 remaining marked places):
  *
  * 1. every tile declared in either manifest is fetched again from its
  *    recorded `url` and its sha256 compared with the recorded hash (the
@@ -23,6 +24,7 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const SOURCES_PATHS = [
   join(ROOT, "data/raw/detail/sources.json"),
   join(ROOT, "data/raw/detail/sources-2.json"),
+  join(ROOT, "data/raw/detail/sources-3.json"),
 ];
 
 interface SourcesTile {

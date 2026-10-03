@@ -253,7 +253,7 @@ interface TerrainParamsValue {
   /**
    * Live detail-patch discard rects [i0, j0, i1, j1] in grid coords;
    * only the first patchRectCount slots are read by the shader. Mirrors
-   * `patchRects: array<vec4f, 16>` in terrain.wgsl.
+   * `patchRects: array<vec4f, 8>` in terrain.wgsl (MAX_DETAIL_PATCHES).
    */
   patchRects: number[][];
   patchRectCount: number;
@@ -700,8 +700,8 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           // (64 B) + cameraPos vec3f (12 B + 4 B pad) + 6 vec2f (48 B)
           // + 4 f32 (16 B) + 3 vec3f (48 B) + 8 f32 (32 B) = 224 B, the
           // patch rect array (MAX_DETAIL_PATCHES x vec4f = 128 B), then
-          // patchRectCount + tail pad → ~368 B.
-          bytes: 368,
+          // patchRectCount + tail pad → ~360 B.
+          bytes: 360,
           estimate: true,
         },
       ]);

@@ -1,9 +1,10 @@
 /**
  * Detail-patch pipeline: data/raw/detail -> data/build/detail.
  *
- * For each site declared in data/raw/detail/sources.json AND
+ * For each site declared in data/raw/detail/sources.json,
  * data/raw/detail/sources-2.json (the second batch adds san-salvador,
- * humahuaca and tilcara — same layers and zooms):
+ * humahuaca and tilcara) and data/raw/detail/sources-3.json (the third
+ * batch adds the 23 remaining marked places — same layers and zooms):
  *
  * - mosaics the Sentinel-2 cloudless 2016 tiles (EOX, layer
  *   s2cloudless_3857, z14 ~9 m/px — Sentinel-2's 10 m native resolution is
@@ -22,9 +23,9 @@
  *   elevation stats and the patch ground size.
  *
  * Every raw tile's sha256 is verified against its declaring source file
- * BEFORE it is decoded — a mismatch fails the build loudly. Both source
- * files are hashed into the manifest (inputSha256) so the cache
- * invalidates if any declared tile, url or site changes.
+ * BEFORE it is decoded — a mismatch fails the build loudly. All three
+ * source manifests are hashed into the manifest (inputSha256) so the
+ * cache invalidates if any declared tile, url or site changes.
  *
  * Re-runnable and deterministic: no timestamps, stable encoders, stable
  * key order in JSON.stringify. When detail/manifest.json already records
@@ -68,11 +69,13 @@ const ROOT = fileURLToPath(new URL("..", import.meta.url));
 /**
  * Every raw source manifest the pipeline reads, in build order. The
  * second batch (sources-2.json) declares san-salvador, humahuaca and
- * tilcara; both files' bytes feed the manifest's inputSha256.
+ * tilcara; the third (sources-3.json) the 23 remaining marked places —
+ * all three files' bytes feed the manifest's inputSha256.
  */
 const SOURCES_PATHS = [
   join(ROOT, "data/raw/detail/sources.json"),
   join(ROOT, "data/raw/detail/sources-2.json"),
+  join(ROOT, "data/raw/detail/sources-3.json"),
 ];
 const OUT_DIR = join(ROOT, "data/build/detail");
 const MANIFEST_PATH = join(OUT_DIR, "manifest.json");
@@ -100,7 +103,9 @@ interface SourcesSite {
   readonly source: {
     readonly kind: string;
     readonly url: string;
-    readonly property: string;
+    // The Wikidata/OSM property the coordinate came from; sources-3
+    // sites resolve through places.json instead, so it may be absent.
+    readonly property?: string;
   };
 }
 

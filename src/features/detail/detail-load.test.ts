@@ -38,11 +38,40 @@ describe("nextDetailSiteStatus", () => {
     expect(s).toBe("failed");
   });
 
-  it("ignores repeated camera-in-range events", () => {
+  it("ignores repeated camera-in-range events while queued/loading/failed", () => {
     for (const status of ALL_STATUSES) {
-      if (status === "idle") continue;
+      if (status === "idle" || status === "ready") continue;
       expect(reduce(status, "camera-in-range")).toBe(status);
     }
+  });
+
+  it("re-requests a ready site (payload warm, GPU evicted)", () => {
+    // A site whose payload survived an eviction only needs the GPU side
+    // back — it goes through the same requested -> loading -> ready walk.
+    let s: DetailSiteStatus = "ready";
+    s = reduce(s, "camera-in-range");
+    expect(s).toBe("requested");
+    s = reduce(s, "load-start");
+    expect(s).toBe("loading");
+    s = reduce(s, "load-ok");
+    expect(s).toBe("ready");
+  });
+
+  it("release drops requested and ready back to idle", () => {
+    expect(reduce("requested", "release")).toBe("idle");
+    expect(reduce("ready", "release")).toBe("idle");
+    // A released site re-requests cleanly on the next selection.
+    let s = reduce("ready", "release");
+    s = reduce(s, "camera-in-range");
+    expect(s).toBe("requested");
+  });
+
+  it("release is a no-op while idle, loading or failed", () => {
+    expect(reduce("idle", "release")).toBe("idle");
+    // In-flight loads are not released mid-flight — the job re-checks
+    // the selection after its await and releases itself if un-wanted.
+    expect(reduce("loading", "release")).toBe("loading");
+    expect(reduce("failed", "release")).toBe("failed");
   });
 
   it("ignores out-of-order loader events", () => {
@@ -55,7 +84,7 @@ describe("nextDetailSiteStatus", () => {
     expect(reduce("failed", "load-start")).toBe("failed");
   });
 
-  it("keeps ready and failed terminal — a failed site never retries", () => {
+  it("keeps failed terminal — a failed site never retries", () => {
     expect(reduce("ready", "load-fail")).toBe("ready");
     expect(reduce("failed", "load-ok")).toBe("failed");
     // Re-entering the draw distance after a failure stays disabled.

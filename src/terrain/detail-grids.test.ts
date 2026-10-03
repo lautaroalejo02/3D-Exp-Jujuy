@@ -164,16 +164,17 @@ describe("detailPatchRectBaseGrid", () => {
 });
 
 describe("buildDetailPatchRects", () => {
-  it("caps the rect list at MAX_DETAIL_PATCHES", () => {
+  it("keeps every site — the shader cap applies to drawn patches only", () => {
+    // The registry is per-site, not per-frame: 29 sites exceed
+    // MAX_DETAIL_PATCHES (the simultaneously-drawn limit) and all of
+    // them still need a rect so the mask can find them by id.
     const sites = Array.from({ length: MAX_DETAIL_PATCHES + 1 }, (_, n) => ({
       id: `s${n}`,
       spec: PATCH_SPEC,
     }));
     const rects = buildDetailPatchRects(sites, BASE_SPEC);
-    expect(rects).toHaveLength(MAX_DETAIL_PATCHES);
-    expect(rects.map((r) => r.id)).toEqual(
-      sites.slice(0, MAX_DETAIL_PATCHES).map((s) => s.id),
-    );
+    expect(rects).toHaveLength(sites.length);
+    expect(rects.map((r) => r.id)).toEqual(sites.map((s) => s.id));
   });
 
   it("keeps site order", () => {

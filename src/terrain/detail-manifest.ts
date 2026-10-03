@@ -40,7 +40,12 @@ export class DetailManifestError extends Error {
 export interface DetailSiteSource {
   readonly kind: string;
   readonly url: string;
-  readonly property: string;
+  /**
+   * The Wikidata property the coordinate came from when the source is a
+   * direct Wikidata lookup; absent for sources-3 sites, which resolve
+   * through places.json (Wikidata or OSM).
+   */
+  readonly property?: string;
 }
 
 /** One detail patch: heights + satellite over the same ground window. */

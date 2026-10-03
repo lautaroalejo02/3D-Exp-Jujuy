@@ -29,6 +29,7 @@ import {
   type FlyToHandle,
 } from "./camera/fly-to";
 import { attachCameraInput } from "./camera/input";
+import { detailLivePatchBudget } from "./features/detail/detail-budget";
 import { detailSatelliteDivisor } from "./features/detail/detail-load";
 import {
   createDetailLayer,
@@ -314,33 +315,35 @@ function downsampleDetailSatellite(
 }
 
 /**
- * Detail patches are additive: if their data is missing or unreadable the
- * app still runs without them (logged), so older data/build outputs keep
- * working. Site payloads are decoded up front; their GPU resources are
- * created lazily by the layer on first approach.
+ * Detail patches are additive: if their manifest is missing or unreadable
+ * the app still runs without them (logged), so older data/build outputs
+ * keep working. Only the manifest is fetched at startup — each site's
+ * heights/satellite payload is fetched lazily by the detail layer the
+ * first time the camera selects it (detail-budget.ts bounds how many
+ * are resident at once).
  */
-async function fetchDetailSites(
-  satelliteDivisor: number,
-): Promise<DetailSiteData[]> {
+async function fetchDetailSites(): Promise<DetailSite[]> {
   const manifest = await loadDetailManifest((url) => fetch(url));
-  return Promise.all(
-    manifest.sites.map(async (site) => {
-      const payload = await loadDetailSite(site, (url) => fetch(url));
-      const bitmap = await createImageBitmap(
-        new Blob([payload.satelliteBytes]),
-      );
-      assertDetailSatelliteSize(site, bitmap.width, bitmap.height);
-      return {
-        site,
-        heightfield: payload.heightfield,
-        satellite: downsampleDetailSatellite(
-          site,
-          bitmap,
-          satelliteDivisor,
-        ),
-      };
-    }),
-  );
+  return [...manifest.sites];
+}
+
+/**
+ * The detail layer's payload loader: download + decode one site's
+ * heights and satellite (downsampled by the device profile). Runs inside
+ * the layer's scheduled loader — never on the frameLoop stack.
+ */
+async function loadDetailSiteData(
+  site: DetailSite,
+  satelliteDivisor: number,
+): Promise<DetailSiteData> {
+  const payload = await loadDetailSite(site, (url) => fetch(url));
+  const bitmap = await createImageBitmap(new Blob([payload.satelliteBytes]));
+  assertDetailSatelliteSize(site, bitmap.width, bitmap.height);
+  return {
+    site,
+    heightfield: payload.heightfield,
+    satellite: downsampleDetailSatellite(site, bitmap, satelliteDivisor),
+  };
 }
 
 /**
@@ -410,15 +413,15 @@ async function main(): Promise<void> {
     });
 
   let data: TerrainData;
-  let detailSites: DetailSiteData[] = [];
+  let detailSites: DetailSite[] = [];
   let placesData: Place[] = [];
   try {
     [data, detailSites, placesData] = await Promise.all([
       fetchTerrainData(quality),
-      fetchDetailSites(detailSatelliteDivisor(profile)).catch((error: unknown) => {
+      fetchDetailSites().catch((error: unknown) => {
         // Non-fatal: the maqueta still works without the detail patches.
         console.warn("detail patches unavailable", error);
-        return [] as DetailSiteData[];
+        return [] as DetailSite[];
       }),
       fetchPlaces().catch((error: unknown) => {
         // Non-fatal like the patches: no markers, the rest still works.
@@ -498,25 +501,16 @@ async function main(): Promise<void> {
   // currently cover (loaded AND in draw distance) — only those may mask
   // the base surface.
   const patchRects = buildDetailPatchRects(
-    detailSites.map((d) => ({ id: d.site.id, spec: d.heightfield.spec })),
+    detailSites.map((s) => ({ id: s.id, spec: s.heights.grid })),
     data.heightfield.spec,
   );
+  const patchRectById = new Map(patchRects.map((r) => [r.id, r.rect]));
+  /**
+   * Pick surfaces for the sites whose payload is currently loaded —
+   * populated by the detail layer's onSiteReady and dropped on
+   * onSiteEvicted, so the map only ever holds live payloads.
+   */
   const pickPatchById = new Map<string, DetailPickPatch>();
-  for (const d of detailSites) {
-    const rect = patchRects.find((r) => r.id === d.site.id)?.rect;
-    if (!rect) continue;
-    pickPatchById.set(d.site.id, {
-      id: d.site.id,
-      rect,
-      center: detailPatchCenterBaseGrid(
-        d.heightfield.spec,
-        data.heightfield.spec,
-      ),
-      gridMap: patchBaseGridMap(d.heightfield.spec, data.heightfield.spec),
-      heightfield: d.heightfield,
-      edgeFade: DETAIL_EDGE_FADE,
-    });
-  }
   let coveringPatchIds: ReadonlySet<string> = new Set();
   // Bump counter the Perfil mode watches: when the covering set changes
   // under an existing transect the profile recomputes.
@@ -630,17 +624,45 @@ async function main(): Promise<void> {
       heights: () => terrain.baseHeightsStorage(),
     },
     sites: detailSites,
+    // Payloads are fetched lazily per site — only while the camera
+    // selects the patch for drawing.
+    loadSite: (site) =>
+      loadDetailSiteData(site, detailSatelliteDivisor(profile)),
+    maxLivePatches: detailLivePatchBudget(profile),
     shaders: { detail: detailShader, mipmap: mipmapShader },
     verticalExaggeration: () => verticalExaggeration,
     // Patches sample the base-resolution shadow texture at their world
     // position (the getter runs in the async loader, after terrain.init).
     shadowTexture: () => terrain.shadowTexture(),
     // The loader finished creating a site's GPU resources off the frame
-    // loop — repaint so the patch appears, and refresh the overlay's GPU
-    // memory total (it now includes the site).
-    onSiteReady: () => {
+    // loop — register its pick surface, repaint so the patch appears,
+    // and refresh the overlay's GPU memory total.
+    onSiteReady: (site, siteData) => {
+      const rect = patchRectById.get(site.id);
+      if (rect) {
+        pickPatchById.set(site.id, {
+          id: site.id,
+          rect,
+          center: detailPatchCenterBaseGrid(
+            site.heights.grid,
+            data.heightfield.spec,
+          ),
+          gridMap: patchBaseGridMap(
+            site.heights.grid,
+            data.heightfield.spec,
+          ),
+          heightfield: siteData.heightfield,
+          edgeFade: DETAIL_EDGE_FADE,
+        });
+      }
       debugOverlay?.refresh();
       requestFrame();
+    },
+    // The memory budget evicted a site: drop its pick surface so the
+    // payload does not linger on the CPU either.
+    onSiteEvicted: (siteId) => {
+      pickPatchById.delete(siteId);
+      debugOverlay?.refresh();
     },
     // Base-terrain discard + pick surface follow exactly the sites the
     // detail layer draws.

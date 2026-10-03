@@ -35,16 +35,28 @@
  * - sun-quebrada-noon.png  same framing at 12:30 local — high sun
  * - sun-overview-morning.png overview framing, winter solstice ~09:00
  *                          local — low ENE sun from the right of frame
+ * - hd-la-quiaca.png       La Quiaca patch drawn (task H1, sources-3)
+ * - hd-pozuelos.png       Laguna de los Pozuelos patch drawn (task H1)
+ * - hd-calilegua.png      Calilegua national park patch drawn (task H1)
  *
  * The run also prints the sun-shadow recompute time (submit → GPU done)
- * for both shadow-quality plans, desktop and mobile.
+ * for both shadow-quality plans, desktop and mobile, plus the detail
+ * payload size and the per-profile peak GPU memory of the live-patch
+ * budget (task H1).
  *
  * Data is read from data/build (run `npm run build:data` and
  * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
  * browser uses createImageBitmap instead); .wgsl files are resolved with
  * @vgpu/wgsl/runtime resolveShader.
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,6 +70,11 @@ import type { Layer } from "../src/app/layers";
 import { OrbitCamera } from "../src/camera/camera";
 import { bboxOnGrid, overviewCamera } from "../src/camera/framing";
 import {
+  detailBudgetPeakBytes,
+  detailLivePatchBudget,
+  detailPatchGpuBytes,
+} from "../src/features/detail/detail-budget";
+import {
   createDetailLayer,
   type DetailLayer,
   type DetailSiteData,
@@ -70,6 +87,7 @@ import {
 } from "../src/features/places/places-markers";
 import { lonLatToGrid } from "../src/geo/grid";
 import { gridToWorld, lonLatToWorld } from "../src/geo/world";
+import { formatBytes } from "../src/render/gpu-memory";
 import { createSceneRenderer } from "../src/render/scene-renderer";
 import type { DepartmentInfo } from "../src/terrain/departments";
 import { buildDetailPatchRects } from "../src/terrain/detail-grids";
@@ -282,42 +300,39 @@ async function main(): Promise<void> {
 
   // Detail patches (data/build/detail/). Site coordinates come from the
   // manifest — the same sourced values the app loads — never hand-written.
-  // Loaded before the terrain layer: the base discard rects are computed
-  // from the same site specs and handed to both layers.
+  // Only the manifest is loaded up front: each site's payload is fetched
+  // and decoded through loadSite the first time a shot's camera selects
+  // it, the same lazy path the app runs.
   let detailLayer: DetailLayer | undefined;
-  const detailSiteData = new Map<string, DetailSiteData>();
-  let detailSites: DetailSiteData[] = [];
+  let detailSites: DetailSite[] = [];
   if (existsSync(join(BUILD_DIR, "detail", "manifest.json"))) {
     const detailManifest = await loadDetailManifest(fileFetch);
-    detailSites = await Promise.all(
-      detailManifest.sites.map(async (site) => {
-        const payload = await loadDetailSite(site, fileFetch, "detail/");
-        const img = decodeJpeg(payload.satelliteBytes, {
-          formatAsRGBA: true,
-          useTArray: true,
-          maxMemoryUsageInMB: 256,
-        });
-        assertDetailSatelliteSize(site, img.width, img.height);
-        const data: DetailSiteData = {
-          site,
-          heightfield: payload.heightfield,
-          satellite: {
-            kind: "rgba",
-            pixels: img.data,
-            width: img.width,
-            height: img.height,
-          },
-        };
-        detailSiteData.set(site.id, data);
-        return data;
-      }),
-    );
+    detailSites = [...detailManifest.sites];
   } else {
     console.warn(
       "data/build/detail/manifest.json missing — detail snapshots " +
         "skipped (run npm run build:detail)",
     );
   }
+  const loadSiteData = async (site: DetailSite): Promise<DetailSiteData> => {
+    const payload = await loadDetailSite(site, fileFetch, "detail/");
+    const img = decodeJpeg(payload.satelliteBytes, {
+      formatAsRGBA: true,
+      useTArray: true,
+      maxMemoryUsageInMB: 256,
+    });
+    assertDetailSatelliteSize(site, img.width, img.height);
+    return {
+      site,
+      heightfield: payload.heightfield,
+      satellite: {
+        kind: "rgba",
+        pixels: img.data,
+        width: img.width,
+        height: img.height,
+      },
+    };
+  };
   // Place markers for places.png. Additive like the detail data: a
   // missing/invalid places.json only means the shot has no dots.
   let placesDoc: PlacesDoc | undefined;
@@ -333,7 +348,7 @@ async function main(): Promise<void> {
   }
 
   const patchRects = buildDetailPatchRects(
-    detailSites.map((d) => ({ id: d.site.id, spec: d.heightfield.spec })),
+    detailSites.map((s) => ({ id: s.id, spec: s.heights.grid })),
     heightfield.spec,
   );
 
@@ -373,6 +388,9 @@ async function main(): Promise<void> {
         heights: () => terrain.baseHeightsStorage(),
       },
       sites: detailSites,
+      loadSite: loadSiteData,
+      // Snapshot renderer runs the desktop profile's live-patch budget.
+      maxLivePatches: detailLivePatchBudget("desktop"),
       shaders: { detail: detailWgsl, mipmap: mipmapWgsl },
       verticalExaggeration: () => EXAGGERATION,
       onCoveringChange: (ids) => {
@@ -395,13 +413,14 @@ async function main(): Promise<void> {
     elevationDeg: number,
     distanceFactor = 1.6,
   ): OrbitCamera => {
-    const data = detailSiteData.get(siteId);
-    if (!data) {
+    const site = detailSites.find((s) => s.id === siteId);
+    if (!site) {
       throw new Error(`detail site "${siteId}" not in the manifest`);
     }
-    const site: DetailSite = data.site;
+    // Camera height from the base DEM — the patch payload is not needed
+    // for framing (it is loaded lazily once the camera selects it).
     const elevationMeters =
-      data.heightfield.heightAtLonLat(site.lon, site.lat) ?? 0;
+      heightfield.heightAtLonLat(site.lon, site.lat) ?? 0;
     const target3 = lonLatToWorld(heightfield.spec, site.lon, site.lat, {
       elevationMeters,
       verticalExaggeration: EXAGGERATION,
@@ -835,6 +854,39 @@ async function main(): Promise<void> {
             drawExtras: (png: PNG, camera: OrbitCamera) =>
               drawPlaceDots(png, camera, "Q1025405"),
           },
+          // Task H1: three of the 23 sources-3 sites — La Quiaca, the
+          // border town at the north tip of the Quebrada; the Pozuelos
+          // lagoon natural monument in the Puna; and Calilegua national
+          // park in the Yungas. Each exercises the lazy loader: the
+          // payload is fetched only when this camera selects the patch.
+          {
+            name: "hd-la-quiaca",
+            camera: detailCamera("la-quiaca", 190, 45),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          {
+            name: "hd-pozuelos",
+            camera: detailCamera(
+              "monumento-natural-laguna-de-los-pozuelos",
+              70,
+              55,
+            ),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          {
+            name: "hd-calilegua",
+            camera: detailCamera("parque-nacional-calilegua", 100, 45),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
         ] satisfies {
           name: string;
           camera: OrbitCamera;
@@ -920,6 +972,49 @@ async function main(): Promise<void> {
     console.log(
       `sun-shadow recompute (mobile ${mobilePlan.width}x${mobilePlan.height}, ` +
         `${mobilePlan.steps} steps): ${fmt(sunMobileTerrain.shadowMs())}`,
+    );
+  }
+
+  // Task H1 cost evidence: the detail payload size the site ships
+  // (data/build/detail — dist/detail mirrors it) and the worst-case GPU
+  // memory of each profile's live-patch budget, computed from the
+  // manifest's per-site sizes with the same accounting the layer's live
+  // GPU report uses.
+  if (detailSites.length > 0) {
+    const dirBytes = (dir: string): number =>
+      readdirSync(dir, { withFileTypes: true }).reduce(
+        (sum, e) =>
+          sum +
+          (e.isDirectory()
+            ? dirBytes(join(dir, e.name))
+            : statSync(join(dir, e.name)).size),
+        0,
+      );
+    console.log(
+      `detail payload (dist/detail): ${formatBytes(dirBytes(join(BUILD_DIR, "detail")))} ` +
+        `over ${detailSites.length} sites`,
+    );
+    for (const profile of ["mobile", "desktop"] as const) {
+      const peak = detailBudgetPeakBytes(
+        detailSites.map((s) =>
+          detailPatchGpuBytes(
+            [s.satellite.grid.width, s.satellite.grid.height],
+            s.heights.grid.width * s.heights.grid.height,
+            profile,
+          ),
+        ),
+        profile,
+      );
+      console.log(
+        `detail GPU peak (${profile}, budget ` +
+          `${detailLivePatchBudget(profile)} live): ${formatBytes(peak)}`,
+      );
+    }
+    // The measured resident total after the last shot ran, for
+    // comparison with the worst case above.
+    console.log(
+      `detail GPU resident at end of run: ` +
+        `${formatBytes(detailLayer?.getGpuMemoryReport().totalBytes ?? 0)}`,
     );
   }
 

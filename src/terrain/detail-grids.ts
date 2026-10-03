@@ -164,9 +164,12 @@ export function detailSiteSizeKm(grid: GridSpec): readonly [number, number] {
  * Maximum number of detail patches the shaders handle at once: the
  * literal size of the `patchRects` uniform array in terrain.wgsl and of
  * the `patchRects`/`patchCenters` arrays in detail.wgsl — all three must
- * match this constant.
+ * match this constant. Sized for the largest device-profile live budget
+ * (DETAIL_LIVE_PATCH_BUDGET.desktop in src/features/detail/detail-budget.ts),
+ * not for the number of sites — only that many patches can ever draw
+ * simultaneously.
  */
-export const MAX_DETAIL_PATCHES = 16;
+export const MAX_DETAIL_PATCHES = 8;
 
 /**
  * Linear map between a patch's height-grid coords and the base grid's.
@@ -276,23 +279,17 @@ export function detailPatchCenterBaseGrid(
 }
 
 /**
- * Discard rects for every site, in the same order. Capped at
- * MAX_DETAIL_PATCHES (the shader's uniform array size): extra sites keep
- * rendering over the base — degraded, not broken — so the overflow is a
- * warning, not a failure.
+ * Discard rects for EVERY site, in the same order — the registry the
+ * terrain layer masks by id from. The shader's uniform array is sized
+ * MAX_DETAIL_PATCHES, but that bound applies to simultaneously DRAWN
+ * patches (the live budget in detail-budget.ts), never to the site
+ * count: the mask writer caps its own copy.
  */
 export function buildDetailPatchRects(
   sites: readonly { readonly id: string; readonly spec: GridSpec }[],
   baseSpec: GridSpec,
 ): DetailPatchRect[] {
-  if (sites.length > MAX_DETAIL_PATCHES) {
-    console.warn(
-      `detail patches: ${sites.length} sites exceed the ` +
-        `${MAX_DETAIL_PATCHES}-rect shader limit; only the first ` +
-        `${MAX_DETAIL_PATCHES} get a base-terrain mask`,
-    );
-  }
-  return sites.slice(0, MAX_DETAIL_PATCHES).map((s) => ({
+  return sites.map((s) => ({
     id: s.id,
     rect: detailPatchRectBaseGrid(s.spec, baseSpec),
   }));
