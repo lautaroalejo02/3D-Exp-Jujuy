@@ -160,7 +160,9 @@ export function parseRegions(value: unknown): RegionsData {
  * Region index (position in data.regions) per department raster value:
  * element 0 is -1 (0 = outside the province), elements 1..16 map each
  * department to its region. Throws when a region names a department
- * absent from departments.json or when one is assigned twice.
+ * absent from departments.json, when one is assigned to two regions, or
+ * when an in-province department is left without a region — the shader
+ * and the pick panel assume complete coverage.
  */
 export function buildDepartmentToRegion(
   data: RegionsData,
@@ -184,6 +186,15 @@ export function buildDepartmentToRegion(
       }
       lut[deptIndex] = regionIndex;
     }
+  }
+  // Every in-province department must land in exactly one region; a slot
+  // still at -1 means regions-jujuy.json forgot it.
+  const missing = departments.filter((d) => lut[d.index] === -1);
+  if (missing.length > 0) {
+    throw new RegionsDataError(
+      `regions-jujuy.json leaves department(s) without a region: ` +
+        missing.map((d) => `"${d.name}"`).join(", "),
+    );
   }
   return lut;
 }

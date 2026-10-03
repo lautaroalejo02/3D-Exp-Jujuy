@@ -54,3 +54,4 @@ Las caracterizaciones por región salen de la sección introductoria del mismo P
 | R0 | Investigación y verificación de la fuente | coordinador | [x] | PIP Jujuy leído completo; Propuesta Estratégica descartada |
 | R1 | Datos + pipeline | delegada | [x] | regions-jujuy.json con citas textuales verificadas por test contra el extracto |
 | R2 | Render + leyenda + fichas | delegada | [x] | 260 tests; captura regions.png (Okabe–Ito, tinte 0,55); toggle "Regiones" apagado por defecto |
+| R3 | Correcciones de GGA: "Sin región asignada" + validación de los 16 departamentos; overlay con nearest; estimación de uniforms | delegada (Devin) | [x] | ver commit |

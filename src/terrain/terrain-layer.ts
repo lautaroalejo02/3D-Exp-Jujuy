@@ -429,7 +429,10 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
         {
           label: "terrain uniforms (approx)",
-          bytes: 64 + 6 * 8 + 12 * 4,
+          // Params (terrain.wgsl) at natural WGSL alignment: mat4x4f
+          // (64 B) + 6 vec2f (6 x 8 B) + 11 f32 (11 x 4 B) = 156 B of
+          // members, rounded up to the struct's 16-byte alignment.
+          bytes: 160,
           estimate: true,
         },
       ]);

@@ -131,7 +131,16 @@ struct VertexOut {
   var rgb = base * light;
 
   // Overlay slot: tints the terrain while keeping the relief shading.
-  let overlay = textureSample(overlayTex, linearSampler, in.uv);
+  // The raster holds one region color per department-grid cell, so it is
+  // read with textureLoad (nearest texel): a filtering sampler would
+  // blend two regions into a third color along their shared edge. The
+  // same texel indexes the department index raster in the border passes.
+  let deptTexel = vec2i(clamp(
+    floor(in.uv * params.deptGridSize),
+    vec2f(0.0),
+    params.deptGridSize - 1.0,
+  ));
+  let overlay = textureLoad(overlayTex, deptTexel, 0);
   rgb = mix(rgb, overlay.rgb * light, overlay.a * params.overlayOpacity);
 
   // Province mask. The SDF raster shares the grid's ground extent, so the
@@ -155,16 +164,11 @@ struct VertexOut {
   // across a departmental boundary. Limited to inside the province so the
   // outside edge stays owned by the outline.
   if (params.deptBorders > 0.001) {
-    let texel = vec2i(clamp(
-      floor(in.uv * params.deptGridSize),
-      vec2f(0.0),
-      params.deptGridSize - 1.0,
-    ));
-    let c = textureLoad(deptIndexTex, texel, 0).r;
-    let border = c != textureLoad(deptIndexTex, texel + vec2i(1, 0), 0).r ||
-      c != textureLoad(deptIndexTex, texel - vec2i(1, 0), 0).r ||
-      c != textureLoad(deptIndexTex, texel + vec2i(0, 1), 0).r ||
-      c != textureLoad(deptIndexTex, texel - vec2i(0, 1), 0).r;
+    let c = textureLoad(deptIndexTex, deptTexel, 0).r;
+    let border = c != textureLoad(deptIndexTex, deptTexel + vec2i(1, 0), 0).r ||
+      c != textureLoad(deptIndexTex, deptTexel - vec2i(1, 0), 0).r ||
+      c != textureLoad(deptIndexTex, deptTexel + vec2i(0, 1), 0).r ||
+      c != textureLoad(deptIndexTex, deptTexel - vec2i(0, 1), 0).r;
     if (border) {
       rgb = mix(rgb, vec3f(1.0), 0.45 * inside);
     }
@@ -176,17 +180,12 @@ struct VertexOut {
   // neighbors are outside the province — that edge belongs to the
   // outline, so no border is drawn there.
   if (params.regionBorders > 0.001) {
-    let texel = vec2i(clamp(
-      floor(in.uv * params.deptGridSize),
-      vec2f(0.0),
-      params.deptGridSize - 1.0,
-    ));
-    let c = textureLoad(overlayTex, texel, 0);
+    let c = overlay;
     if (c.a > 0.0) {
-      let e = textureLoad(overlayTex, texel + vec2i(1, 0), 0);
-      let w = textureLoad(overlayTex, texel - vec2i(1, 0), 0);
-      let s = textureLoad(overlayTex, texel + vec2i(0, 1), 0);
-      let n = textureLoad(overlayTex, texel - vec2i(0, 1), 0);
+      let e = textureLoad(overlayTex, deptTexel + vec2i(1, 0), 0);
+      let w = textureLoad(overlayTex, deptTexel - vec2i(1, 0), 0);
+      let s = textureLoad(overlayTex, deptTexel + vec2i(0, 1), 0);
+      let n = textureLoad(overlayTex, deptTexel - vec2i(0, 1), 0);
       let border =
         (e.a > 0.0 && any(e.rgb != c.rgb)) ||
         (w.a > 0.0 && any(w.rgb != c.rgb)) ||
