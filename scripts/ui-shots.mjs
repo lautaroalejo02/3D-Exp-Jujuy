@@ -314,6 +314,36 @@ async function main() {
         await page.mouse.up();
         await page.close();
       }
+
+      // Agua mode: the sheet's real controls when flow data shipped,
+      // the placeholder/note under the WebGPU fallback either way.
+      {
+        const { page, state } = await openApp(mobile, base);
+        console.log(`mobile agua: app state = ${state}`);
+        await page.locator('[data-mode="agua"]').tap();
+        await Promise.race([
+          page.waitForSelector("#sheet-agua .agua, #sheet-agua .agua-note", {
+            state: "attached",
+            timeout: 30000,
+          }),
+          page.waitForSelector(".webgpu-notice", {
+            state: "attached",
+            timeout: 30000,
+          }),
+        ]).catch(() => {
+          console.warn(
+            "mobile agua: sheet/notice did not attach — capturing anyway",
+          );
+        });
+        // Let the rain sim run: particles must have visibly advected
+        // onto the drainage lines before the shot (they move ~1.2
+        // cells/s, faster on rivers).
+        await sleep(4000);
+        await page.screenshot({
+          path: join(OUT_DIR, "mobile-agua.png"),
+        });
+        await page.close();
+      }
       await mobile.close();
 
       // ---- Desktop: 1440x900, left side panel ----
@@ -379,9 +409,45 @@ async function main() {
         });
         await page.close();
       }
+
+      // Agua mode side panel, with "Mostrar cuencas" on when the real
+      // controls mounted (no-op under the fallback placeholder).
+      {
+        const { page, state } = await openApp(desktop, base);
+        console.log(`desktop agua: app state = ${state}`);
+        await page.locator('[data-mode="agua"]').click();
+        await Promise.race([
+          page.waitForSelector("#sheet-agua .agua, #sheet-agua .agua-note", {
+            state: "attached",
+            timeout: 30000,
+          }),
+          page.waitForSelector(".webgpu-notice", {
+            state: "attached",
+            timeout: 30000,
+          }),
+        ]).catch(() => {
+          console.warn(
+            "desktop agua: sheet/notice did not attach — capturing anyway",
+          );
+        });
+        // Same as the mobile shot: let particles stream onto the
+        // drainage lines before capturing.
+        await sleep(4000);
+        const basinsToggle = page.locator(
+          "#sheet-agua .agua .regions-toggle input",
+        );
+        if (await basinsToggle.count()) {
+          await basinsToggle.check();
+          await sleep(400);
+        }
+        await page.screenshot({
+          path: join(OUT_DIR, "desktop-agua.png"),
+        });
+        await page.close();
+      }
       await desktop.close();
     } finally {
-      await browser.close();
+      await Promise.race([browser.close(), sleep(8000)]);
     }
   } finally {
     server.kill();
@@ -390,7 +456,10 @@ async function main() {
   console.log(`ui shots written to ${OUT_DIR}`);
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main().then(
+  () => process.exit(0),
+  (error) => {
+    console.error(error);
+    process.exit(1);
+  },
+);

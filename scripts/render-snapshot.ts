@@ -48,11 +48,18 @@
  *                          the context plain with no fin floating over
  *                          it or poking through the cut wall (hybrid
  *                          format on a boundary-crossing patch)
+ * - agua-overview.png      overview with rain droplets advected onto the
+ *                          drainage network (~30 sim-seconds in)
+ * - agua-cuencas.png       same framing with the main drainage basins
+ *                          tinted and the river network emphasized
+ * - agua-portrait.png      phone framing of agua-overview (mobile
+ *                          particle budget at portrait DPR)
  *
  * The run also prints the sun-shadow recompute time (submit → GPU done)
- * for both shadow-quality plans, desktop and mobile, plus the detail
- * payload size and the per-profile peak GPU memory of the live-patch
- * budget (task H1).
+ * for both shadow-quality plans, the rain-sim step time for both
+ * particle budgets, desktop and mobile, plus the detail payload size
+ * and the per-profile peak GPU memory of the live-patch budget
+ * (task H1).
  *
  * Data is read from data/build (run `npm run build:data` and
  * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
@@ -97,6 +104,9 @@ import {
 } from "../src/features/places/places-markers";
 import { lonLatToGrid } from "../src/geo/grid";
 import { gridToWorld, lonLatToWorld } from "../src/geo/world";
+import { RAIN_PARTICLE_BUDGET } from "../src/modes/agua/agua-config";
+import { createAguaLayer, type AguaLayer } from "../src/modes/agua/agua-layer";
+import { loadFlowData, type FlowData } from "../src/modes/agua/flow-data";
 import { formatBytes } from "../src/render/gpu-memory";
 import { createSceneRenderer } from "../src/render/scene-renderer";
 import type { DepartmentInfo } from "../src/terrain/departments";
@@ -288,7 +298,7 @@ async function main(): Promise<void> {
     rgba: buildRegionOverlay(provinceMask.index, deptToRegion, regionsData),
   };
 
-  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl, dioramaWgsl, shadowWgsl] =
+  const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl, dioramaWgsl, shadowWgsl, rainSimWgsl, rainDrawWgsl, basinsWgsl] =
     await Promise.all([
       resolveWgsl(join("terrain", "terrain.wgsl")),
       resolveWgsl(join("render", "mipmap.wgsl")),
@@ -297,6 +307,9 @@ async function main(): Promise<void> {
       resolveWgsl(join("features", "detail", "detail.wgsl")),
       resolveWgsl(join("terrain", "diorama.wgsl")),
       resolveWgsl(join("sun", "shadow.wgsl")),
+      resolveWgsl(join("modes", "agua", "rain-sim.wgsl")),
+      resolveWgsl(join("modes", "agua", "rain-draw.wgsl")),
+      resolveWgsl(join("modes", "agua", "basins.wgsl")),
     ]);
 
   const gpu = await init();
@@ -364,6 +377,19 @@ async function main(): Promise<void> {
     console.warn(
       "data/build/places.json unavailable — places.png will have no " +
         `marker dots (run npm run build:places): ${
+          error instanceof Error ? error.message : error
+        }`,
+    );
+  }
+  // Flow rasters for the agua shots. Additive like places: a missing
+  // flow.json only means the two agua snapshots are skipped.
+  let flowData: FlowData | undefined;
+  try {
+    flowData = await loadFlowData(fileFetch);
+  } catch (error) {
+    console.warn(
+      "data/build/flow.json unavailable — agua snapshots skipped " +
+        `(run npm run build:flow): ${
           error instanceof Error ? error.message : error
         }`,
     );
@@ -497,6 +523,51 @@ async function main(): Promise<void> {
   diorama.init({ gpu });
   const mobileDiorama = makeDiorama(mobileTerrain);
   mobileDiorama.init({ gpu });
+
+  // Agua mode shots: three layer instances over the shared terrain —
+  // rain only, rain + basin tint, and a mobile-budget clone whose only
+  // job is the sim-cost number (same pattern as sunMobileTerrain).
+  let aguaRain: AguaLayer | undefined;
+  let aguaCuencas: AguaLayer | undefined;
+  let aguaMobile: AguaLayer | undefined;
+  if (flowData) {
+    const flow = flowData;
+    const makeAgua = (
+      initialBasins: boolean,
+      particleBudget: number,
+      pixelRatio: () => number = () => 1,
+    ) =>
+      createAguaLayer({
+        flow,
+        grid: terrain.gridUniforms,
+        heights: () => terrain.baseHeightsStorage(),
+        mesh: {
+          width: terrain.gridUniforms.meshSize[0],
+          height: terrain.gridUniforms.meshSize[1],
+        },
+        shaders: {
+          sim: rainSimWgsl,
+          rain: rainDrawWgsl,
+          basins: basinsWgsl,
+        },
+        particleBudget,
+        pixelRatio,
+        verticalExaggeration: () => EXAGGERATION,
+        isActive: () => true,
+        requestFrame: () => {},
+        initialBasins,
+      });
+    aguaRain = makeAgua(false, RAIN_PARTICLE_BUDGET.desktop);
+    aguaRain.init({ gpu });
+    aguaCuencas = makeAgua(true, RAIN_PARTICLE_BUDGET.desktop);
+    aguaCuencas.init({ gpu });
+    aguaMobile = makeAgua(
+      false,
+      RAIN_PARTICLE_BUDGET.mobile,
+      () => PORTRAIT_DPR,
+    );
+    aguaMobile.init({ gpu });
+  }
 
   // Sun shots get their own terrain+diorama pair with the shadow engine
   // at the DESKTOP quality plan — leaving the shared `terrain` on the
@@ -771,6 +842,35 @@ async function main(): Promise<void> {
     });
   };
 
+  // Agua mode shots: the stills need a developed drainage pattern, so
+  // each runs ~30 sim-seconds of particle advection first (the initial
+  // state is seeded randomly, not yet streamed onto the flow lines).
+  const stepAgua = async (
+    layer: AguaLayer,
+    camera: OrbitCamera,
+    viewport: readonly [number, number] = [WIDTH, HEIGHT],
+  ): Promise<void> => {
+    for (let k = 0; k < 60; k++) {
+      layer.update(
+        { time: k * 0.5, viewport, camera },
+        0.5,
+      );
+    }
+    await layer.simSettled();
+  };
+  const aguaCamera = overviewCamera(
+    heightfield.spec,
+    WIDTH / HEIGHT,
+    relief,
+    { region: provinceRegion },
+  );
+  const aguaPortraitCamera = overviewCamera(
+    heightfield.spec,
+    PORTRAIT_CSS[0] / PORTRAIT_CSS[1],
+    relief,
+    { region: provinceRegion },
+  );
+
   const shots: {
     name: string;
     camera: OrbitCamera;
@@ -1037,6 +1137,52 @@ async function main(): Promise<void> {
       size: [WIDTH, HEIGHT],
       drawExtras: drawPlaceDots,
     },
+    // Agua mode (task S4): droplets streamed onto the drainage network,
+    // then the same framing with the basin tint + river overlay on.
+    // Skipped when data/build/flow.json is missing.
+    ...(aguaRain && aguaCuencas && aguaMobile
+      ? ([
+          {
+            name: "agua-overview",
+            camera: aguaCamera,
+            layers: [diorama, terrain, aguaRain],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+            prepare: () => stepAgua(aguaRain, aguaCamera),
+          },
+          {
+            name: "agua-cuencas",
+            camera: aguaCamera,
+            layers: [diorama, terrain, aguaCuencas],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+            prepare: () => stepAgua(aguaCuencas, aguaCamera),
+          },
+          // Phone evidence (task A2): droplets must read at the mobile
+          // overview — the layer is created with the portrait DPR so the
+          // CSS-px droplet width lands on physical pixels correctly.
+          {
+            name: "agua-portrait",
+            camera: aguaPortraitCamera,
+            layers: [mobileDiorama, mobileTerrain, aguaMobile],
+            scene: portraitRenderer,
+            output: portraitOutput,
+            size: portraitSize,
+            prepare: () =>
+              stepAgua(aguaMobile, aguaPortraitCamera, portraitSize),
+          },
+        ] satisfies {
+          name: string;
+          camera: OrbitCamera;
+          layers: Layer[];
+          scene: ReturnType<typeof createSceneRenderer>;
+          output: ReturnType<typeof target>;
+          size: readonly [number, number];
+          prepare?: () => Promise<void>;
+        }[])
+      : []),
   ];
 
   mkdirSync(OUT_DIR, { recursive: true });
@@ -1144,6 +1290,29 @@ async function main(): Promise<void> {
     console.log(
       `detail GPU resident at end of run: ` +
         `${formatBytes(detailLayer?.getGpuMemoryReport().totalBytes ?? 0)}`,
+    );
+  }
+
+  // Rain-sim cost evidence for both particle budgets (task S4): one
+  // isolated step each after the queue drained — a step measured inside
+  // the shot loop would include the backlog of the stepped frames.
+  if (aguaRain && aguaMobile) {
+    for (const layer of [aguaRain, aguaMobile]) {
+      layer.update(
+        { time: 0, viewport: [WIDTH, HEIGHT], camera: aguaCamera },
+        1 / 60,
+      );
+      await layer.simSettled();
+    }
+    const fmt = (v: number | undefined): string =>
+      v === undefined ? "n/a" : `${v.toFixed(2)} ms`;
+    console.log(
+      `rain sim step (desktop ${RAIN_PARTICLE_BUDGET.desktop} particles): ` +
+        fmt(aguaRain.lastSimMs()),
+    );
+    console.log(
+      `rain sim step (mobile ${RAIN_PARTICLE_BUDGET.mobile} particles): ` +
+        fmt(aguaMobile.lastSimMs()),
     );
   }
 

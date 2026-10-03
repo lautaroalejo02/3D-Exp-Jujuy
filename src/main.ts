@@ -42,6 +42,13 @@ import {
 import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
+import { RAIN_PARTICLE_BUDGET } from "./modes/agua/agua-config";
+import { createAguaLayer } from "./modes/agua/agua-layer";
+import basinsShader from "./modes/agua/basins.wgsl";
+import rainDrawShader from "./modes/agua/rain-draw.wgsl";
+import rainSimShader from "./modes/agua/rain-sim.wgsl";
+import { createAguaSheet } from "./modes/agua/agua-sheet";
+import { loadFlowData } from "./modes/agua/flow-data";
 import { placeViewDistanceKm } from "./features/places/place-distance";
 import { clusterZoomDistanceKm } from "./features/places/places-markers";
 import { createPlacesLayer } from "./features/places/places-layer";
@@ -110,6 +117,7 @@ import { DropdownGroup } from "./ui/dropdowns";
 import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
 import { createExplorarContent } from "./ui/explorar";
 import { createAppMenu, type AppMenu } from "./ui/menu";
+import type { AppMode } from "./ui/mode-bar";
 import { createPickPanelLayer, type PickPanelLayer } from "./ui/pick-panel";
 import { createRegionsControls } from "./ui/regions";
 import { sheetSnapHeightsPx, type SheetSnap } from "./ui/sheet";
@@ -191,9 +199,15 @@ let appMenu: AppMenu | undefined;
  * geometry changes through this late-bound hook.
  */
 let reframeView: (() => void) | undefined;
+/**
+ * Like reframeView: set once the Agua layer exists, so the menu (created
+ * before any data loads) can report mode switches to it.
+ */
+let onModeChangeHook: ((mode: AppMode) => void) | undefined;
 function ensureMenu(overlay: HTMLElement): AppMenu {
   appMenu ??= createAppMenu(overlay, {
     onSheetGeometry: () => reframeView?.(),
+    onModeChange: (m) => onModeChangeHook?.(m),
   });
   return appMenu;
 }
@@ -361,6 +375,13 @@ async function fetchPlaces(): Promise<Place[]> {
   return [...doc.places];
 }
 
+/**
+ * Flow rasters for the Agua mode — additive like places: a missing or
+ * stale flow.json just leaves the Agua sheet with an explanatory note.
+ */
+const fetchFlowData = (): ReturnType<typeof loadFlowData> =>
+  loadFlowData((url) => fetch(url));
+
 function selectedQuality(search: string): TerrainQuality {
   return new URLSearchParams(search).get("calidad") === "alta"
     ? "high"
@@ -420,8 +441,9 @@ async function main(): Promise<void> {
   let data: TerrainData;
   let detailSites: DetailSite[] = [];
   let placesData: Place[] = [];
+  let flowData: Awaited<ReturnType<typeof loadFlowData>> | undefined;
   try {
-    [data, detailSites, placesData] = await Promise.all([
+    [data, detailSites, placesData, flowData] = await Promise.all([
       fetchTerrainData(quality),
       fetchDetailSites().catch((error: unknown) => {
         // Non-fatal: the maqueta still works without the detail patches.
@@ -432,6 +454,11 @@ async function main(): Promise<void> {
         // Non-fatal like the patches: no markers, the rest still works.
         console.warn("places unavailable", error);
         return [] as Place[];
+      }),
+      fetchFlowData().catch((error: unknown) => {
+        // Non-fatal like the patches: no Agua layer, the sheet explains.
+        console.warn("flow data unavailable", error);
+        return undefined;
       }),
     ]);
   } catch (error) {
@@ -779,6 +806,27 @@ async function main(): Promise<void> {
     // update() — the diorama inits before the terrain owns the texture.
     shadowTexture: () => terrain.shadowTexture(),
   });
+  // Agua mode: rain particles over the flow rasters + the basin tint.
+  // Drawn last so droplets composite over the terrain; animates only
+  // while the mode is active and playing (isActive polls the menu).
+  const agua = flowData
+    ? createAguaLayer({
+        flow: flowData,
+        grid: terrain.gridUniforms,
+        heights: () => terrain.baseHeightsStorage(),
+        mesh: plan.mesh,
+        shaders: {
+          sim: rainSimShader,
+          rain: rainDrawShader,
+          basins: basinsShader,
+        },
+        particleBudget: RAIN_PARTICLE_BUDGET[profile],
+        pixelRatio: () => canvasSurface.dpr,
+        verticalExaggeration: () => verticalExaggeration,
+        isActive: () => menu.mode() === "agua",
+        requestFrame,
+      })
+    : undefined;
   const layers: Layer[] = [
     diorama,
     terrain,
@@ -786,6 +834,7 @@ async function main(): Promise<void> {
     pickMarker,
     pickPanel,
     places,
+    ...(agua ? [agua] : []),
   ];
   // The detail sheet holds two mutually exclusive slots — pick info and
   // place card — so there are never two overlapping panels. presentDetail
@@ -840,7 +889,8 @@ async function main(): Promise<void> {
         flyToPlace(place);
       },
       onPlacesVisible: (v) => {
-        places.setVisible(v);
+        placesUserVisible = v;
+        syncPlacesVisible();
       },
       sections: [
         createRegionsControls({
@@ -869,6 +919,47 @@ async function main(): Promise<void> {
   // moves and refine on release/pause. The mode keeps the cartographic
   // look until the user opens it (menu.onModeChange inside).
   registerSolMode({ menu, terrain, diorama, requestFrame });
+
+  // Agua sheet replaces the "Próximamente" placeholder; without flow data
+  // it explains why the simulation is unavailable instead of going blank.
+  const aguaHost = menu.modeHosts.agua;
+  aguaHost.textContent = "";
+  if (flowData && agua) {
+    aguaHost.appendChild(
+      createAguaSheet({
+        basins: flowData.basinInfos,
+        departmentName: (index) =>
+          data.departments.departments.find((d) => d.index === index)
+            ?.name,
+        onPlay: (p) => agua.setPlaying(p),
+        onIntensity: (i) => agua.setIntensity(i),
+        onBasins: (v) => agua.setBasinsVisible(v),
+        attribution: flowData.attribution,
+      }),
+    );
+  } else {
+    const note = document.createElement("p");
+    note.className = "agua-note";
+    note.textContent =
+      "Los datos de escurrimiento no están disponibles en esta versión.";
+    aguaHost.appendChild(note);
+  }
+  // Place markers belong to Explorar: the "Mostrar lugares" toggle keeps
+  // the user's choice, but the markers only show while that mode is
+  // active — Agua, Sol and Perfil hide them entirely.
+  let placesUserVisible = true;
+  const syncPlacesVisible = (): void => {
+    places.setVisible(placesUserVisible && menu.mode() === "explorar");
+  };
+  syncPlacesVisible();
+
+  // Entering Agua repaints with the simulation running; leaving repaints
+  // without it. Mode switches also re-sync the place markers. One
+  // late-bound call — the menu predates this layer.
+  onModeChangeHook = () => {
+    syncPlacesVisible();
+    requestFrame();
+  };
 
   // ---- Framing inside the UI-free rectangle ---------------------------
   // The scene is framed for the part of the screen the chrome does NOT
@@ -1067,6 +1158,7 @@ async function main(): Promise<void> {
     ...renderer.gpuMemoryEntries(),
     ...terrain.getGpuMemoryReport().entries,
     ...detail.getGpuMemoryReport().entries,
+    ...(agua ? agua.getGpuMemoryReport().entries : []),
   ];
   const gpuMemoryBytes = (): number =>
     gpuMemoryEntries().reduce((s, e) => s + e.bytes, 0);

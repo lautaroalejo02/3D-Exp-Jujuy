@@ -173,6 +173,46 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
       },
     ],
   },
+  {
+    title: "Escurrimiento y cuencas",
+    lines: [
+      "Calculados sobre el DEM Terrarium y los límites geoBoundaries (priority-flood + D8 + acumulación)",
+    ],
+    links: [
+      {
+        label: "Método",
+        url: "https://doi.org/10.1016/j.cageo.2013.04.024",
+      },
+    ],
+  },
+  {
+    title: "Agua (nota «qué es una cuenca»)",
+    lines: ["Wikipedia en español, «Cuenca hidrográfica» — definición parafraseada"],
+    links: [
+      {
+        label: "CC BY-SA 4.0",
+        url: "https://creativecommons.org/licenses/by-sa/4.0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://es.wikipedia.org/wiki/Cuenca_hidrogr%C3%A1fica",
+      },
+    ],
+  },
+  {
+    title: "Agua (nota «cuencas cerradas de la Puna»)",
+    lines: ["Wikipedia en español, «Endorreísmo» — texto parafraseado"],
+    links: [
+      {
+        label: "CC BY-SA 4.0",
+        url: "https://creativecommons.org/licenses/by-sa/4.0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://es.wikipedia.org/wiki/Endorre%C3%ADsmo",
+      },
+    ],
+  },
 ];
 
 const COLLAPSED_BELOW_PX = 640;

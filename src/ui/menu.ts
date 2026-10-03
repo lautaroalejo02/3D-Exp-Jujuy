@@ -65,6 +65,12 @@ export function createAppMenu(
      * rectangle from it.
      */
     readonly onSheetGeometry?: () => void;
+    /**
+     * Fired when the active mode changes (mode-bar tap or setMode) —
+     * modes that animate only while active use it to start/stop their
+     * frame requests.
+     */
+    readonly onModeChange?: (mode: AppMode) => void;
   } = {},
 ): AppMenu {
   const doc = overlay.ownerDocument;
@@ -146,6 +152,7 @@ export function createAppMenu(
     // A mode tap is intent to see its content — lift a minimized sheet.
     if (modeSheet.snap() === "min") modeSheet.setSnap("half");
     for (const listener of modeListeners) listener(next);
+    opts.onModeChange?.(next);
   };
 
   const bar = createModeBar({ initial: mode, onSelect: setMode }, doc);
