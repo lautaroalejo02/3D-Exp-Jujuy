@@ -3,6 +3,7 @@ import { clock, frameLoop, init, surface, type Gpu } from "vgpu";
 import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
 import { overviewCamera } from "./camera/framing";
+import { attachCameraInput } from "./camera/input";
 import { formatBytes } from "./render/gpu-memory";
 import mipmapShader from "./render/mipmap.wgsl";
 import presentShader from "./render/present.wgsl";
@@ -187,6 +188,11 @@ async function main(): Promise<void> {
       verticalExaggeration: INITIAL_VERTICAL_EXAGGERATION,
     },
   );
+  attachCameraInput(canvas, {
+    camera,
+    // Picking lands in the next task; for now taps are only logged.
+    onTap: (point) => console.debug("tap", point),
+  });
   const appClock = clock(gpu);
 
   const memoryReport = {

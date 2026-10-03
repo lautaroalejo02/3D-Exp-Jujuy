@@ -14,6 +14,18 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 - `npm test` — Vitest
 - `npm run check:wgsl` — valida cada `src/**/*.wgsl` con `vgpu check`
 
+## Controles de la cámara
+
+| Gesto | Acción |
+|---|---|
+| Arrastrar (botón izquierdo o un dedo) | Rotar el relieve |
+| Arrastrar con botón derecho/medio, o Shift/Ctrl + izquierdo | Desplazar el terreno |
+| Dos dedos juntos | Desplazar el terreno |
+| Pinza (dos dedos) | Acercar / alejar |
+| Girar dos dedos | Rotar en azimut |
+| Rueda del mouse | Acercar / alejar |
+| Toque o click corto | Seleccionar un punto (picking) |
+
 ## Datos generados (`data/build/`)
 
 `npm run build:data` produce, desde `data/raw/`:
