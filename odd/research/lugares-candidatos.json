@@ -1,0 +1,816 @@
+{
+  "note": "Research output (2026-10-03). Candidates for the future places feature; not consumed by the build. Coordinates from Wikidata (CC0) or OSM (ODbL). Department and elevation must come from project data (raster + DEM), not from these notes.",
+  "places": [
+    {
+      "name": "Purmamarca",
+      "category": "Quebrada",
+      "lat": -23.733333,
+      "lon": -65.483333,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1025405",
+        "url": "https://www.wikidata.org/wiki/Q1025405",
+        "license": "CC0"
+      },
+      "instanceOf": "village (Q532)",
+      "department": "Tumbaya Department",
+      "description": "localidad en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Purmamarca",
+      "elevationReported": {
+        "value": 2324,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Cerro de los Siete Colores",
+      "category": "Quebrada",
+      "lat": -23.7469,
+      "lon": -65.5035,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1056078",
+        "url": "https://www.wikidata.org/wiki/Q1056078",
+        "license": "CC0"
+      },
+      "instanceOf": "hill (Q54050)",
+      "department": "Jujuy Province (P131 points directly to province, no department recorded in Wikidata); geographically within Tumbaya Department, next to Purmamarca",
+      "description": "cerro en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Cerro_de_los_Siete_Colores",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Maimará",
+      "category": "Quebrada",
+      "lat": -23.6260856,
+      "lon": -65.4091433,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q3843526",
+        "url": "https://www.wikidata.org/wiki/Q3843526",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement / village (Q3257686, Q532)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Tilcara Department",
+      "description": "asentamiento en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Maimar%C3%A1",
+      "elevationReported": {
+        "value": 2397,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Paleta del Pintor",
+      "category": "Quebrada",
+      "lat": -23.6295809,
+      "lon": -65.4046105,
+      "source": {
+        "kind": "osm",
+        "id": "node/7025906687",
+        "url": "https://nominatim.openstreetmap.org/search?q=Paleta%20del%20Pintor%2C%20Jujuy%2C%20Argentina&format=json",
+        "license": "ODbL"
+      },
+      "instanceOf": null,
+      "department": "Departamento Tilcara (Municipio de Maimará), Jujuy",
+      "description": "Cerro Paleta del Pintor, near Maimará, Tilcara Department, Jujuy, Argentina (OSM display_name)",
+      "eswiki": null,
+      "elevationReported": null,
+      "notes": "No Wikidata item found; sourced from OpenStreetMap Nominatim instead. Of three near-identical OSM nodes returned, chose the one explicitly labeled 'Cerro Paleta del Pintor' (the hillside, not an address point)."
+    },
+    {
+      "name": "Tilcara",
+      "category": "Quebrada",
+      "lat": -23.5768095,
+      "lon": -65.3934201,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q604722",
+        "url": "https://www.wikidata.org/wiki/Q604722",
+        "license": "CC0"
+      },
+      "instanceOf": "city/settlement (Q15284)",
+      "department": "Tilcara Department (Q948101)",
+      "description": "ciudad y cabecera del departamento de Tilcara, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Tilcara",
+      "elevationReported": {
+        "value": 2461,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from Tilcara Department (Q948101, the admin division), a train station (Q97275897), a hostel, and a disambiguation page (Q3163987); the chosen item Q604722 is the town/human settlement."
+    },
+    {
+      "name": "Pucará de Tilcara",
+      "category": "Quebrada",
+      "lat": -23.58861111,
+      "lon": -65.40277778,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q2062241",
+        "url": "https://www.wikidata.org/wiki/Q2062241",
+        "license": "CC0"
+      },
+      "instanceOf": "archaeological site / fortification (Q57831, Q839954)",
+      "department": "Tilcara (town, Q604722), Tilcara Department",
+      "description": "sitio arqueológico en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Pucar%C3%A1_de_Tilcara",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Uquía",
+      "category": "Quebrada",
+      "lat": -23.30361111,
+      "lon": -65.35611111,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q3552109",
+        "url": "https://www.wikidata.org/wiki/Q3552109",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Humahuaca Department",
+      "description": "asentamiento en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Uqu%C3%ADa",
+      "elevationReported": {
+        "value": 2820,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from 'Uquiasaurus' (extinct lizard genus) and 'Uquian' (a South American geologic age / Peruvian ravine), neither of which is in Argentina."
+    },
+    {
+      "name": "Humahuaca",
+      "category": "Quebrada",
+      "lat": -23.20544,
+      "lon": -65.35048,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1026833",
+        "url": "https://www.wikidata.org/wiki/Q1026833",
+        "license": "CC0"
+      },
+      "instanceOf": "city (Q515), capital (Q15284)",
+      "department": "Humahuaca Department (Q532173)",
+      "description": "ciudad en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Humahuaca",
+      "elevationReported": {
+        "value": 3012,
+        "unit": "m",
+        "source": "wikidata P2044 (an alternate value of 2970 m also appears on the item)"
+      },
+      "notes": "Disambiguated from Humahuaca Department (Q532173), a train station, an extinct language, a cathedral, a religious prelature, and a disambiguation page; chose the city item Q1026833."
+    },
+    {
+      "name": "Serranía de Hornocal",
+      "category": "Quebrada",
+      "lat": -23.2617,
+      "lon": -65.1226,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q16630587",
+        "url": "https://www.wikidata.org/wiki/Q16630587",
+        "license": "CC0"
+      },
+      "instanceOf": "mountain/mountain range (Q46831)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Humahuaca Department",
+      "description": "montañas argentinas",
+      "eswiki": "https://es.wikipedia.org/wiki/Serran%C3%ADa_de_Hornocal",
+      "elevationReported": {
+        "value": 4761,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "",
+      "coordinatorReview": "El raster departamental (geoBoundaries/IGN) lo ubica en Valle Grande, no en Humahuaca."
+    },
+    {
+      "name": "Quebrada de Humahuaca",
+      "category": "Quebrada",
+      "lat": -23.199861111111,
+      "lon": -65.348861111111,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q28061",
+        "url": "https://www.wikidata.org/wiki/Q28061",
+        "license": "CC0"
+      },
+      "instanceOf": "canyon / valley (Q150784, Q39816)",
+      "department": "Jujuy Province (spans Tumbaya, Tilcara and Humahuaca departments)",
+      "description": "profundo y angosto surco en el noroeste argentino; UNESCO World Heritage Site",
+      "eswiki": "https://es.wikipedia.org/wiki/Quebrada_de_Humahuaca",
+      "elevationReported": {
+        "value": 3224,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Wikidata item also carries an alternate coordinate (-23.1, -65.33333); the preferred-rank coordinate above was used."
+    },
+    {
+      "name": "Cuesta de Lipán",
+      "category": "Quebrada",
+      "lat": -23.6856,
+      "lon": -65.6211,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q5793997",
+        "url": "https://www.wikidata.org/wiki/Q5793997",
+        "license": "CC0"
+      },
+      "instanceOf": "mountain/mountain pass (Q8502)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Tumbaya Department (connects Purmamarca to Salinas Grandes)",
+      "description": "montaña en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Cuesta_de_Lip%C3%A1n",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Salinas Grandes",
+      "category": "Puna",
+      "lat": -23.63325,
+      "lon": -65.894441666667,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q2893104",
+        "url": "https://www.wikidata.org/wiki/Q2893104",
+        "license": "CC0"
+      },
+      "instanceOf": "salt flat (Q935277)",
+      "department": "Shared between Jujuy (Tumbaya/Susques area) and Salta provinces; no P131 recorded on the Wikidata item",
+      "description": "el salar más grande de la Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Salinas_Grandes_(Jujuy_y_Salta)",
+      "elevationReported": {
+        "value": 3410,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from several unrelated 'Salinas Grandes' items (a Nicaraguan settlement, a train station, other salt pans); chose Q2893104, explicitly described as spanning Jujuy and Salta."
+    },
+    {
+      "name": "Laguna de Guayatayoc",
+      "category": "Puna",
+      "lat": -23.41666667,
+      "lon": -65.85,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1388407",
+        "url": "https://www.wikidata.org/wiki/Q1388407",
+        "license": "CC0"
+      },
+      "instanceOf": "lake (Q23397)",
+      "department": "Cochinoca Department (Q609628)",
+      "description": "lago en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Laguna_de_Guayatayoc",
+      "elevationReported": {
+        "value": 3405,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Item carries two coordinate values (-23.41666667,-65.85 and -23.29903,-65.90056); the preferred-rank one was used."
+    },
+    {
+      "name": "Laguna de los Pozuelos (Monumento Natural)",
+      "category": "Puna",
+      "lat": -22.35,
+      "lon": -66,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q830120",
+        "url": "https://www.wikidata.org/wiki/Q830120",
+        "license": "CC0"
+      },
+      "instanceOf": "lake / natural monument (Q23397)",
+      "department": "Jujuy Province (P131 points directly to province); geographically spans Santa Catalina/Rinconada/Cochinoca departments",
+      "description": "monumento natural de la Argentina, en Jujuy",
+      "eswiki": "https://es.wikipedia.org/wiki/Monumento_natural_Laguna_de_los_Pozuelos",
+      "elevationReported": {
+        "value": 3635,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Abra Pampa",
+      "category": "Puna",
+      "lat": -22.716666666667,
+      "lon": -65.7,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q55386",
+        "url": "https://www.wikidata.org/wiki/Q55386",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement / city (Q15284)",
+      "department": "Cochinoca Department (Q609628)",
+      "description": "ciudad y cabecera del departamento de Cochinoca, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Abra_Pampa",
+      "elevationReported": {
+        "value": 3487,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "La Quiaca",
+      "category": "Puna",
+      "lat": -22.105555555556,
+      "lon": -65.6,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q693381",
+        "url": "https://www.wikidata.org/wiki/Q693381",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement / city (Q15284, Q902814)",
+      "department": "Yavi Department (Q1063330)",
+      "description": "ciudad y cabecera del departamento de Yavi, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/La_Quiaca",
+      "elevationReported": {
+        "value": 3442,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from La Quiaca Airport, La Quiaca River (which flows into Bolivia), a train station, and a disambiguation page."
+    },
+    {
+      "name": "Yavi",
+      "category": "Puna",
+      "lat": -22.130980555556,
+      "lon": -65.462916666667,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1024040",
+        "url": "https://www.wikidata.org/wiki/Q1024040",
+        "license": "CC0"
+      },
+      "instanceOf": "locality (Q3257686)",
+      "department": "Yavi Department (Q1063330)",
+      "description": "localidad en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Yavi_(Jujuy)",
+      "elevationReported": null,
+      "notes": "Disambiguated from several unrelated Turkish neighbourhoods also named 'Yavi' and a 2021 video game of the same name; chosen item has P131 = Yavi Department, Jujuy."
+    },
+    {
+      "name": "Susques",
+      "category": "Puna",
+      "lat": -23.400555555556,
+      "lon": -66.367222222222,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1495796",
+        "url": "https://www.wikidata.org/wiki/Q1495796",
+        "license": "CC0"
+      },
+      "instanceOf": "city/locality (Q3257686)",
+      "department": "Susques Department (Q616351)",
+      "description": "ciudad y cabecera del departamento de Susques, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Susques",
+      "elevationReported": {
+        "value": 3896,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Laguna de Vilama",
+      "category": "Puna",
+      "lat": -22.59553056,
+      "lon": -66.92620278,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q16589099",
+        "url": "https://www.wikidata.org/wiki/Q16589099",
+        "license": "CC0"
+      },
+      "instanceOf": "salt lake (Q23397)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Susques/Rinconada area, far western Puna near the Chilean/Bolivian border",
+      "description": "lago en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Laguna_de_Vilama",
+      "elevationReported": {
+        "value": 4488,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Cerro Zapaleri",
+      "category": "Puna",
+      "lat": -22.813805555555554,
+      "lon": -67.1807,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q147206",
+        "url": "https://www.wikidata.org/wiki/Q147206",
+        "license": "CC0"
+      },
+      "instanceOf": "mountain/stratovolcano (Q8502)",
+      "department": "Rinconada Department, Jujuy (tri-border point of Argentina, Bolivia and Chile)",
+      "description": "estratovolcán en el norte de Chile, Argentina y en el suroeste de Bolivia",
+      "eswiki": "https://es.wikipedia.org/wiki/Cerro_Zapaleri",
+      "elevationReported": {
+        "value": 5607,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "P131 lists four administrative entities (Rinconada Department, Jujuy Province, plus Chilean and Bolivian regions) since it is the exact Argentina-Bolivia-Chile tripoint.",
+      "coordinatorReview": "Trifinio Argentina-Bolivia-Chile: el raster departamental lo ubica justo fuera del límite (esperable en un punto del borde)."
+    },
+    {
+      "name": "Tres Cruces",
+      "category": "Puna",
+      "lat": -22.91666667,
+      "lon": -65.58055556,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q994862",
+        "url": "https://www.wikidata.org/wiki/Q994862",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Humahuaca Department (Q532173)",
+      "description": "asentamiento en Argentina; paraje de altura sobre la RN9, en el límite entre la Quebrada y la Puna",
+      "eswiki": "https://es.wikipedia.org/wiki/Tres_Cruces_(Argentina)",
+      "elevationReported": {
+        "value": 3693,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from many unrelated 'Tres Cruces' places in Uruguay, Mexico, Lithuania and Spain; chose the item whose eswiki title is 'Tres Cruces (Argentina)' and whose P131 is Humahuaca Department, Jujuy."
+    },
+    {
+      "name": "Rinconada",
+      "category": "Puna",
+      "lat": -22.440277777778,
+      "lon": -66.167222222222,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1817419",
+        "url": "https://www.wikidata.org/wiki/Q1817419",
+        "license": "CC0"
+      },
+      "instanceOf": "rural municipality (Q3257686)",
+      "department": "Rinconada Department (Q1063533)",
+      "description": "ciudad y cabecera del departamento de Rinconada, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Rinconada_(Argentina)",
+      "elevationReported": {
+        "value": 3851,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from many unrelated 'Rinconada' places in Chile, Mexico and Spain; chose the item explicitly described as 'in Jujuy Province, Argentina'."
+    },
+    {
+      "name": "Cochinoca",
+      "category": "Puna",
+      "lat": -22.745,
+      "lon": -65.896666666667,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1105115",
+        "url": "https://www.wikidata.org/wiki/Q1105115",
+        "license": "CC0"
+      },
+      "instanceOf": "populated place (Q3257686)",
+      "department": "Jujuy Province (P131 points directly to province); the locality shares its name with, but has a distinct Wikidata item from, Cochinoca Department (Q609628)",
+      "description": "localidad en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Cochinoca",
+      "elevationReported": {
+        "value": 3552,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated the locality (Q1105115) from Cochinoca Department (Q609628), a separate Wikidata item."
+    },
+    {
+      "name": "Santa Catalina",
+      "category": "Puna",
+      "lat": -21.9452659,
+      "lon": -66.0526142,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q2096227",
+        "url": "https://www.wikidata.org/wiki/Q2096227",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Santa Catalina Department (Q1063370)",
+      "description": "ciudad y cabecera del departamento de Santa Catalina, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Santa_Catalina_(Jujuy)",
+      "elevationReported": {
+        "value": 3801,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Many same-named places exist worldwide (Philippines, Colombia, Uruguay, Mexico, Spain, Peru, saints named Catherine); disambiguated using the item explicitly describing it as the capital of Santa Catalina Department, Jujuy, Argentina — the northernmost town in the province."
+    },
+    {
+      "name": "Parque Nacional Calilegua",
+      "category": "Yungas",
+      "lat": -23.639,
+      "lon": -64.838,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q829260",
+        "url": "https://www.wikidata.org/wiki/Q829260",
+        "license": "CC0"
+      },
+      "instanceOf": "national park / protected area (Q46169, Q6974775)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Ledesma and Valle Grande departments",
+      "description": "parque nacional de la provincia de Jujuy, en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Parque_nacional_Calilegua",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Libertador General San Martín",
+      "category": "Yungas",
+      "lat": -23.8,
+      "lon": -64.783333333333,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q600706",
+        "url": "https://www.wikidata.org/wiki/Q600706",
+        "license": "CC0"
+      },
+      "instanceOf": "city (Q515)",
+      "department": "Ledesma Department (Q1089006)",
+      "description": "ciudad argentina ubicada en la provincia de Jujuy",
+      "eswiki": "https://es.wikipedia.org/wiki/Libertador_General_San_Mart%C3%ADn_(Jujuy)",
+      "elevationReported": {
+        "value": 472,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from the person José de San Martín, several unrelated Argentine departments also named 'Libertador General San Martín' (San Luis, Chaco), 'Nevado de Cachi' (unrelated search hit), and two train station items; chose the city item (Q600706) whose eswiki title is 'Libertador General San Martín (Jujuy)'."
+    },
+    {
+      "name": "San Pedro de Jujuy",
+      "category": "Yungas",
+      "lat": -24.233333,
+      "lon": -64.866667,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1020263",
+        "url": "https://www.wikidata.org/wiki/Q1020263",
+        "license": "CC0"
+      },
+      "instanceOf": "city (Q515)",
+      "department": "San Pedro Department (Q964001)",
+      "description": "ciudad y cabecera del departamento de San Pedro, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/San_Pedro_de_Jujuy",
+      "elevationReported": {
+        "value": 553,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Valle Grande",
+      "category": "Yungas",
+      "lat": -23.4761784,
+      "lon": -64.948555,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q1015185",
+        "url": "https://www.wikidata.org/wiki/Q1015185",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Valle Grande Department (Q1063527)",
+      "description": "ciudad y cabecera del departamento de Valle Grande, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Valle_Grande_(Jujuy)",
+      "elevationReported": null,
+      "notes": "Disambiguated from several unrelated 'Valle Grande' places in Italy, Mexico, Chile and other Argentine provinces (Río Negro); chose the item explicitly described as 'village in Jujuy Province, Argentina'."
+    },
+    {
+      "name": "Reserva de Biosfera de las Yungas",
+      "category": "Yungas",
+      "lat": null,
+      "lon": null,
+      "source": {
+        "kind": null,
+        "id": null,
+        "url": null,
+        "license": null
+      },
+      "instanceOf": null,
+      "department": null,
+      "description": "UNESCO biosphere reserve spanning parts of Jujuy, Salta and Tucumán provinces (Southern Andean Yungas ecoregion)",
+      "eswiki": null,
+      "elevationReported": null,
+      "notes": "No Wikidata item found for this specific biosphere reserve despite several search variants ('Reserva de Biosfera de las Yungas', 'Reserva de Biosfera Yungas', 'Las Yungas Biosphere Reserve'); the closest related items found were generic ecoregion entries (e.g. Q5395199 'Southern Andean Yungas', Q743261 'Yungas') with no usable point coordinate. Nominatim was not queried for this one because it is a multi-province designation, not a point place; recording as unsourced rather than guessing a centroid."
+    },
+    {
+      "name": "San Salvador de Jujuy",
+      "category": "Valles",
+      "lat": -24.185556,
+      "lon": -65.299444,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q44217",
+        "url": "https://www.wikidata.org/wiki/Q44217",
+        "license": "CC0"
+      },
+      "instanceOf": "city, capital (Q515, Q15284)",
+      "department": "Dr. Manuel Belgrano Department (Q907577)",
+      "description": "capital de la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/San_Salvador_de_Jujuy",
+      "elevationReported": {
+        "value": 1201,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Palpalá",
+      "category": "Valles",
+      "lat": -24.258333,
+      "lon": -65.208333,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q55385",
+        "url": "https://www.wikidata.org/wiki/Q55385",
+        "license": "CC0"
+      },
+      "instanceOf": "city, capital (Q515, Q15284)",
+      "department": "Palpalá Department (Q1063359)",
+      "description": "ciudad y cabecera del departamento de Palpalá, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Palpal%C3%A1",
+      "elevationReported": {
+        "value": 1024,
+        "unit": "m",
+        "source": "wikidata P2044 (an alternate value of 1126 m also appears on the item)"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Yala",
+      "category": "Valles",
+      "lat": -24.117,
+      "lon": -65.4,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q6169692",
+        "url": "https://www.wikidata.org/wiki/Q6169692",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Dr. Manuel Belgrano Department",
+      "description": "localidad de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Yala_(Jujuy)",
+      "elevationReported": null,
+      "notes": "Disambiguated from Yala province/city in Thailand and several unrelated homonyms."
+    },
+    {
+      "name": "Termas de Reyes",
+      "category": "Valles",
+      "lat": -24.171,
+      "lon": -65.486,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q78803897",
+        "url": "https://www.wikidata.org/wiki/Q78803897",
+        "license": "CC0"
+      },
+      "instanceOf": "populated place (Q486972)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Dr. Manuel Belgrano Department",
+      "description": "Paraje poblado de la provincia de Jujuy en Argentina (thermal spa town near San Salvador de Jujuy)",
+      "eswiki": "https://es.wikipedia.org/wiki/Termas_de_Reyes",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Dique La Ciénaga",
+      "category": "Valles",
+      "lat": -24.432052,
+      "lon": -65.276685,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q140327429",
+        "url": "https://www.wikidata.org/wiki/Q140327429",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "El Carmen Department (Q782266)",
+      "description": "asentamiento en El Carmen, Jujuy, Argentina (reservoir/dam and recreational area)",
+      "eswiki": null,
+      "elevationReported": null,
+      "notes": "Wikidata item is recently created (Q140327429) and has no eswiki sitelink; the P31 value ('human settlement') describes the populated place around the dam rather than the dam structure itself, but it is the only Wikidata item matching this name and it falls correctly within El Carmen Department, Jujuy.",
+      "coordinatorReview": "NO CONFIABLE: el item de Wikidata no tiene etiqueta y está descrito como asentamiento (posible import automático); verificar con otra fuente antes de usar."
+    },
+    {
+      "name": "Lagunas de Yala",
+      "category": "Valles",
+      "lat": -24.108022,
+      "lon": -65.479041,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q140327436",
+        "url": "https://www.wikidata.org/wiki/Q140327436",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Dr. Manuel Belgrano Department (Q907577)",
+      "description": "asentamiento en Dr. Manuel Belgrano, Jujuy, Argentina (chain of small lakes inside Potrero de Yala provincial park)",
+      "eswiki": null,
+      "elevationReported": null,
+      "notes": "Recently created Wikidata item, no eswiki sitelink. Coordinates are close to but distinct from the Parque Provincial Potrero de Yala item, consistent with the lagoons being a feature inside that park.",
+      "coordinatorReview": "NO CONFIABLE: el item de Wikidata no tiene etiqueta y está descrito como asentamiento (posible import automático); verificar con otra fuente antes de usar."
+    },
+    {
+      "name": "Parque Provincial Potrero de Yala",
+      "category": "Valles",
+      "lat": -24.1,
+      "lon": -65.467,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q16616407",
+        "url": "https://www.wikidata.org/wiki/Q16616407",
+        "license": "CC0"
+      },
+      "instanceOf": "protected area",
+      "department": "Dr. Manuel Belgrano Department (Q907577)",
+      "description": "Área protegida bajo gestión del gobierno de la Provincia de Jujuy",
+      "eswiki": "https://es.wikipedia.org/wiki/Parque_provincial_Potrero_de_Yala",
+      "elevationReported": null,
+      "notes": ""
+    },
+    {
+      "name": "Volcán",
+      "category": "Valles",
+      "lat": -23.9179808,
+      "lon": -65.465287,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q4016103",
+        "url": "https://www.wikidata.org/wiki/Q4016103",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Jujuy Province (P131 points directly to province); geographically in Tumbaya Department",
+      "description": "localidad de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Volc%C3%A1n_(Jujuy)",
+      "elevationReported": {
+        "value": 2084,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Disambiguated from the generic concept 'volcano' (Q8072), Panamanian and Costa Rican towns of the same name, and unrelated music/mythology items."
+    },
+    {
+      "name": "Tumbaya",
+      "category": "Valles",
+      "lat": -23.8575495,
+      "lon": -65.4670199,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q2302575",
+        "url": "https://www.wikidata.org/wiki/Q2302575",
+        "license": "CC0"
+      },
+      "instanceOf": "human settlement (Q486972)",
+      "department": "Tumbaya Department (Q1063348)",
+      "description": "ciudad y cabecera del departamento de Tumbaya, en la provincia de Jujuy, Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Tumbaya",
+      "elevationReported": {
+        "value": 2099,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": ""
+    },
+    {
+      "name": "Nevado de Chañi",
+      "category": "Cumbres",
+      "lat": -24.063333,
+      "lon": -65.745833,
+      "source": {
+        "kind": "wikidata",
+        "id": "Q6746083",
+        "url": "https://www.wikidata.org/wiki/Q6746083",
+        "license": "CC0"
+      },
+      "instanceOf": "mountain (Q8502)",
+      "department": "Jujuy Province (P131 points directly to province); on the border of Tumbaya and Valle Grande departments, also close to the Salta provincial border",
+      "description": "montaña en Argentina",
+      "eswiki": "https://es.wikipedia.org/wiki/Cha%C3%B1i",
+      "elevationReported": {
+        "value": 5949,
+        "unit": "m",
+        "source": "wikidata P2044"
+      },
+      "notes": "Researched as a candidate for 'highest summit of Jujuy' per task instructions rather than assuming it. Elevation is inconsistent across sources: Wikidata P2044 gives 5949 m; the Spanish Wikipedia article on Jujuy Province states in its geography section that Chañi reaches 6200 m, while that same article's infobox lists 5896 m as the province's maximum altitude (attributed to Chañi). All three sources agree Nevado de Chañi is the commonly cited highest point of Jujuy; the exact figure is genuinely disputed across sources, so no single elevation should be treated as definitive for the map.",
+      "coordinatorReview": "Elevación según fuentes: 5949 (Wikidata), 6200 y 5896 (es.wikipedia). El DEM del proyecto da 5871 m en la coordenada; para fichas usar el DEM (AGENTS.md)."
+    }
+  ]
+}

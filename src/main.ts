@@ -53,6 +53,13 @@ import {
   type DetailSite,
 } from "./terrain/detail-manifest";
 import {
+  buildDepartmentToRegion,
+  buildRegionOverlay,
+  departmentToRegionNames,
+  parseRegions,
+  type RegionsData,
+} from "./terrain/regions";
+import {
   loadHeightfield,
   loadTerrainManifest,
   type TerrainQuality,
@@ -69,6 +76,12 @@ import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
 import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
 import { createPickPanelLayer } from "./ui/pick-panel";
+import { createRegionsControls } from "./ui/regions";
+
+// Bundled as a raw string (Vite ?raw) and validated by parseRegions; the
+// file is hand-authored from the verified PIP Jujuy source — see
+// data/raw/regions-jujuy.json and odd/research/pip-jujuy-extracto.txt.
+import regionsJsonText from "../data/raw/regions-jujuy.json?raw";
 
 function describeFailure(result: Extract<WebGpuSupport, { supported: false }>): string {
   switch (result.reason) {
@@ -139,6 +152,7 @@ interface TerrainData {
   readonly heightfield: Awaited<ReturnType<typeof loadHeightfield>>;
   readonly satellite: SatelliteImage;
   readonly departments: DepartmentsData;
+  readonly regions: RegionsData;
   /**
    * Mean reconstruction error of the downsampled level, meters. Only the
    * default quality reports one; shown in the pick panel's precision note.
@@ -172,6 +186,7 @@ async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
   return {
     heightfield,
     departments,
+    regions: parseRegions(JSON.parse(regionsJsonText)),
     satellite: {
       kind: "bitmap",
       bitmap,
@@ -387,6 +402,21 @@ async function main(): Promise<void> {
     requestFrame();
   });
 
+  // Department raster value → region index, then the overlay RGBA the
+  // shader tints by. Built once on the CPU from departments.json names.
+  const deptToRegion = buildDepartmentToRegion(
+    data.regions,
+    data.departments.departments,
+  );
+  const regionOverlay = {
+    grid: data.departments.grid,
+    rgba: buildRegionOverlay(
+      data.departments.index,
+      deptToRegion,
+      data.regions,
+    ),
+  };
+
   let verticalExaggeration = DEFAULT_VERTICAL_EXAGGERATION;
 
   // Discard rects + pick data for the detail sites, in base grid coords.
@@ -469,6 +499,7 @@ async function main(): Promise<void> {
       index: data.departments.index,
       sdf: data.departments.sdf,
     },
+    regionOverlay,
     pixelRatio: () => canvasSurface.dpr,
     onExaggeration: (v) => {
       verticalExaggeration = v;
@@ -488,7 +519,11 @@ async function main(): Promise<void> {
       cellSizeMeters: metersPerGridCell(data.heightfield.spec),
       meanAbsErrorMeters: data.meanAbsErrorMeters,
     },
-    { data: data.departments, hitSpec: data.heightfield.spec },
+    {
+      data: data.departments,
+      hitSpec: data.heightfield.spec,
+      regionNames: departmentToRegionNames(deptToRegion, data.regions),
+    },
   );
   const detail = createDetailLayer({
     baseSpec: data.heightfield.spec,
@@ -539,6 +574,16 @@ async function main(): Promise<void> {
   ];
   for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
+  overlay.appendChild(
+    createRegionsControls({
+      regions: data.regions.regions,
+      source: data.regions.source,
+      onToggle: (on) => {
+        terrain.setRegionsVisible(on);
+        requestFrame();
+      },
+    }),
+  );
 
   const camera = overviewCamera(
     data.heightfield.spec,

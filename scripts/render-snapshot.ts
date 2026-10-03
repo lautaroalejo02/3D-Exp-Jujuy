@@ -22,6 +22,8 @@
  *                          occlusion against the base DEM) so they sit
  *                          where the DOM markers would. Labels/cards are
  *                          DOM-only and not represented here.
+ * - regions.png            overview with the regions layer ON: the four
+ *                          PIP Jujuy regions tinted with thin borders
  *
  * Data is read from data/build (run `npm run build:data` and
  * `npm run build:detail` first). The JPEG is decoded with jpeg-js (the
@@ -55,6 +57,7 @@ import {
 import { lonLatToGrid } from "../src/geo/grid";
 import { gridToWorld, lonLatToWorld } from "../src/geo/world";
 import { createSceneRenderer } from "../src/render/scene-renderer";
+import type { DepartmentInfo } from "../src/terrain/departments";
 import { buildDetailPatchRects } from "../src/terrain/detail-grids";
 import {
   assertDetailSatelliteSize,
@@ -69,6 +72,11 @@ import {
 } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
 import { loadPlaces, type PlacesDoc } from "../src/terrain/places-manifest";
+import {
+  buildDepartmentToRegion,
+  buildRegionOverlay,
+  parseRegions,
+} from "../src/terrain/regions";
 import {
   createTerrainLayer,
   DEFAULT_VERTICAL_EXAGGERATION,
@@ -152,7 +160,8 @@ async function main(): Promise<void> {
   ) as TerrainManifest;
   const level = manifest.levels.default;
   const deptLevel = level.departments;
-  if (!deptLevel) {
+  const boundaries = manifest.boundaries;
+  if (!deptLevel || !boundaries) {
     throw new Error(
       "terrain.json has no departments data — run npm run build:data",
     );
@@ -184,6 +193,25 @@ async function main(): Promise<void> {
       `satellite decoded as ${jpg.width}x${jpg.height}, expected ${level.satellite.grid.width}x${level.satellite.grid.height}`,
     );
   }
+
+  // Regions overlay: departments.json names → region index → RGBA tint
+  // raster, same construction the app runs on the CPU before upload.
+  const regionsData = parseRegions(
+    JSON.parse(
+      readFileSync(join(ROOT, "data", "raw", "regions-jujuy.json"), "utf8"),
+    ),
+  );
+  const departmentsMeta = JSON.parse(
+    readFileSync(join(BUILD_DIR, boundaries.file.file), "utf8"),
+  ) as { departments: DepartmentInfo[] };
+  const deptToRegion = buildDepartmentToRegion(
+    regionsData,
+    departmentsMeta.departments,
+  );
+  const regionOverlay = {
+    grid: deptLevel.index.grid,
+    rgba: buildRegionOverlay(provinceMask.index, deptToRegion, regionsData),
+  };
 
   const [terrainWgsl, mipmapWgsl, presentWgsl, markerWgsl, detailWgsl] =
     await Promise.all([
@@ -285,6 +313,7 @@ async function main(): Promise<void> {
       verticalExaggeration: EXAGGERATION,
       provinceMask,
       detailPatches: patchRects,
+      regionOverlay,
       ...(mesh !== undefined ? { mesh } : {}),
       ...(pixelRatio !== undefined ? { pixelRatio } : {}),
     });
@@ -353,6 +382,11 @@ async function main(): Promise<void> {
     () => PORTRAIT_DPR,
   );
   mobileTerrain.init({ gpu });
+  // Regions shot: same terrain with the overlay bound and visible from
+  // the start (the app's toggle only flips the same two uniforms).
+  const regionsTerrain = makeTerrain();
+  regionsTerrain.init({ gpu });
+  regionsTerrain.setRegionsVisible(true);
 
   // Pick marker at Humahuaca for the third snapshot: the hit is built like
   // the app's tap path produces it (grid coords + DEM elevation), then the
@@ -526,6 +560,16 @@ async function main(): Promise<void> {
       name: "quebrada-marker",
       camera: quebradaCamera(),
       layers: [terrain, pickMarker],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+    },
+    {
+      name: "regions",
+      camera: overviewCamera(heightfield.spec, WIDTH / HEIGHT, relief, {
+        region: provinceRegion,
+      }),
+      layers: [regionsTerrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],

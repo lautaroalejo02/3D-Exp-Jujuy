@@ -72,6 +72,18 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
       },
     ],
   },
+  {
+    title: "Regiones de Jujuy",
+    lines: [
+      "PIP Jujuy — PISEAR, Ministerio de Agroindustria de la Nación (fuente de texto)",
+    ],
+    links: [
+      {
+        label: "Fuente (PDF)",
+        url: "https://www.magyp.gob.ar/sitio/areas/pisear/institucional/docs/_archivos/000005_PIP%20Jujuy.pdf",
+      },
+    ],
+  },
 ];
 
 const COLLAPSED_BELOW_PX = 640;
