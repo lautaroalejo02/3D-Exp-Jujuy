@@ -17,7 +17,7 @@
  *   covers the z14 window;
  * - writes heights as Int16 little-endian meters and a manifest
  *   (detail/manifest.json) with grid specs, file sizes + sha256,
- *   elevation stats, the patch ground size and the measured liftMeters.
+ *   elevation stats and the patch ground size.
  *
  * Every raw tile's sha256 is verified against sources.json BEFORE it is
  * decoded — a mismatch fails the build loudly. sources.json itself is
@@ -51,7 +51,6 @@ import { decode as decodeJpeg, encode as encodeJpeg } from "jpeg-js";
 import { PNG } from "pngjs";
 
 import {
-  detailLiftMeters,
   detailSiteGrids,
   detailSiteSizeKm,
   type DetailSiteGrids,
@@ -74,7 +73,7 @@ const JPEG_QUALITY = 85;
  * Output format version, written to manifest.json and part of the cache
  * key. Bump whenever decoding, cropping, mosaicking or encoding changes.
  */
-const PIPELINE_VERSION = 1;
+const PIPELINE_VERSION = 2;
 
 interface SourcesSite {
   readonly id: string;
@@ -399,12 +398,6 @@ function buildSite(
     encodeHeightsLE(heights),
   );
 
-  const { maxDiffMeters, liftMeters } = detailLiftMeters(
-    heights,
-    grids.heightsGrid.width,
-    grids.heightsGrid.height,
-  );
-
   const manifestSite: DetailSite = {
     id: site.id,
     name: site.name,
@@ -427,7 +420,6 @@ function buildSite(
       grid: grids.satelliteGrid,
     },
     sizeKm: detailSiteSizeKm(grids.heightsGrid),
-    liftMeters,
   };
   console.log(
     `  ${site.id}: satellite ${grids.satelliteGrid.width}x` +
@@ -436,8 +428,7 @@ function buildSite(
       `${grids.demCrop.y} of ${grids.demMosaicGrid.width}x` +
       `${grids.demMosaicGrid.height}), min ` +
       `${manifestSite.heights.elevation.minMeters} m / max ` +
-      `${manifestSite.heights.elevation.maxMeters} m, lift ` +
-      `${liftMeters} m (self-reconstruction max diff ${maxDiffMeters} m)`,
+      `${manifestSite.heights.elevation.maxMeters} m`,
   );
   return {
     site: manifestSite,

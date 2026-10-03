@@ -313,6 +313,25 @@ describe("intersectHeightfield", () => {
     expect(hit!.elevationMeters).toBeCloseTo(atLonLat!, 6);
   });
 
+  it("marches the overridden surface when surfaceAt is provided", () => {
+    // A flat DEM at 500 m, but the drawn surface (e.g. a geomorphed
+    // detail patch) reports 800 m: the hit must land on the override and
+    // report its elevation, not the DEM's.
+    const field = flatField(500);
+    const exaggeration = 2;
+    const terrainY = elevationToWorldY(800, exaggeration);
+    const [x, , z] = gridToWorld(SPEC, 40, 60);
+    const hit = intersectHeightfield(
+      { origin: [x, terrainY + 10, z], direction: [0, -1, 0] },
+      field,
+      exaggeration,
+      { surfaceAt: () => 800, surfaceMarginMeters: 400 },
+    );
+    expect(hit).toBeDefined();
+    expect(hit!.world[1]).toBeCloseTo(terrainY, 9);
+    expect(hit!.elevationMeters).toBeCloseTo(800, 9);
+  });
+
   it("returns the first hit when the ray would cross twice", () => {
     // Two towers; the ray must stop at the first (western) one.
     const field = fieldFrom((i) => (i === 40 || i === 90 ? 5000 : 500));

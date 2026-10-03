@@ -43,6 +43,7 @@ import { createPickMarkerLayer } from "../src/features/pick-marker/pick-marker";
 import { lonLatToGrid } from "../src/geo/grid";
 import { lonLatToWorld } from "../src/geo/world";
 import { createSceneRenderer } from "../src/render/scene-renderer";
+import { buildDetailPatchRects } from "../src/terrain/detail-grids";
 import {
   assertDetailSatelliteSize,
   loadDetailManifest,
@@ -201,31 +202,16 @@ async function main(): Promise<void> {
     label: "snapshot-out-portrait",
   });
 
-  const makeTerrain = (mesh?: MeshSize, pixelRatio?: () => number) =>
-    createTerrainLayer({
-      heightfield,
-      satellite: {
-        kind: "rgba",
-        pixels: jpg.data,
-        width: jpg.width,
-        height: jpg.height,
-      },
-      shaders: { terrain: terrainWgsl, mipmap: mipmapWgsl },
-      verticalExaggeration: EXAGGERATION,
-      provinceMask,
-      ...(mesh !== undefined ? { mesh } : {}),
-      ...(pixelRatio !== undefined ? { pixelRatio } : {}),
-    });
-  const terrain = makeTerrain();
-  terrain.init({ gpu });
-
   // Detail patches (data/build/detail/). Site coordinates come from the
   // manifest — the same sourced values the app loads — never hand-written.
+  // Loaded before the terrain layer: the base discard rects are computed
+  // from the same site specs and handed to both layers.
   let detailLayer: DetailLayer | undefined;
   const detailSiteData = new Map<string, DetailSiteData>();
+  let detailSites: DetailSiteData[] = [];
   if (existsSync(join(BUILD_DIR, "detail", "manifest.json"))) {
     const detailManifest = await loadDetailManifest(fileFetch);
-    const sites: DetailSiteData[] = await Promise.all(
+    detailSites = await Promise.all(
       detailManifest.sites.map(async (site) => {
         const payload = await loadDetailSite(site, fileFetch, "detail/");
         const img = decodeJpeg(payload.satelliteBytes, {
@@ -248,18 +234,56 @@ async function main(): Promise<void> {
         return data;
       }),
     );
-    detailLayer = createDetailLayer({
-      baseSpec: heightfield.spec,
-      sites,
-      shaders: { detail: detailWgsl, mipmap: mipmapWgsl },
-      verticalExaggeration: () => EXAGGERATION,
-    });
-    detailLayer.init({ gpu });
   } else {
     console.warn(
       "data/build/detail/manifest.json missing — detail snapshots " +
         "skipped (run npm run build:detail)",
     );
+  }
+  const patchRects = buildDetailPatchRects(
+    detailSites.map((d) => ({ id: d.site.id, spec: d.heightfield.spec })),
+    heightfield.spec,
+  );
+
+  const makeTerrain = (mesh?: MeshSize, pixelRatio?: () => number) =>
+    createTerrainLayer({
+      heightfield,
+      satellite: {
+        kind: "rgba",
+        pixels: jpg.data,
+        width: jpg.width,
+        height: jpg.height,
+      },
+      shaders: { terrain: terrainWgsl, mipmap: mipmapWgsl },
+      verticalExaggeration: EXAGGERATION,
+      provinceMask,
+      detailPatches: patchRects,
+      ...(mesh !== undefined ? { mesh } : {}),
+      ...(pixelRatio !== undefined ? { pixelRatio } : {}),
+    });
+  const terrain = makeTerrain();
+  terrain.init({ gpu });
+
+  // Sites whose patch currently covers the base (loaded AND in range) —
+  // mirrored into the terrain's discard mask by the detail layer.
+  const coveringIds = new Set<string>();
+  if (detailSites.length > 0) {
+    detailLayer = createDetailLayer({
+      baseSpec: heightfield.spec,
+      baseSurface: {
+        grid: terrain.gridUniforms,
+        heights: () => terrain.baseHeightsStorage(),
+      },
+      sites: detailSites,
+      shaders: { detail: detailWgsl, mipmap: mipmapWgsl },
+      verticalExaggeration: () => EXAGGERATION,
+      onCoveringChange: (ids) => {
+        coveringIds.clear();
+        for (const id of ids) coveringIds.add(id);
+        terrain.setDetailPatchMask(coveringIds);
+      },
+    });
+    detailLayer.init({ gpu });
   }
 
   /**
@@ -488,6 +512,16 @@ async function main(): Promise<void> {
 
   mkdirSync(OUT_DIR, { recursive: true });
   for (const shot of shots) {
+    // The discard mask must match THIS shot's layers: a shot without the
+    // detail layer would otherwise inherit the previous shot's mask and
+    // leave a hole in the base terrain.
+    if (shot.layers.includes(terrain)) {
+      terrain.setDetailPatchMask(
+        detailLayer && shot.layers.includes(detailLayer)
+          ? coveringIds
+          : new Set(),
+      );
+    }
     for (const layer of shot.layers) {
       layer.update(
         { time: 0, viewport: shot.size, camera: shot.camera },

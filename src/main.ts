@@ -23,10 +23,15 @@ import {
   createDetailLayer,
   type DetailSiteData,
 } from "./features/detail/detail-layer";
+import { DETAIL_EDGE_FADE } from "./features/detail/detail-uniforms";
 import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
 import { metersPerGridCell } from "./geo";
+import {
+  detailSurfaceElevation,
+  type DetailPickPatch,
+} from "./picking/detail-pick";
 import { intersectHeightfield, screenToRay } from "./picking/ray";
 import { formatBytes, type GpuMemoryEntry } from "./render/gpu-memory";
 import mipmapShader from "./render/mipmap.wgsl";
@@ -36,6 +41,10 @@ import {
   loadDepartments,
   type DepartmentsData,
 } from "./terrain/departments";
+import {
+  buildDetailPatchRects,
+  patchBaseGridMap,
+} from "./terrain/detail-grids";
 import {
   assertDetailSatelliteSize,
   loadDetailManifest,
@@ -361,6 +370,29 @@ async function main(): Promise<void> {
   });
 
   let verticalExaggeration = DEFAULT_VERTICAL_EXAGGERATION;
+
+  // Discard rects + pick data for the detail sites, in base grid coords.
+  // The terrain keeps the rects and the detail layer says which sites
+  // currently cover (loaded AND in draw distance) — only those may mask
+  // the base surface.
+  const patchRects = buildDetailPatchRects(
+    detailSites.map((d) => ({ id: d.site.id, spec: d.heightfield.spec })),
+    data.heightfield.spec,
+  );
+  const pickPatchById = new Map<string, DetailPickPatch>();
+  for (const d of detailSites) {
+    const rect = patchRects.find((r) => r.id === d.site.id)?.rect;
+    if (!rect) continue;
+    pickPatchById.set(d.site.id, {
+      id: d.site.id,
+      rect,
+      gridMap: patchBaseGridMap(d.heightfield.spec, data.heightfield.spec),
+      heightfield: d.heightfield,
+      edgeFade: DETAIL_EDGE_FADE,
+    });
+  }
+  let coveringPatchIds: ReadonlySet<string> = new Set();
+
   const terrain = createTerrainLayer({
     heightfield: data.heightfield,
     satellite: data.satellite,
@@ -368,6 +400,7 @@ async function main(): Promise<void> {
     quality,
     mesh: plan.mesh,
     verticalExaggeration,
+    detailPatches: patchRects,
     provinceMask: {
       grid: data.departments.grid,
       index: data.departments.index,
@@ -396,6 +429,12 @@ async function main(): Promise<void> {
   );
   const detail = createDetailLayer({
     baseSpec: data.heightfield.spec,
+    // The patch geomorphs onto the terrain's own drawn surface: same
+    // heights storage buffer + the terrain's grid uniforms, shared.
+    baseSurface: {
+      grid: terrain.gridUniforms,
+      heights: () => terrain.baseHeightsStorage(),
+    },
     sites: detailSites,
     shaders: { detail: detailShader, mipmap: mipmapShader },
     verticalExaggeration: () => verticalExaggeration,
@@ -404,6 +443,13 @@ async function main(): Promise<void> {
     // memory total (it now includes the site).
     onSiteReady: () => {
       debugOverlay?.refresh();
+      requestFrame();
+    },
+    // Base-terrain discard + pick surface follow exactly the sites the
+    // detail layer draws.
+    onCoveringChange: (ids) => {
+      coveringPatchIds = new Set(ids);
+      terrain.setDetailPatchMask(coveringPatchIds);
       requestFrame();
     },
   });
@@ -441,10 +487,43 @@ async function main(): Promise<void> {
         canvas.clientWidth,
         canvas.clientHeight,
       );
+      // While patches cover, march the geomorphed surface the user sees —
+      // and at ~patch-cell resolution: patch cells are ~1/8 of a base
+      // cell, so the default 0.5-cell step could skip narrow ridges.
+      const covering: DetailPickPatch[] = [];
+      let patchMargin = 0;
+      for (const id of coveringPatchIds) {
+        const patch = pickPatchById.get(id);
+        if (!patch) continue;
+        covering.push(patch);
+        // mix(base, patch) stays inside [min(baseMin, patchMin),
+        // max(baseMax, patchMax)] — that is all the clip box must grow.
+        patchMargin = Math.max(
+          patchMargin,
+          patch.heightfield.max - data.heightfield.max,
+          data.heightfield.min - patch.heightfield.min,
+        );
+      }
       const hit = intersectHeightfield(
         ray,
         data.heightfield,
         verticalExaggeration,
+        covering.length === 0
+          ? {}
+          : {
+              stepCells: 0.1,
+              surfaceMarginMeters: Math.max(0, patchMargin),
+              surfaceAt: (i, j) =>
+                detailSurfaceElevation(
+                  {
+                    heightfield: data.heightfield,
+                    meshToGrid: terrain.gridUniforms.meshToGrid,
+                  },
+                  covering,
+                  i,
+                  j,
+                ),
+            },
       );
       // A miss (sky) dispatches undefined so layers clear pick state.
       for (const layer of layers) layer.onPick?.(hit);

@@ -17,6 +17,14 @@
 // raw byte (decode *255) and the SDF is biased by 127 (decode *255 - 127).
 // The SDF drives the "outside Jujuy" dimming and a screen-space outline
 // whose width stays ~constant in pixels via fwidth().
+//
+// DETAIL PATCHES: `patchRects` holds the FULL outer extent (in grid
+// coords) of every detail patch that is loaded AND inside its draw
+// distance — the app maintains it via setDetailPatchMask. Fragments
+// inside a live rect are discarded: the patch renders there at its true
+// height and geomorphs onto this surface at the border (detail.wgsl), so
+// the base would only poke through it otherwise. A site that is merely
+// in range but still loading has no rect — the base keeps showing.
 
 struct Params {
   viewProjection: mat4x4f,
@@ -36,6 +44,11 @@ struct Params {
   dimStrength: f32,    // 0..1: how strongly outside terrain is dimmed
   outlinePx: f32,      // province outline width in physical pixels
   deptBorders: f32,    // 1 = thin department borders; 0 = off
+  // Full outer extent [i0, j0, i1, j1] of each live detail patch, in grid
+  // coords; only the first patchRectCount slots are valid. Fixed literal
+  // size — vgpu rejects symbolic array lengths.
+  patchRects: array<vec4f, 8>,
+  patchRectCount: f32,
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -112,6 +125,19 @@ struct VertexOut {
 }
 
 @fragment fn fs_main(in: VertexOut) -> @location(0) vec4f {
+  // Detail patches own the surface inside their full extent: discard the
+  // base fragments there so nothing of the coarser mesh pokes through
+  // the patch or z-fights with it.
+  for (var p = 0u; p < u32(params.patchRectCount); p++) {
+    let r = params.patchRects[p];
+    if (
+      in.grid.x >= r.x && in.grid.x <= r.z &&
+      in.grid.y >= r.y && in.grid.y <= r.w
+    ) {
+      discard;
+    }
+  }
+
   // Normal from central finite differences of the height grid. The sample
   // spacing is 2 cells of real ground distance; elevation is exaggerated
   // like the vertex displacement so slopes stay truthful to the render.

@@ -13,8 +13,6 @@
 import type { GridSpec } from "../geo/grid";
 import { metersPerGridCell } from "../geo/world";
 import { TILE_SIZE } from "../geo/slippy";
-import { boxDownsample } from "./raster";
-import { reconstructionError } from "./stats";
 
 /** Inclusive tile index ranges for one tile source, from sources.json. */
 export interface DetailTileRange {
@@ -163,45 +161,120 @@ export function detailSiteSizeKm(grid: GridSpec): readonly [number, number] {
 }
 
 /**
- * Downsampling factor for the lift estimate: 8 coarsens the z12 patch
- * heights to ~280 m cells, matching the base terrain's default level
- * (heights-half). The `alta` level (~140 m cells, factor 4) is covered
- * too — its reconstruction error is a subset of the coarser one.
+ * Maximum number of detail patches the base terrain can mask at once:
+ * the size of the `patchRects` uniform array in terrain.wgsl.
  */
-export const LIFT_ESTIMATE_FACTOR = 8;
+export const MAX_DETAIL_PATCHES = 8;
 
 /**
- * Elevation lift (meters, before exaggeration) so the patch surface stays
- * above the coincident base terrain everywhere in its extent.
- *
- * Estimated without reading the base data: downsample the patch heights by
- * LIFT_ESTIMATE_FACTOR, reconstruct them bilinearly, and take the worst
- * absolute error — that is how far a base-resolution surface can sit above
- * or below the patch.
+ * Linear map between a patch's height-grid coords and the base grid's.
+ * Both grids share global-pixel space (px counts scale by
+ * 2^(patchZoom - baseZoom)), so the mapping is axis-aligned and exact:
+ *   baseGridI = (patchGridI + 0.5) * k[0] + c[0]
+ *   baseGridJ = (patchGridJ + 0.5) * k[1] + c[1]
+ * Used by the detail shader (geomorph target), the base shader's discard
+ * rect and picking — all three must agree on the same conversion.
  */
-export function detailLiftMeters(
-  heights: Float32Array,
-  width: number,
-  height: number,
-  factor = LIFT_ESTIMATE_FACTOR,
-): { readonly maxDiffMeters: number; readonly liftMeters: number } {
-  const coarse = boxDownsample(heights, width, height, factor);
-  const error = reconstructionError(
-    heights,
-    width,
-    height,
-    coarse.data,
-    coarse.width,
-    coarse.height,
-    factor,
-  );
+export interface PatchBaseGridMap {
+  readonly k: readonly [number, number];
+  readonly c: readonly [number, number];
+}
+
+export function patchBaseGridMap(
+  patchSpec: GridSpec,
+  baseSpec: GridSpec,
+): PatchBaseGridMap {
+  const zoomFactor = 2 ** (patchSpec.zoom - baseSpec.zoom);
+  const k = patchSpec.scale / (zoomFactor * baseSpec.scale);
   return {
-    maxDiffMeters: error.maxAbsErrorMeters,
-    // The *1.2 and +25 m are a RENDERING margin, not terrain data: they
-    // absorb the difference between the real base DEM (z10 Terrarium
-    // pyramid) and this self-downsample estimate so the patch always wins
-    // the depth test. Task D2 revisits this — the plan is to drop the
-    // uniform lift once the base terrain is masked inside the patch.
-    liftMeters: Math.ceil(error.maxAbsErrorMeters * 1.2 + 25),
+    k: [k, k],
+    c: [
+      (patchSpec.originPx[0] - zoomFactor * baseSpec.originPx[0]) /
+        (zoomFactor * baseSpec.scale) -
+        0.5,
+      (patchSpec.originPx[1] - zoomFactor * baseSpec.originPx[1]) /
+        (zoomFactor * baseSpec.scale) -
+        0.5,
+    ],
   };
+}
+
+/** Patch grid coords -> base grid coords. */
+export function patchGridToBaseGrid(
+  map: PatchBaseGridMap,
+  gi: number,
+  gj: number,
+): readonly [number, number] {
+  return [
+    (gi + 0.5) * map.k[0] + map.c[0],
+    (gj + 0.5) * map.k[1] + map.c[1],
+  ];
+}
+
+/** Base grid coords -> patch grid coords (inverse of patchGridToBaseGrid). */
+export function baseGridToPatchGrid(
+  map: PatchBaseGridMap,
+  bi: number,
+  bj: number,
+): readonly [number, number] {
+  return [
+    (bi - map.c[0]) / map.k[0] - 0.5,
+    (bj - map.c[1]) / map.k[1] - 0.5,
+  ];
+}
+
+/**
+ * One patch's discard rect for the base terrain shader: the patch's FULL
+ * outer extent re-expressed in base grid coords — the whole patch, not
+ * just its opaque interior. When the patch is drawn the base discards
+ * every fragment inside this rect and the patch geomorphs onto the base
+ * surface at the border, so no part of the coarser base can poke through.
+ */
+export interface DetailPatchRect {
+  /** Site id; the terrain layer toggles the rect's active flag by name. */
+  readonly id: string;
+  /** Bounds [i0, j0, i1, j1] in base grid coords (i0 < i1, j0 < j1). */
+  readonly rect: readonly [number, number, number, number];
+}
+
+/**
+ * Full outer extent of a patch in base grid coords: patch grid coords
+ * span [-0.5, width-0.5] x [-0.5, height-0.5], so converting the two
+ * opposite corners gives the rect.
+ */
+export function detailPatchRectBaseGrid(
+  patchSpec: GridSpec,
+  baseSpec: GridSpec,
+): readonly [number, number, number, number] {
+  const map = patchBaseGridMap(patchSpec, baseSpec);
+  const [i0, j0] = patchGridToBaseGrid(map, -0.5, -0.5);
+  const [i1, j1] = patchGridToBaseGrid(
+    map,
+    patchSpec.width - 0.5,
+    patchSpec.height - 0.5,
+  );
+  return [i0, j0, i1, j1];
+}
+
+/**
+ * Discard rects for every site, in the same order. Capped at
+ * MAX_DETAIL_PATCHES (the shader's uniform array size): extra sites keep
+ * rendering over the base — degraded, not broken — so the overflow is a
+ * warning, not a failure.
+ */
+export function buildDetailPatchRects(
+  sites: readonly { readonly id: string; readonly spec: GridSpec }[],
+  baseSpec: GridSpec,
+): DetailPatchRect[] {
+  if (sites.length > MAX_DETAIL_PATCHES) {
+    console.warn(
+      `detail patches: ${sites.length} sites exceed the ` +
+        `${MAX_DETAIL_PATCHES}-rect shader limit; only the first ` +
+        `${MAX_DETAIL_PATCHES} get a base-terrain mask`,
+    );
+  }
+  return sites.slice(0, MAX_DETAIL_PATCHES).map((s) => ({
+    id: s.id,
+    rect: detailPatchRectBaseGrid(s.spec, baseSpec),
+  }));
 }

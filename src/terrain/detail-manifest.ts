@@ -26,7 +26,7 @@ import { assertSameGroundExtent } from "./validate";
 const defaultFetch: FetchLike = (url) => fetch(url);
 
 /** detail/manifest.json schema version produced by the pipeline. */
-export const DETAIL_SCHEMA_VERSION = 1;
+export const DETAIL_SCHEMA_VERSION = 2;
 
 /** Thrown when detail/manifest.json or a payload fails validation. */
 export class DetailManifestError extends Error {
@@ -60,14 +60,6 @@ export interface DetailSite {
   readonly satellite: TerrainFileEntry & { readonly grid: GridSpec };
   /** Ground size of the patch in kilometers, [east, south]. */
   readonly sizeKm: readonly [number, number];
-  /**
-   * Uniform elevation lift (meters, before exaggeration) baked into the
-   * patch render so it wins the depth test over the base terrain within
-   * its extent. Measured as the worst self-reconstruction error of the
-   * patch heights at base-terrain resolution, plus a margin; see
-   * scripts/build-detail.ts.
-   */
-  readonly liftMeters: number;
 }
 
 export interface DetailManifest {
@@ -142,7 +134,6 @@ function assertDetailManifest(
       typeof site.lat !== "number" ||
       !isRecord(site.source) ||
       typeof site.source.url !== "string" ||
-      typeof site.liftMeters !== "number" ||
       !Array.isArray(site.sizeKm) ||
       site.sizeKm.length !== 2 ||
       typeof site.sizeKm[0] !== "number" ||

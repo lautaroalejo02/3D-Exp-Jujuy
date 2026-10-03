@@ -17,9 +17,10 @@ import type { TerrainGridUniforms } from "../../terrain/terrain-uniforms";
  */
 
 /**
- * UV band at each patch border over which the surface fades to alpha 0.
- * The lift is tapered with the same band, so the patch surface meets the
- * base terrain where it becomes invisible — no seam, no step.
+ * UV band at each patch border over which the elevation geomorphs from
+ * the base surface (weight 0 at the outer edge) to the patch DEM (weight
+ * 1 at the inner rect). The geomorph — not an alpha fade — hides the
+ * seam, so the patch can draw opaque over the discarded base.
  */
 export const DETAIL_EDGE_FADE = 0.05;
 
@@ -29,6 +30,9 @@ export const DETAIL_EDGE_FADE = 0.05;
  * patch win over the coincident base surface instead of z-fighting. At a
  * typical viewing distance (~20 km, near 0.5 km) the offset equals ~1.6 m
  * of depth — far above f32 depth noise (~mm) and far below the relief.
+ * Still needed with geomorphing: the patch's outer edge coincides with
+ * the base surface exactly, and the shared rasterized line would
+ * z-fight without it.
  *
  * Done in the shader rather than the pipeline's depthBias because the
  * units of depthBias on depth32float are implementation-dependent; a

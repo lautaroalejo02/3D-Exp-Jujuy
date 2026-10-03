@@ -21,6 +21,7 @@ import {
   type GpuMemoryReport,
 } from "../../render/gpu-memory";
 import { generateMipmaps } from "../../render/mipmap";
+import { patchBaseGridMap } from "../../terrain/detail-grids";
 import type { DetailSite } from "../../terrain/detail-manifest";
 import type { Heightfield } from "../../terrain/heightfield";
 import type { SatelliteImage } from "../../terrain/satellite";
@@ -43,12 +44,13 @@ import {
  * site, draped over the base terrain where its coarse pixels (70–140 m)
  * undersell places like the Hornocal stripes (~9 m/px here).
  *
- * Drawn after the terrain layer inside the same pass; the patch wins the
- * depth test through a uniform elevation lift (tapered to zero across the
- * border fade band) plus a small clip-space z bias — see detail.wgsl for
- * the mechanics. Unlike the base terrain the patch applies NO
- * outside-province dimming: sites can straddle the border (Salinas Grandes
- * does) and dimming would erase exactly the detail they carry.
+ * Drawn after the terrain layer inside the same pass. There is NO lift:
+ * the base terrain discards its fragments inside each drawn patch's full
+ * rect and the patch geomorphs its elevation onto the base surface across
+ * the border band — see detail.wgsl for the mechanics. Unlike the base
+ * terrain the patch applies NO outside-province dimming: sites can
+ * straddle the border (Salinas Grandes does) and dimming would erase
+ * exactly the detail they carry.
  *
  * LAZY GPU ALLOCATION, OUTSIDE THE FRAME LOOP (task D1b): a site's
  * resources (~28 MiB of texture + storage, ~7 MiB on mobile) are created
@@ -82,6 +84,16 @@ export interface DetailLayerShaders {
 export interface DetailLayerOptions {
   /** GridSpec of the loaded base terrain level (world-space anchor). */
   readonly baseSpec: GridSpec;
+  /**
+   * The base terrain's drawn surface, shared — never duplicated. `grid`
+   * is the terrain layer's own grid uniforms (mesh spacing included) and
+   * `heights()` returns its heights storage buffer; it is only called
+   * inside the async loader, once the terrain layer has initialized.
+   */
+  readonly baseSurface: {
+    readonly grid: TerrainGridUniforms;
+    heights(): StorageBuffer;
+  };
   readonly sites: readonly DetailSiteData[];
   readonly shaders: DetailLayerShaders;
   /** Live vertical exaggeration (the value the terrain slider drives). */
@@ -94,6 +106,16 @@ export interface DetailLayerOptions {
    * memory readout. Runs on the loader task, never inside update/draw.
    */
   readonly onSiteReady?: (site: DetailSite) => void;
+  /**
+   * Fires whenever the set of COVERING sites changes — a site covers
+   * while it is loaded AND inside its draw distance, which is exactly
+   * when the base terrain may discard fragments under it. The app gates
+   * the base-terrain mask on this so a site that is merely in range but
+   * still loading, or loaded but out of range, never punches a hole.
+   * May fire inside update() (visibility edge) or on the loader task
+   * (load finished while in range).
+   */
+  readonly onCoveringChange?: (siteIds: readonly string[]) => void;
   /**
    * How the async loader is scheduled; defaults to setTimeout(0), which
    * is what guarantees resource creation runs outside the frameLoop
@@ -120,9 +142,12 @@ interface DetailParamsValue extends TerrainGridUniforms {
   exaggeration: number;
   ambient: number;
   lightStrength: number;
-  liftMeters: number;
   biasNdc: number;
   edgeFade: number;
+  patchToBaseK: readonly [number, number];
+  patchToBaseC: readonly [number, number];
+  baseGridSize: readonly [number, number];
+  baseMeshToGrid: readonly [number, number];
 }
 
 const IDENTITY_MAT4 = [
@@ -186,6 +211,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
       spec.height + 1,
     ];
     const gridUniforms = buildPatchGridUniforms(spec, opts.baseSpec, mesh);
+    const toBase = patchBaseGridMap(spec, opts.baseSpec);
     const [pcx, pcy] = gridCenterGlobalPixel(spec);
     return {
       data,
@@ -195,9 +221,12 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         exaggeration: opts.verticalExaggeration(),
         ambient: opts.ambient ?? 0.42,
         lightStrength: opts.lightStrength ?? 0.85,
-        liftMeters: data.site.liftMeters,
         biasNdc: DETAIL_DEPTH_BIAS_NDC,
         edgeFade: DETAIL_EDGE_FADE,
+        patchToBaseK: toBase.k,
+        patchToBaseC: toBase.c,
+        baseGridSize: opts.baseSurface.grid.gridSize,
+        baseMeshToGrid: opts.baseSurface.grid.meshToGrid,
       },
       centerWorld: patchGlobalPixelToWorld(gridUniforms, pcx, pcy),
       drawDistanceKm: detailDrawDistanceKm(data.site.sizeKm),
@@ -251,13 +280,14 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         label: `detail-${rt.data.site.id}`,
         vertices: vertexCount,
         cull: "none",
-        // Reversed-Z like the base terrain; the win over the coincident
-        // base surface comes from the shader's lift + clip-z bias.
+        // Reversed-Z like the base terrain; the shared border line is
+        // handled by the shader's clip-z bias. Opaque: the base under the
+        // patch is discarded, so there is nothing to blend with.
         depth: { compare: "greater", write: true },
-        blend: "alpha",
         set: {
           params: rt.params,
           heights,
+          baseHeights: opts.baseSurface.heights(),
           satelliteTex: satellite,
           linearSampler: sampler(gpu, {
             minFilter: "linear",
@@ -302,6 +332,10 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         console.warn(`detail patch ${rt.data.site.id} disabled`, error);
       }
     }
+    // A site that just became ready (or failed) while the camera is in
+    // range changes the covering set; report before resolving waiters so
+    // the base mask is already right when whenSettled() resolves.
+    syncCovering();
     notifySettledIfIdle();
   };
 
@@ -312,6 +346,20 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
       flushScheduled = true;
       schedule(flushLoads);
     }
+  };
+
+  // The sites whose patches currently cover the base terrain (loaded AND
+  // in draw distance) — the same condition draw() uses. Reported to the
+  // app so the base-terrain discard mask tracks it exactly.
+  let coveringKey = "";
+  const syncCovering = (): void => {
+    const ids = runtimes
+      .filter((rt) => rt.visible && rt.gpu !== undefined)
+      .map((rt) => rt.data.site.id);
+    const key = ids.join(",");
+    if (key === coveringKey) return;
+    coveringKey = key;
+    opts.onCoveringChange?.(ids);
   };
 
   return {
@@ -349,6 +397,9 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         rt.params.exaggeration = exaggeration;
         rt.gpu.draw.set({ params: rt.params });
       }
+      // Visibility edges flip the covering set even without any load —
+      // the base terrain must discard exactly while a patch is drawn.
+      syncCovering();
     },
 
     draw(pass: FramePass): void {

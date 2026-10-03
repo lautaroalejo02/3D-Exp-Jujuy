@@ -38,6 +38,17 @@ export interface IntersectOptions {
   readonly refineMeters?: number;
   /** Safety cap on march steps before giving up. Default 20000. */
   readonly maxSteps?: number;
+  /**
+   * Overrides the surface the ray marches, in meters at grid coords
+   * (i, j). Default: the heightfield's bilinear sample. Used to march
+   * the geomorphed surface a detail patch draws (picking/detail-pick).
+   */
+  readonly surfaceAt?: (i: number, j: number) => number;
+  /**
+   * How far (meters) the overridden surface may exceed the heightfield's
+   * [min, max]; the clip box is widened by it. Ignored without surfaceAt.
+   */
+  readonly surfaceMarginMeters?: number;
 }
 
 /**
@@ -192,13 +203,16 @@ export function intersectHeightfield(
   const cellKm = metersPerGridCell(spec) / 1000;
   const [x0, , z0] = gridToWorld(spec, -0.5, -0.5);
   const [x1, , z1] = gridToWorld(spec, spec.width - 0.5, spec.height - 0.5);
+  const margin = opts.surfaceAt !== undefined ? (opts.surfaceMarginMeters ?? 0) : 0;
   const clip = clipRayToBox(
     ray,
-    [x0, elevationToWorldY(heightfield.min, verticalExaggeration), z0],
-    [x1, elevationToWorldY(heightfield.max, verticalExaggeration), z1],
+    [x0, elevationToWorldY(heightfield.min - margin, verticalExaggeration), z0],
+    [x1, elevationToWorldY(heightfield.max + margin, verticalExaggeration), z1],
   );
   if (!clip) return undefined;
   const [tEnter, tExit] = clip;
+
+  const heightAt = opts.surfaceAt ?? ((i: number, j: number) => heightfield.heightAtGrid(i, j));
 
   /** Signed distance above the exaggerated surface at parameter t (km). */
   const aboveSurface = (t: number): number => {
@@ -206,7 +220,7 @@ export function intersectHeightfield(
     const y = ray.origin[1] + ray.direction[1] * t;
     const z = ray.origin[2] + ray.direction[2] * t;
     const [i, j] = worldToGrid(spec, x, z);
-    const meters = heightfield.heightAtGrid(i, j);
+    const meters = heightAt(i, j);
     return y - elevationToWorldY(meters, verticalExaggeration);
   };
 
@@ -226,7 +240,7 @@ export function intersectHeightfield(
     const x = ray.origin[0] + ray.direction[0] * t;
     const z = ray.origin[2] + ray.direction[2] * t;
     const [i, j] = worldToGrid(spec, x, z);
-    const elevationMeters = heightfield.heightAtGrid(i, j);
+    const elevationMeters = heightAt(i, j);
     return {
       world: [x, elevationToWorldY(elevationMeters, verticalExaggeration), z],
       grid: [i, j],

@@ -6,6 +6,7 @@ import {
   type Draw,
   type Gpu,
   type ShaderSource,
+  type StorageBuffer,
   type Texture,
 } from "vgpu";
 
@@ -18,9 +19,16 @@ import {
 } from "../render/gpu-memory";
 import { generateMipmaps } from "../render/mipmap";
 import { createTerrainControls } from "../ui/controls";
+import {
+  MAX_DETAIL_PATCHES,
+  type DetailPatchRect,
+} from "./detail-grids";
 import type { Heightfield, TerrainQuality } from "./heightfield";
 import type { SatelliteImage } from "./satellite";
-import { buildTerrainGridUniforms } from "./terrain-uniforms";
+import {
+  buildTerrainGridUniforms,
+  type TerrainGridUniforms,
+} from "./terrain-uniforms";
 
 /**
  * Vertical exaggeration of the relief at startup. Shared by the app and
@@ -94,6 +102,13 @@ export interface TerrainLayerOptions {
   readonly onExaggeration?: (value: number) => void;
   /** Adds the "alta puede ir lenta en celulares" note to the controls. */
   readonly warnHighQualityOnMobile?: boolean;
+  /**
+   * Detail patches that may cover part of this terrain (their FULL outer
+   * extents in this grid's coords). The rects are not drawn by this
+   * layer — setDetailPatchMask toggles which of them discard the base
+   * surface while their patch is on screen.
+   */
+  readonly detailPatches?: readonly DetailPatchRect[];
 }
 
 export interface TerrainLayer extends Layer {
@@ -102,6 +117,24 @@ export interface TerrainLayer extends Layer {
   /** Vertex count of the generated mesh draw call. */
   readonly vertexCount: number;
   readonly meshSize: MeshSize;
+  /**
+   * The grid mapping the terrain shader uses (mesh spacing included).
+   * Stable from construction — the detail layer derives its geomorph
+   * uniforms from it.
+   */
+  readonly gridUniforms: TerrainGridUniforms;
+  /**
+   * The base heights storage buffer the terrain shader reads. Only valid
+   * after init() — the detail layer calls it lazily when a site loads.
+   */
+  baseHeightsStorage(): StorageBuffer;
+  /**
+   * Toggle which declared detail patches discard the base surface: only
+   * patches that are loaded AND inside their draw distance may be in the
+   * set — a loaded patch the camera left behind must not punch a hole in
+   * the terrain.
+   */
+  setDetailPatchMask(activeIds: ReadonlySet<string>): void;
   getGpuMemoryReport(): GpuMemoryReport;
 }
 
@@ -125,11 +158,26 @@ interface TerrainParamsValue {
   dimStrength: number;
   outlinePx: number;
   deptBorders: number;
+  /**
+   * Live detail-patch discard rects [i0, j0, i1, j1] in grid coords;
+   * only the first patchRectCount slots are read by the shader. Mirrors
+   * `patchRects: array<vec4f, 8>` in terrain.wgsl.
+   */
+  patchRects: number[][];
+  patchRectCount: number;
 }
 
 const IDENTITY_MAT4 = [
   1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
 ];
+
+/**
+ * Inactive slots get a degenerate rect (i0 > i1, j0 > j1): the inside
+ * test can never fire on them even if the shader read past the count.
+ */
+function emptyPatchRects(): number[][] {
+  return Array.from({ length: MAX_DETAIL_PATCHES }, () => [0, 0, -1, -1]);
+}
 
 function uploadSatellite(gpu: Gpu, tex: Texture, image: SatelliteImage): void {
   if (image.kind === "bitmap") {
@@ -183,6 +231,10 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     dimStrength: opts.dimStrength ?? 0.55,
     outlinePx: opts.outlineCssPx ?? 2,
     deptBorders: opts.showDepartmentBorders ? 1 : 0,
+    // No patch is live until the app calls setDetailPatchMask: a site
+    // that is merely in range but still loading keeps the base surface.
+    patchRects: emptyPatchRects(),
+    patchRectCount: 0,
   };
 
   let heightsBuffer: ReturnType<typeof storage> | undefined;
@@ -350,6 +402,29 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       opts.onExaggeration?.(value);
     },
 
+    gridUniforms,
+
+    baseHeightsStorage(): StorageBuffer {
+      if (!heightsBuffer) {
+        throw new Error("terrain layer used before init()");
+      }
+      return heightsBuffer;
+    },
+
+    setDetailPatchMask(activeIds: ReadonlySet<string>): void {
+      const rects = emptyPatchRects();
+      let count = 0;
+      for (const patch of opts.detailPatches ?? []) {
+        if (count >= MAX_DETAIL_PATCHES) break;
+        if (!activeIds.has(patch.id)) continue;
+        rects[count] = [...patch.rect];
+        count++;
+      }
+      params.patchRects = rects;
+      params.patchRectCount = count;
+      terrainDraw?.set({ params: { patchRects: rects, patchRectCount: count } });
+    },
+
     getGpuMemoryReport(): GpuMemoryReport {
       const sat = opts.satellite;
       const maskCells = opts.provinceMask
@@ -375,7 +450,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
         {
           label: "terrain uniforms (approx)",
-          bytes: 64 + 6 * 8 + 11 * 4,
+          bytes: 64 + 6 * 8 + 11 * 4 + MAX_DETAIL_PATCHES * 16,
           estimate: true,
         },
       ]);
