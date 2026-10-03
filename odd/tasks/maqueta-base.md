@@ -1,4 +1,4 @@
-# Tarea ODD: maqueta-base
+[x] | `ff30bd5`; 99 tests; snapshots OK; GGA PASSED (2º intento: altura hardcodeada y coordenada sin fuente corregidas) |[x] | `2f00286`; 82 tests; build determinista; GGA PASSED |[x] | `a571281`; 35 tests; GGA PASSED |[x] | `0355d3b`; GGA PASSED (2º intento: catch vacío corregido) |# Tarea ODD: maqueta-base
 
 Locator: `odd/tasks/maqueta-base.md` · Engram: `odd/maqueta-base/tasks` (proyecto `3d-exp-jujuy`) · Rama: `feat/maqueta-base`
 
@@ -50,11 +50,11 @@ src/features/<nombre>/     (futuro) regiones, lugares, perfil, lluvia
 ## Checklist
 | ID | Tarea | Ruta | Estado | Evidencia |
 |---|---|---|---|---|
-| T1 | AGENTS.md (fuente de verdad openspec/ u odd/tasks/) + ATTRIBUTIONS.md Terrain Tiles | inline (1 archivo mecánico c/u) | [ ] | |
-| T2 | Scaffold Vite + TS strict + vitest + vgpu; aviso sin WebGPU; panel de atribuciones | delegada (Devin swe-2-high): 2+ archivos | [ ] | |
-| T3 | Módulo geo + tests (TDD) | delegada (Devin) | [ ] | |
-| T4 | Pipeline de datos + tests de funciones puras | delegada (Devin) | [ ] | |
-| T5 | Render del terreno (vgpu), calidad default/alta, captura headless | delegada (Devin; fallback subagente Claude) | [ ] | |
+| T1 | AGENTS.md (fuente de verdad openspec/ u odd/tasks/) + ATTRIBUTIONS.md Terrain Tiles | inline (1 archivo mecánico c/u) | [x] | `b0ca976`; RDD: medium, under_budget (79 líneas) |
+| T2 | Scaffold Vite + TS strict + vitest + vgpu; aviso sin WebGPU; panel de atribuciones | delegada (Devin swe-2-high): 2+ archivos | [x] | `0355d3b`; GGA PASSED (2º intento: catch vacío corregido) |
+| T3 | Módulo geo + tests (TDD) | delegada (Devin) | [x] | `a571281`; 35 tests; GGA PASSED |
+| T4 | Pipeline de datos + tests de funciones puras | delegada (Devin) | [x] | `2f00286`; 82 tests; build determinista; GGA PASSED |
+| T5 | Render del terreno (vgpu), calidad default/alta, captura headless | delegada (Devin; fallback subagente Claude) | [x] | `ff30bd5`; 99 tests; snapshots OK; GGA PASSED (2º intento: altura hardcodeada y coordenada sin fuente corregidas) |
 | T6 | Cámara + controles mouse/touch | delegada (Devin) | [ ] | |
 | T7 | Picking + panel lat/lon/altura | delegada (Devin) | [ ] | |
 | T8 | Mediciones, DECISIONS.md, deploy preview, Engram | inline + verificación | [ ] | |
@@ -69,5 +69,15 @@ src/features/<nombre>/     (futuro) regiones, lugares, perfil, lluvia
 ## Progreso
 - 2026-10-02: rama creada desde `036c136`. RDD `on` (default). Devin `swe-2-high` disponible.
 
+## RDD
+- Rango 036c136..ff30bd5 (T1–T5): medium, slice_budget_reached, 6372 líneas. Consentimiento: **declined** por Lautaro (candidate-scoped). Próxima base: ff30bd5.
+- `.atl/` excluido localmente vía `.git/info/exclude` para que el inventario de untracked quede vacío.
+
+## Mediciones (T4/T5)
+- Descarga: default ~5,4 MB (satélite 2,4 + alturas 3,0); alta ~20 MB (8 + 12).
+- Error de media resolución vs completa: medio 7,45 m, p99 40,9 m, máx 501 m, 10% de celdas > 20 m.
+- GPU (terreno): default 37,6 MiB; alta 150,4 MiB; + color/depth ~7,8 MiB a 1280x800.
+- Malla: default 608x640 (2,33 M vértices/draw); alta 1216x1280 (9,32 M).
+
 ## Próximo paso
-T1 commit, luego T2.
+T6 controles (Devin), luego T7 picking.
