@@ -27,6 +27,41 @@ export interface ScreenPoint {
 }
 
 /**
+ * Radius around a marker's projected dot that a canvas tap may land in
+ * and still count as a marker tap, in CSS px. Generous for touch (the
+ * dot itself is 10 px) but small enough that nearby terrain taps keep
+ * picking the terrain.
+ */
+export const MARKER_TAP_RADIUS_PX = 22;
+
+/**
+ * Index of the candidate screen point nearest to `tap`, or undefined
+ * when none lies within `radiusPx`. `undefined` entries are markers that
+ * are off-screen, occluded or hidden — they are never tapped. Runs on
+ * the same projected positions the marker layer renders, so the tap
+ * target matches what the user sees.
+ */
+export function nearestMarker(
+  points: readonly (ScreenPoint | undefined)[],
+  tap: ScreenPoint,
+  radiusPx = MARKER_TAP_RADIUS_PX,
+): number | undefined {
+  let best: number | undefined;
+  let bestD2 = radiusPx * radiusPx;
+  for (const [index, p] of points.entries()) {
+    if (p === undefined) continue;
+    const dx = p.x - tap.x;
+    const dy = p.y - tap.y;
+    const d2 = dx * dx + dy * dy;
+    if (d2 <= bestD2) {
+      best = index;
+      bestD2 = d2;
+    }
+  }
+  return best;
+}
+
+/**
  * Project a world-space point through the camera's view-projection
  * matrix into screen coordinates. Undefined when the point is behind the
  * camera (clip w <= 0); points in front are projected even when they

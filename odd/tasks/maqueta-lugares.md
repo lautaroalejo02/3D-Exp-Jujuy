@@ -52,3 +52,4 @@ La lista de investigación traía una categoría por región (Quebrada, Puna…)
 |---|---|---|---|---|
 | L0 | Descarga de Wikidata y selección | coordinador | [x] | 35 lugares con `lastrevid` |
 | L1 | Build + verify + marcadores + fichas | delegada (Devin) | [x] | 312 tests; verify:places OK contra Wikidata en vivo; 4 lugares con DEM de detalle; captura places.png |
+| L2 | Regresión en iPhone: la capa de lugares capturaba todos los toques (`#overlay > *` ganaba por especificidad) y el mapa no respondía; puntos de ~10 px solo visuales, tap resuelto en el canvas, lista accesible de lugares, sin zoom de página en iOS | delegada (Devin) | [x] | 319 tests |

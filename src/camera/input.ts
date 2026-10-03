@@ -232,6 +232,12 @@ export function attachCameraInput(
   // Right-drag is a pan gesture; the canvas never opens a context menu.
   const onContextMenu = (e: Event): void => e.preventDefault();
 
+  // iOS Safari pinch: touch-action: none on the canvas/app is not enough —
+  // it still fires page-zoom gesture events for pinches over the map.
+  // Canceling them here (canvas only, so scrollable cards keep their
+  // native behavior) keeps every pinch as a map zoom.
+  const onGesture = (e: Event): void => e.preventDefault();
+
   canvas.addEventListener("pointerdown", onPointerDown);
   canvas.addEventListener("pointermove", onPointerMove);
   canvas.addEventListener("pointerup", onPointerUp);
@@ -239,6 +245,9 @@ export function attachCameraInput(
   canvas.addEventListener("lostpointercapture", onLostPointerCapture);
   canvas.addEventListener("wheel", onWheel, { passive: false });
   canvas.addEventListener("contextmenu", onContextMenu);
+  canvas.addEventListener("gesturestart", onGesture);
+  canvas.addEventListener("gesturechange", onGesture);
+  canvas.addEventListener("gestureend", onGesture);
 
   return {
     dispose(): void {
@@ -249,6 +258,9 @@ export function attachCameraInput(
       canvas.removeEventListener("lostpointercapture", onLostPointerCapture);
       canvas.removeEventListener("wheel", onWheel);
       canvas.removeEventListener("contextmenu", onContextMenu);
+      canvas.removeEventListener("gesturestart", onGesture);
+      canvas.removeEventListener("gesturechange", onGesture);
+      canvas.removeEventListener("gestureend", onGesture);
       state = createGestureState();
     },
   };

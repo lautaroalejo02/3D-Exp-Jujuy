@@ -6,6 +6,7 @@ import { Heightfield } from "../../terrain/heightfield";
 import {
   declutterLabels,
   isOccluded,
+  nearestMarker,
   projectToScreen,
 } from "./places-markers";
 
@@ -107,6 +108,47 @@ describe("isOccluded", () => {
       verticalExaggeration: 1,
     });
     expect(isOccluded(hf, eye, marker, 1)).toBe(false);
+  });
+});
+
+describe("nearestMarker", () => {
+  const tap = { x: 100, y: 100 };
+
+  it("returns the marker inside the tap radius", () => {
+    expect(nearestMarker([{ x: 110, y: 95 }], tap, 22)).toBe(0);
+  });
+
+  it("returns undefined when every marker is beyond the radius", () => {
+    expect(nearestMarker([{ x: 130, y: 100 }], tap, 22)).toBeUndefined();
+  });
+
+  it("accepts a tap exactly on the radius boundary", () => {
+    expect(nearestMarker([{ x: 122, y: 100 }], tap, 22)).toBe(0);
+  });
+
+  it("skips undefined candidates (off-screen, occluded, hidden)", () => {
+    expect(
+      nearestMarker([undefined, { x: 105, y: 100 }], tap, 22),
+    ).toBe(1);
+    expect(nearestMarker([undefined], tap, 22)).toBeUndefined();
+  });
+
+  it("picks the closest marker when several are inside the radius", () => {
+    expect(
+      nearestMarker(
+        [
+          { x: 115, y: 100 },
+          { x: 104, y: 102 },
+          { x: 90, y: 90 },
+        ],
+        tap,
+        22,
+      ),
+    ).toBe(1);
+  });
+
+  it("returns undefined for an empty candidate list", () => {
+    expect(nearestMarker([], tap, 22)).toBeUndefined();
   });
 });
 

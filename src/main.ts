@@ -563,6 +563,11 @@ async function main(): Promise<void> {
   attachCameraInput(canvas, {
     camera,
     onTap: (point) => {
+      // Marker taps never reach the canvas as DOM events (the places
+      // layer is click-through), so the tap is tested against the same
+      // projected positions the layer draws. A marker hit opens its card
+      // and the terrain pick does not run.
+      if (places.pickAt(point.x, point.y)) return;
       const ray = screenToRay(
         camera,
         point.x,

@@ -12,15 +12,26 @@ import {
   declutterLabels,
   isOccluded,
   MARKER_LIFT_METERS,
+  MARKER_TAP_RADIUS_PX,
+  nearestMarker,
   projectToScreen,
   type LabelRect,
 } from "./places-markers";
 
 /**
- * DOM place markers over the 3D terrain: one button per place, projected
- * every rendered frame from its world position with the live camera
- * matrix and the CURRENT vertical exaggeration. Tapping a marker opens a
- * card ("ficha") with the sourced data from places.json.
+ * DOM place markers over the 3D terrain: one purely visual marker per
+ * place, projected every rendered frame from its world position with
+ * the live camera matrix and the CURRENT vertical exaggeration.
+ * Tapping a marker opens a card ("ficha") with the sourced data from
+ * places.json.
+ *
+ * The layer and its markers are pointer-events: none — a full-screen
+ * interactive layer would swallow every map gesture (iOS Safari then
+ * pinch-zooms the page). Marker taps therefore come in through the
+ * canvas tap path: main.ts calls pickAt() before running the terrain
+ * pick, and this layer answers from the same projected positions it
+ * renders. Drags starting on a marker hit the canvas and pan the map.
+ * Keyboard users get the same cards from the "Lugares" list control.
  *
  * - Markers anchor a few meters above the DRAWN surface — the same
  *   geomorphed surface picking uses — so they ride the terrain (and the
@@ -87,14 +98,21 @@ interface MarkerState {
   /** World anchor from the last update, km — also the label distance. */
   world: readonly [number, number, number] | undefined;
   occluded: boolean;
-  el: HTMLButtonElement | undefined;
+  el: HTMLElement | undefined;
   labelEl: HTMLElement | undefined;
   labelSize: { w: number; h: number } | undefined;
 }
 
 export interface PlacesLayer extends Layer {
-  /** The "Lugares" toggle; on by default. */
+  /** The "Lugares" marker visibility; on by default. */
   setVisible(visible: boolean): void;
+  /**
+   * Canvas-tap hit test at (x, y) in canvas CSS px: opens the card of
+   * the nearest on-screen, unoccluded marker inside MARKER_TAP_RADIUS_PX
+   * and returns true. False means no marker was hit — the caller should
+   * run the normal terrain pick.
+   */
+  pickAt(x: number, y: number): boolean;
 }
 
 export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
@@ -128,7 +146,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
   let cardLon: HTMLElement | undefined;
   let cardAltNote: HTMLElement | undefined;
   let cardLinks: HTMLElement | undefined;
-  let toggleEl: HTMLElement | undefined;
+  let visibleCheckbox: HTMLInputElement | undefined;
 
   const closeCard = (): void => {
     if (card) card.hidden = true;
@@ -265,7 +283,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
             h: ESTIMATED_LABEL_HEIGHT,
           };
           const s = m.screen ?? { x: 0, y: 0 };
-          // The label sits to the right of the centered marker button.
+          // The label sits to the right of the centered marker dot.
           return {
             x: s.x + 10,
             y: s.y - size.h / 2,
@@ -302,9 +320,25 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
       }
     },
 
+    pickAt(x: number, y: number): boolean {
+      const index = nearestMarker(
+        markers.map((m) =>
+          visible && m.screen !== undefined && !m.occluded
+            ? m.screen
+            : undefined,
+        ),
+        { x, y },
+        MARKER_TAP_RADIUS_PX,
+      );
+      const marker = index === undefined ? undefined : markers[index];
+      if (!marker) return false;
+      openCard(marker);
+      return true;
+    },
+
     onPick(): void {
-      // A canvas tap means the user aimed at the terrain (markers are DOM
-      // buttons and never reach the pick path), so the card is dismissed.
+      // A canvas tap that missed every marker means the user aimed at
+      // the terrain, so the card is dismissed.
       closeCard();
     },
 
@@ -316,30 +350,24 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         layer.className = "places-layer";
 
         for (const marker of markers) {
-          const button = doc.createElement("button");
-          button.type = "button";
-          button.className = "place-marker";
+          // Purely visual: taps reach the card through pickAt(), keyboard
+          // users through the "Lugares" list — aria-hidden keeps the
+          // decorative dot out of the a11y tree either way.
+          const el = doc.createElement("span");
+          el.className = "place-marker";
+          el.setAttribute("aria-hidden", "true");
           // Hidden until the first update() projects a position — avoids a
           // flash of unpositioned markers at the corner.
-          button.hidden = true;
-          button.setAttribute("aria-label", marker.place.name);
+          el.hidden = true;
           const dot = doc.createElement("span");
           dot.className = "place-marker-dot";
-          dot.setAttribute("aria-hidden", "true");
           const label = doc.createElement("span");
           label.className = "place-marker-label";
           label.textContent = marker.place.name;
-          button.append(dot, label);
-          button.addEventListener("click", () => {
-            if (selected === marker) {
-              closeCard();
-            } else {
-              openCard(marker);
-            }
-          });
-          marker.el = button;
+          el.append(dot, label);
+          marker.el = el;
           marker.labelEl = label;
-          layer.appendChild(button);
+          layer.appendChild(el);
         }
 
         // Card ("ficha"): reuses the pick-panel shell + data grid so the
@@ -389,35 +417,82 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         layer.appendChild(cardEl);
         root.appendChild(layer);
 
-        // "Lugares" toggle, inside the existing controls panel when it is
+        // "Lugares" control: a button that expands a list with one button
+        // per place (sorted by name) — the keyboard path to the same card
+        // pickAt() opens — plus a checkbox that keeps the show/hide-
+        // markers toggle. Inside the existing controls panel when it is
         // there (it mounts first), floating top-left as a fallback.
-        const toggle = doc.createElement("button");
-        toggle.type = "button";
-        toggle.className = "places-toggle";
-        toggle.textContent = "Lugares";
-        toggle.setAttribute("aria-pressed", "true");
-        toggle.setAttribute(
+        const control = doc.createElement("div");
+        control.className = "places-control";
+
+        const listToggle = doc.createElement("button");
+        listToggle.type = "button";
+        listToggle.className = "places-toggle";
+        listToggle.textContent = "Lugares";
+        listToggle.setAttribute("aria-expanded", "false");
+        listToggle.setAttribute(
           "aria-label",
-          "Mostrar u ocultar los lugares",
+          "Mostrar la lista de lugares",
         );
+
+        const listPanel = doc.createElement("div");
+        listPanel.className = "places-list";
+        listPanel.hidden = true;
+
+        const visLabel = doc.createElement("label");
+        visLabel.className = "places-list-visible";
+        const checkbox = doc.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = visible;
+        visLabel.append(
+          checkbox,
+          doc.createTextNode("Mostrar en el mapa"),
+        );
+
+        const items = doc.createElement("ul");
+        items.className = "places-list-items";
+        const sorted = [...markers].sort((a, b) =>
+          a.place.name.localeCompare(b.place.name, "es"),
+        );
+        for (const marker of sorted) {
+          const li = doc.createElement("li");
+          const item = doc.createElement("button");
+          item.type = "button";
+          item.className = "places-list-item";
+          item.textContent = marker.place.name;
+          item.addEventListener("click", () => {
+            openCard(marker);
+          });
+          li.appendChild(item);
+          items.appendChild(li);
+        }
+        listPanel.append(visLabel, items);
+        control.append(listToggle, listPanel);
+
+        listToggle.addEventListener("click", () => {
+          const open = listPanel.hidden;
+          listPanel.hidden = !open;
+          listToggle.setAttribute("aria-expanded", String(open));
+        });
+
         const applyVisible = (v: boolean): void => {
           visible = v;
-          toggle.setAttribute("aria-pressed", String(v));
+          checkbox.checked = v;
           layer.hidden = !v;
           if (!v) closeCard();
         };
-        toggle.addEventListener("click", () => {
-          applyVisible(!visible);
+        checkbox.addEventListener("change", () => {
+          applyVisible(checkbox.checked);
         });
+
         const panel = root.querySelector(".terrain-controls");
         if (panel) {
-          panel.appendChild(toggle);
+          panel.appendChild(control);
         } else {
-          toggle.classList.add("places-toggle--floating");
-          root.appendChild(toggle);
+          control.classList.add("places-control--floating");
+          root.appendChild(control);
         }
-        toggleEl = toggle;
-        toggle.setAttribute("aria-pressed", String(visible));
+        visibleCheckbox = checkbox;
         layer.hidden = !visible;
 
         container = layer;
@@ -434,9 +509,9 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
         return () => {
           container = undefined;
           card = undefined;
-          toggleEl = undefined;
+          visibleCheckbox = undefined;
           layer.remove();
-          toggle.remove();
+          control.remove();
         };
       },
     },
@@ -444,7 +519,7 @@ export function createPlacesLayer(opts: PlacesLayerOptions): PlacesLayer {
     setVisible(v: boolean): void {
       visible = v;
       if (container) container.hidden = !v;
-      toggleEl?.setAttribute("aria-pressed", String(v));
+      if (visibleCheckbox) visibleCheckbox.checked = v;
       if (!v) closeCard();
     },
   };
