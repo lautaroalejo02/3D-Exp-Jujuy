@@ -1,7 +1,9 @@
 /**
  * Detail-patch pipeline: data/raw/detail -> data/build/detail.
  *
- * For each site declared in data/raw/detail/sources.json:
+ * For each site declared in data/raw/detail/sources.json AND
+ * data/raw/detail/sources-2.json (the second batch adds san-salvador,
+ * humahuaca and tilcara — same layers and zooms):
  *
  * - mosaics the Sentinel-2 cloudless 2016 tiles (EOX, layer
  *   s2cloudless_3857, z14 ~9 m/px — Sentinel-2's 10 m native resolution is
@@ -19,16 +21,16 @@
  *   (detail/manifest.json) with grid specs, file sizes + sha256,
  *   elevation stats and the patch ground size.
  *
- * Every raw tile's sha256 is verified against sources.json BEFORE it is
- * decoded — a mismatch fails the build loudly. sources.json itself is
- * hashed into the manifest (inputSha256) so the cache invalidates if any
- * declared tile, url or site changes.
+ * Every raw tile's sha256 is verified against its declaring source file
+ * BEFORE it is decoded — a mismatch fails the build loudly. Both source
+ * files are hashed into the manifest (inputSha256) so the cache
+ * invalidates if any declared tile, url or site changes.
  *
  * Re-runnable and deterministic: no timestamps, stable encoders, stable
  * key order in JSON.stringify. When detail/manifest.json already records
  * the current input hash, the current PIPELINE_VERSION, every
  * manifest-listed output exists with the recorded size and sha256, AND
- * every raw tile on disk still matches its sources.json sha256 (the
+ * every raw tile on disk still matches its declared sha256 (the
  * inputSha256 alone cannot catch a tile corrupted in place), prints
  * "up to date" and does nothing. `--force` rebuilds.
  *
@@ -63,7 +65,15 @@ import { elevationStats } from "../src/terrain/stats";
 import { assertSameGroundExtent } from "../src/terrain/validate";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const SOURCES_PATH = join(ROOT, "data/raw/detail/sources.json");
+/**
+ * Every raw source manifest the pipeline reads, in build order. The
+ * second batch (sources-2.json) declares san-salvador, humahuaca and
+ * tilcara; both files' bytes feed the manifest's inputSha256.
+ */
+const SOURCES_PATHS = [
+  join(ROOT, "data/raw/detail/sources.json"),
+  join(ROOT, "data/raw/detail/sources-2.json"),
+];
 const OUT_DIR = join(ROOT, "data/build/detail");
 const MANIFEST_PATH = join(OUT_DIR, "manifest.json");
 const TILE_SIZE_PX = 256;
@@ -71,9 +81,10 @@ const JPEG_QUALITY = 85;
 
 /**
  * Output format version, written to manifest.json and part of the cache
- * key. Bump whenever decoding, cropping, mosaicking or encoding changes.
+ * key. Bump whenever decoding, cropping, mosaicking, encoding or the
+ * input manifest set changes.
  */
-const PIPELINE_VERSION = 2;
+const PIPELINE_VERSION = 3;
 
 interface SourcesSite {
   readonly id: string;
@@ -156,7 +167,7 @@ function checkPreviousBuild(
     return `pipeline version changed (manifest recorded ${String(m?.pipelineVersion)}, pipeline is ${PIPELINE_VERSION})`;
   }
   if (m.inputSha256 !== inputSha256) {
-    return "input sources.json hash changed";
+    return "input sources hash changed";
   }
   if (!Array.isArray(m.sites)) {
     return "detail/manifest.json lists no sites";
@@ -211,8 +222,8 @@ function readRecordedEntry(
 }
 
 /**
- * Raw-tile freshness for the cache: inputSha256 only proves sources.json
- * is unchanged — a tile corrupted or replaced on disk under an untouched
+ * Raw-tile freshness for the cache: inputSha256 only proves the source manifests
+ * are unchanged — a tile corrupted or replaced on disk under an untouched
  * manifest would otherwise be declared "up to date". Every declared tile
  * is re-hashed here before the cache verdict; a mismatch just rebuilds
  * (the build itself will then fail loudly inside readVerifiedTile).
@@ -225,34 +236,34 @@ function checkRawTiles(tiles: readonly SourcesTile[]): string | undefined {
     if (bytes.length !== tile.bytes) {
       return (
         `raw tile ${tile.file} is ${bytes.length} B, ` +
-        `sources.json recorded ${tile.bytes} B`
+        `the sources manifest recorded ${tile.bytes} B`
       );
     }
     if (sha256(bytes) !== tile.sha256) {
-      return `raw tile ${tile.file} sha256 does not match sources.json`;
+      return `raw tile ${tile.file} sha256 does not match the sources manifest`;
     }
   }
   return undefined;
 }
 
-/** Read + verify a raw tile against its sources.json record, then decode. */
+/** Read + verify a raw tile against its sources-manifest record, then decode. */
 function readVerifiedTile(
   record: SourcesTile,
 ): Uint8Array {
   const path = join(ROOT, record.file);
   if (!existsSync(path)) {
-    throw new Error(`${record.file} is missing (declared in sources.json)`);
+    throw new Error(`${record.file} is missing (declared in a sources manifest)`);
   }
   const bytes = readFileSync(path);
   if (bytes.length !== record.bytes) {
     throw new Error(
-      `${record.file} is ${bytes.length} B, sources.json recorded ${record.bytes} B`,
+      `${record.file} is ${bytes.length} B, the sources manifest recorded ${record.bytes} B`,
     );
   }
   const actual = sha256(bytes);
   if (actual !== record.sha256) {
     throw new Error(
-      `${record.file} sha256 mismatch: sources.json recorded ` +
+      `${record.file} sha256 mismatch: the sources manifest recorded ` +
         `${record.sha256}, file on disk hashes to ${actual}; ` +
         `run "npm run verify:detail" to check the tile against its URL`,
     );
@@ -280,7 +291,7 @@ function requireTileRecord(
   if (!record) {
     throw new Error(
       `${file} is expected by the site's tile ranges but missing from ` +
-        `sources.json`,
+        `the sources manifest`,
     );
   }
   return record;
@@ -441,9 +452,40 @@ function buildSite(
 
 function main(): void {
   const force = process.argv.includes("--force");
-  const sourcesBytes = readFileSync(SOURCES_PATH);
-  const inputSha256 = sha256(sourcesBytes);
-  const sources = JSON.parse(sourcesBytes.toString("utf8")) as SourcesDoc;
+
+  // Both source manifests feed one combined input hash and one merged
+  // site/tile list; a site id or tile file declared twice is a data bug
+  // and fails loudly rather than silently overriding.
+  const inputHash = createHash("sha256");
+  const sites: SourcesSite[] = [];
+  const tiles = new Map<string, SourcesTile>();
+  const siteIds = new Set<string>();
+  for (const sourcesPath of SOURCES_PATHS) {
+    const sourcesBytes = readFileSync(sourcesPath);
+    inputHash.update(sourcesBytes);
+    const manifest = JSON.parse(sourcesBytes.toString("utf8")) as SourcesDoc;
+    const manifestName = sourcesPath.split(/[\\/]/).pop() ?? sourcesPath;
+    for (const site of manifest.sites) {
+      if (siteIds.has(site.id)) {
+        throw new Error(
+          `site id "${site.id}" is declared in two source manifests ` +
+            `(${manifestName})`,
+        );
+      }
+      siteIds.add(site.id);
+      sites.push(site);
+    }
+    for (const tile of manifest.tiles) {
+      if (tiles.has(tile.file)) {
+        throw new Error(
+          `tile "${tile.file}" is declared in two source manifests ` +
+            `(${manifestName})`,
+        );
+      }
+      tiles.set(tile.file, tile);
+    }
+  }
+  const inputSha256 = inputHash.digest("hex");
 
   if (!force) {
     const fileState = (file: string): CacheFileState | undefined => {
@@ -454,7 +496,7 @@ function main(): void {
     };
     const reason =
       checkPreviousBuild(inputSha256, fileState) ??
-      checkRawTiles(sources.tiles);
+      checkRawTiles([...tiles.values()]);
     if (reason === undefined) {
       console.log("up to date");
       return;
@@ -462,22 +504,18 @@ function main(): void {
     console.log(`${reason}; rebuilding`);
   }
 
-  const tiles = new Map<string, SourcesTile>(
-    sources.tiles.map((t) => [t.file, t]),
-  );
-
   mkdirSync(OUT_DIR, { recursive: true });
-  const sites: DetailSite[] = [];
-  for (const site of sources.sites) {
+  const builtSites: DetailSite[] = [];
+  for (const site of sites) {
     mkdirSync(join(OUT_DIR, site.id), { recursive: true });
-    sites.push(buildSite(site, tiles).site);
+    builtSites.push(buildSite(site, tiles).site);
   }
 
-  // Coverage check: every tile recorded in sources.json should belong to
-  // one of the declared sites — warn (not fail) on leftovers so an
-  // intentional extra download does not break the build.
+  // Coverage check: every tile recorded in a sources manifest should
+  // belong to one of the declared sites — warn (not fail) on leftovers
+  // so an intentional extra download does not break the build.
   const expected = new Set<string>();
-  for (const site of sources.sites) {
+  for (const site of sites) {
     const grids = detailSiteGrids(site.id, site.satellite, site.dem);
     for (let ty = 0; ty < grids.satelliteTilesY; ty++) {
       for (let tx = 0; tx < grids.satelliteTilesX; tx++) {
@@ -509,8 +547,8 @@ function main(): void {
   for (const file of tiles.keys()) {
     if (!expected.has(file)) {
       console.warn(
-        `warning: ${file} is recorded in sources.json but not covered ` +
-          `by any site's tile ranges`,
+        `warning: ${file} is recorded in a sources manifest but not ` +
+          `covered by any site's tile ranges`,
       );
     }
   }
@@ -519,12 +557,12 @@ function main(): void {
     schemaVersion: DETAIL_SCHEMA_VERSION,
     pipelineVersion: PIPELINE_VERSION,
     inputSha256,
-    sites,
+    sites: builtSites,
   };
   writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + "\n");
 
   console.log("data/build/detail written:");
-  for (const site of sites) {
+  for (const site of builtSites) {
     for (const entry of [site.satellite, site.heights]) {
       console.log(
         `  ${entry.file}: ${fmtBytes(statSync(join(OUT_DIR, entry.file)).size)}`,

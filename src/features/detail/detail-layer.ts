@@ -21,7 +21,12 @@ import {
   type GpuMemoryReport,
 } from "../../render/gpu-memory";
 import { generateMipmaps } from "../../render/mipmap";
-import { patchBaseGridMap } from "../../terrain/detail-grids";
+import {
+  detailPatchCenterBaseGrid,
+  detailPatchRectBaseGrid,
+  MAX_DETAIL_PATCHES,
+  patchBaseGridMap,
+} from "../../terrain/detail-grids";
 import type { DetailSite } from "../../terrain/detail-manifest";
 import type { Heightfield } from "../../terrain/heightfield";
 import type { SatelliteImage } from "../../terrain/satellite";
@@ -35,6 +40,7 @@ import {
   buildPatchGridUniforms,
   DETAIL_DEPTH_BIAS_NDC,
   DETAIL_EDGE_FADE,
+  DETAIL_SPLIT_BAND_CELLS,
   detailDrawDistanceKm,
   patchGlobalPixelToWorld,
 } from "./detail-uniforms";
@@ -51,6 +57,15 @@ import {
  * terrain the patch applies NO outside-province dimming: sites can
  * straddle the border (Salinas Grandes does) and dimming would erase
  * exactly the detail they carry.
+ *
+ * OVERLAP ARBITRATION (task A1): when two drawn patches cover the same
+ * base-grid pixels — tilcara touches siete-colores, humahuaca may touch
+ * hornocal — the shader runs a Voronoi split on patch centers and only
+ * the owner draws each pixel (detail.wgsl). Every drawn patch's uniforms
+ * therefore carry the rects+centers of the WHOLE covering set plus its
+ * own slot; refreshArbitration() rewrites them whenever that set
+ * changes, in the same runtimes order the CPU picking twin
+ * (detail-pick.ts) sees.
  *
  * LAZY GPU ALLOCATION, OUTSIDE THE FRAME LOOP (task D1b): a site's
  * resources (~28 MiB of texture + storage, ~7 MiB on mobile) are created
@@ -148,11 +163,33 @@ interface DetailParamsValue extends TerrainGridUniforms {
   patchToBaseC: readonly [number, number];
   baseGridSize: readonly [number, number];
   baseMeshToGrid: readonly [number, number];
+  /**
+   * Voronoi overlap arbitration (detail.wgsl): rects [i0,j0,i1,j1] and
+   * centers (xy) of the currently drawn patches — patchCount of them —
+   * in base grid coords; patchIndex is this draw's slot.
+   */
+  patchRects: number[][];
+  patchCenters: number[][];
+  patchCount: number;
+  patchIndex: number;
+  splitBand: number;
 }
 
 const IDENTITY_MAT4 = [
   1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1,
 ];
+
+/**
+ * Inactive arbitration slots get a degenerate rect (i0 > i1) so the
+ * contain test can never fire even if the shader read past patchCount.
+ */
+function emptySlotRects(): number[][] {
+  return Array.from({ length: MAX_DETAIL_PATCHES }, () => [0, 0, -1, -1]);
+}
+
+function emptySlotCenters(): number[][] {
+  return Array.from({ length: MAX_DETAIL_PATCHES }, () => [0, 0, 0, 0]);
+}
 
 interface SiteGpuResources {
   readonly heights: StorageBuffer;
@@ -163,6 +200,10 @@ interface SiteGpuResources {
 interface SiteRuntime {
   readonly data: DetailSiteData;
   readonly params: DetailParamsValue;
+  /** Full outer extent in base grid coords: [i0, j0, i1, j1]. */
+  readonly baseRect: readonly [number, number, number, number];
+  /** Patch center in base grid coords (Voronoi arbitration point). */
+  readonly baseCenter: readonly [number, number];
   /** Patch center in base-world km on the ground plane: [x, z]. */
   readonly centerWorld: readonly [number, number];
   /** Camera distance below which the patch is drawn, in km. */
@@ -227,13 +268,57 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         patchToBaseC: toBase.c,
         baseGridSize: opts.baseSurface.grid.gridSize,
         baseMeshToGrid: opts.baseSurface.grid.meshToGrid,
+        // Filled by refreshArbitration() once sites start covering.
+        patchRects: emptySlotRects(),
+        patchCenters: emptySlotCenters(),
+        patchCount: 0,
+        patchIndex: 0,
+        splitBand: DETAIL_SPLIT_BAND_CELLS,
       },
+      baseRect: detailPatchRectBaseGrid(spec, opts.baseSpec),
+      baseCenter: detailPatchCenterBaseGrid(spec, opts.baseSpec),
       centerWorld: patchGlobalPixelToWorld(gridUniforms, pcx, pcy),
       drawDistanceKm: detailDrawDistanceKm(data.site.sizeKm),
       status: "idle",
       visible: false,
     };
   });
+
+  /**
+   * Rewrite the Voronoi arbitration uniforms on every runtime from the
+   * current covering set (visible AND loaded = exactly what draw()
+   * draws), in runtimes order — the same order the CPU picking twin
+   * sees. Runs inside update() so the uniforms each frame's draw.set
+   * pushes already reflect any covering change.
+   */
+  const refreshArbitration = (): void => {
+    const covering = runtimes.filter(
+      (rt) => rt.visible && rt.gpu !== undefined,
+    );
+    if (covering.length > MAX_DETAIL_PATCHES) {
+      console.warn(
+        `detail patches: ${covering.length} covering sites exceed the ` +
+          `${MAX_DETAIL_PATCHES}-slot shader limit; extra patches draw ` +
+          `without overlap arbitration`,
+      );
+    }
+    const slots = covering.slice(0, MAX_DETAIL_PATCHES);
+    const rects = emptySlotRects();
+    const centers = emptySlotCenters();
+    slots.forEach((rt, i) => {
+      rects[i] = [...rt.baseRect];
+      centers[i] = [rt.baseCenter[0], rt.baseCenter[1], 0, 0];
+    });
+    const indexByRuntime = new Map<SiteRuntime, number>(
+      slots.map((rt, i) => [rt, i]),
+    );
+    for (const rt of runtimes) {
+      rt.params.patchRects = rects;
+      rt.params.patchCenters = centers;
+      rt.params.patchCount = slots.length;
+      rt.params.patchIndex = indexByRuntime.get(rt) ?? 0;
+    }
+  };
 
   let gpuRef: Gpu | undefined;
 
@@ -392,7 +477,12 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         if (previous === "idle" && rt.status === "requested") {
           enqueueLoad(rt);
         }
-        if (!rt.gpu) continue; // requested/loading/failed: base terrain shows
+      }
+      // The covering set just settled for this frame; arbitration
+      // uniforms go out with the same draw.set batch.
+      refreshArbitration();
+      for (const rt of runtimes) {
+        if (!rt.visible || !rt.gpu) continue; // requested/loading/failed: base terrain shows
         rt.params.viewProjection = viewProjection;
         rt.params.exaggeration = exaggeration;
         rt.gpu.draw.set({ params: rt.params });

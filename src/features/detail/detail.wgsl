@@ -32,6 +32,18 @@
 // patch's clip-space z toward the camera so it wins the reversed-Z
 // "greater" test on that shared rasterized line instead of z-fighting
 // (see detail-uniforms.ts for why this is not depthBias).
+//
+// OVERLAP (task A1): two drawn patches may cover the same base-grid
+// pixels (tilcara touches siete-colores; humahuaca may touch hornocal).
+// Ownership is a Voronoi split on the patch centers in base grid coords:
+// the patch whose center is nearest owns the pixel and draws it; every
+// other covering patch discards the fragment. The exact bisector goes to
+// the lower slot index, so the decision is deterministic and exactly one
+// patch claims each covered pixel. Within splitBand base cells of the
+// seam the owner geomorphs back toward the base surface (same scheme as
+// the patch's outer edge), and the loser morphs to the base surface too —
+// both surfaces coincide with the base surface right at the split line,
+// so they meet without cracks and never z-fight.
 
 struct Params {
   viewProjection: mat4x4f,
@@ -54,6 +66,16 @@ struct Params {
   patchToBaseC: vec2f,
   baseGridSize: vec2f,    // base height grid size in cells
   baseMeshToGrid: vec2f,  // base grid cells per base mesh vertex step
+  // Voronoi overlap arbitration, all in base grid coords: patchRects and
+  // patchCenters (.xy) list the patches the layer currently DRAWS —
+  // patchCount of them; patchIndex is this draw's slot. Fixed literal
+  // sizes — vgpu rejects symbolic array lengths; must match
+  // MAX_DETAIL_PATCHES in src/terrain/detail-grids.ts.
+  patchRects: array<vec4f, 16>,
+  patchCenters: array<vec4f, 16>,
+  patchCount: f32,
+  patchIndex: f32,
+  splitBand: f32,   // seam geomorph width in base grid cells
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -142,16 +164,53 @@ fn morphWeight(gi: f32, gj: f32) -> f32 {
   return smoothstep(0.0, params.edgeFade, edgeDistance(patchUv(gi, gj)));
 }
 
+fn rectContains(r: vec4f, bi: f32, bj: f32) -> bool {
+  return bi >= r.x && bi <= r.z && bj >= r.y && bj <= r.w;
+}
+
+// Signed ownership margin at base grid coords (bi, bj), in base grid
+// cells: the distance to the nearest competing drawn patch's center
+// minus the distance to this patch's own center, minimized over every
+// drawn patch whose rect also covers the point. Positive = this patch
+// owns the pixel; negative = a competitor is nearer and this patch must
+// discard the fragment. On the exact bisector (|margin| below a hair)
+// the lower slot index wins, applied symmetrically by both patches so
+// ownership stays deterministic.
+fn splitMargin(bi: f32, bj: f32) -> f32 {
+  let selfIdx = i32(params.patchIndex);
+  let dSelf = distance(vec2f(bi, bj), params.patchCenters[selfIdx].xy);
+  var margin = 1e9;
+  let n = i32(params.patchCount);
+  for (var q = 0; q < n; q++) {
+    if (q == selfIdx) { continue; }
+    if (!rectContains(params.patchRects[q], bi, bj)) { continue; }
+    let dQ = distance(vec2f(bi, bj), params.patchCenters[q].xy);
+    var m = dQ - dSelf;
+    if (abs(m) <= 0.001) {
+      m = select(0.001, -0.001, q < selfIdx);
+    }
+    margin = min(margin, m);
+  }
+  return margin;
+}
+
 // The DRAWN surface height at patch grid coords: base-mesh surface near
 // the border, patch DEM in the interior, geomorph across the band. Also
 // defined just outside the patch (w = 0 there), which keeps the fragment
-// normal's finite differences well-formed at the outer edge.
+// normal's finite differences well-formed at the outer edge. The
+// Voronoi seam gets the same treatment: the owner morphs back to the
+// base surface across splitBand base cells and the loser (discarded)
+// morphs to the base surface on its side, so the two patch surfaces
+// coincide with the base surface at the split line — no crack, no
+// coincident geometry.
 fn surfaceElevation(gi: f32, gj: f32) -> f32 {
   let bg = vec2f(
     (gi + 0.5) * params.patchToBaseK.x + params.patchToBaseC.x,
     (gj + 0.5) * params.patchToBaseK.y + params.patchToBaseC.y,
   );
-  return mix(baseMeshHeightAt(bg.x, bg.y), heightAt(gi, gj), morphWeight(gi, gj));
+  let w = morphWeight(gi, gj) *
+    smoothstep(0.0, params.splitBand, splitMargin(bg.x, bg.y));
+  return mix(baseMeshHeightAt(bg.x, bg.y), heightAt(gi, gj), w);
 }
 
 struct VertexOut {
@@ -195,6 +254,17 @@ struct VertexOut {
 }
 
 @fragment fn fs_main(in: VertexOut) -> @location(0) vec4f {
+  // Voronoi ownership: a fragment covered by several drawn patches is
+  // drawn by the nearest-center patch only — the loser discards, so no
+  // pixel ever receives two coincident patch surfaces.
+  let bg = vec2f(
+    (in.grid.x + 0.5) * params.patchToBaseK.x + params.patchToBaseC.x,
+    (in.grid.y + 0.5) * params.patchToBaseK.y + params.patchToBaseC.y,
+  );
+  if (splitMargin(bg.x, bg.y) < 0.0) {
+    discard;
+  }
+
   // Normal from central finite differences of the DRAWN (geomorphed)
   // surface — the same field the vertex shader displaces — so the border
   // keeps the base surface's shading and the transition hides inside the

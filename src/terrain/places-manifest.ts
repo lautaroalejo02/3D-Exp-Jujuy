@@ -20,6 +20,15 @@
  * fallback and restricts photo licenses to PHOTO_LICENSE_RE both in
  * the raw download and in the built document.
  *
+ * Schema v5 (odd/tasks/maqueta-ajustes-lugares.md) adds
+ * `coordinateSource`/`osmElementUrl`: places whose Wikidata P625
+ * precision is >= 0.001 degrees take their coordinate from the
+ * OpenStreetMap element recorded in osm-coordinates.json (ODbL; the
+ * card shows "© OpenStreetMap contributors"). Elevation, department
+ * and detail-patch detection all use the final coordinate. Photos now
+ * come from commons-photos-depicts.json (P18 + P180 depicts), with the
+ * task's editorial exclusion table applied on top.
+ *
  * Pure data access — nothing here touches the GPU or the DOM (same
  * contract as detail-manifest.ts).
  */
@@ -32,7 +41,7 @@ import { OUTSIDE_JUJUY } from "../ui/pick-panel";
 const defaultFetch: FetchLike = (url) => fetch(url);
 
 /** places.json schema version produced by the pipeline. */
-export const PLACES_SCHEMA_VERSION = 4;
+export const PLACES_SCHEMA_VERSION = 5;
 
 /** Thrown when a places document fails validation. */
 export class PlacesDataError extends Error {
@@ -163,9 +172,161 @@ export function assertRawPlacesDoc(
 }
 
 // ---------------------------------------------------------------------------
+// Raw input: data/raw/places/osm-coordinates.json — OpenStreetMap element
+// coordinates (downloaded once by the coordinator via Nominatim) for the
+// places whose Wikidata P625 is too coarse to position the marker
+// (precision >= OSM_PRECISION_THRESHOLD_DEG). ODbL 1.0, "© OpenStreetMap
+// contributors"; the card shows the attribution and links the element.
+// verify-places re-checks each recorded element against Nominatim.
+// ---------------------------------------------------------------------------
+
+/**
+ * P625 precision (degrees) at or above which an OSM override applies —
+ * 0.001 deg ~ 110 m of rounding, e.g. arc-minute (~0.0167 deg) values
+ * like Purmamarca's that stranded the marker inside a mountain.
+ */
+export const OSM_PRECISION_THRESHOLD_DEG = 0.001;
+
+export interface RawOsmOverride {
+  readonly id: string;
+  readonly name: string;
+  /** The Wikidata coordinate being replaced, kept for provenance. */
+  readonly wikidataCoordinate: {
+    readonly lat: number;
+    readonly lon: number;
+    readonly precision?: number | null;
+  };
+  readonly osm: {
+    /** OSM element reference, e.g. "relation/4473250". */
+    readonly element: string;
+    /** Nominatim `type` (administrative, lake, village…). */
+    readonly type: string;
+    readonly lat: number;
+    readonly lon: number;
+    /** Canonical element URL; must match `element`. */
+    readonly url: string;
+  };
+}
+
+export interface RawOsmCoordinatesDoc {
+  readonly description?: string;
+  readonly license?: string;
+  readonly licenseUrl?: string;
+  readonly attribution?: string;
+  readonly places: readonly RawOsmOverride[];
+}
+
+const RAW_OSM_PLACE_KEYS: ReadonlySet<string> = new Set([
+  "id",
+  "name",
+  "wikidataCoordinate",
+  "osm",
+]);
+const RAW_OSM_WIKIDATA_KEYS: ReadonlySet<string> = new Set([
+  "lat",
+  "lon",
+  "precision",
+]);
+const RAW_OSM_ELEMENT_KEYS: ReadonlySet<string> = new Set([
+  "element",
+  "type",
+  "lat",
+  "lon",
+  "url",
+]);
+const OSM_ELEMENT_RE = /^(node|way|relation)\/[1-9]\d*$/;
+
+export function assertRawOsmCoordinatesDoc(
+  value: unknown,
+): asserts value is RawOsmCoordinatesDoc {
+  const doc = value as RawOsmCoordinatesDoc | null;
+  if (!isRecord(doc) || !Array.isArray(doc.places)) {
+    throw new PlacesDataError(
+      "osm-coordinates.json is missing or has no places array",
+    );
+  }
+  for (const [k, place] of doc.places.entries()) {
+    const what = `osm-coordinates.json places[${k}]`;
+    if (
+      !isRecord(place) ||
+      typeof place.id !== "string" ||
+      !/^Q[1-9]\d*$/.test(place.id) ||
+      typeof place.name !== "string" ||
+      !isRecord(place.wikidataCoordinate) ||
+      typeof place.wikidataCoordinate.lat !== "number" ||
+      typeof place.wikidataCoordinate.lon !== "number" ||
+      !(
+        place.wikidataCoordinate.precision === undefined ||
+        place.wikidataCoordinate.precision === null ||
+        typeof place.wikidataCoordinate.precision === "number"
+      ) ||
+      !isRecord(place.osm) ||
+      typeof place.osm.element !== "string" ||
+      !OSM_ELEMENT_RE.test(place.osm.element) ||
+      typeof place.osm.type !== "string" ||
+      typeof place.osm.lat !== "number" ||
+      typeof place.osm.lon !== "number" ||
+      // The element URL must be the canonical form of `element` — a
+      // mismatch means the override is not traceable to its source.
+      place.osm.url !==
+        `https://www.openstreetmap.org/${place.osm.element}`
+    ) {
+      throw new PlacesDataError(
+        `${what} (id ${isRecord(place) ? String(place.id) : "?"}) is ` +
+          "not a valid OSM coordinate override entry",
+      );
+    }
+    const extra = [
+      ...unknownKeys(place, RAW_OSM_PLACE_KEYS),
+      ...unknownKeys(place.wikidataCoordinate, RAW_OSM_WIKIDATA_KEYS).map(
+        (key) => `wikidataCoordinate.${key}`,
+      ),
+      ...unknownKeys(place.osm, RAW_OSM_ELEMENT_KEYS).map(
+        (key) => `osm.${key}`,
+      ),
+    ];
+    if (extra.length > 0) {
+      throw new PlacesDataError(
+        `${what} (id ${place.id}) carries unexpected field(s): ` +
+          extra.join(", "),
+      );
+    }
+  }
+}
+
+/**
+ * The coordinate a place card should use: the OSM element's lat/lon when
+ * the Wikidata precision is too coarse and an override was recorded,
+ * else the Wikidata P625 value (possibly null precision = exact point).
+ */
+export function effectiveCoordinate(
+  place: RawWikidataPlace,
+  override: RawOsmOverride | undefined,
+): { lat: number; lon: number; source: PlaceCoordinateSource; osmElementUrl?: string } {
+  const precision = place.coordinates.precision ?? 0;
+  if (override !== undefined && precision >= OSM_PRECISION_THRESHOLD_DEG) {
+    return {
+      lat: override.osm.lat,
+      lon: override.osm.lon,
+      source: "osm",
+      osmElementUrl: override.osm.url,
+    };
+  }
+  return {
+    lat: place.coordinates.lat,
+    lon: place.coordinates.lon,
+    source: "wikidata",
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Raw input: data/raw/places/commons-photos.json (downloaded once by the
 // coordinator; licenses are re-checked by verify-places). Every photo is
 // served at runtime from upload.wikimedia.org — nothing is committed.
+//
+// HISTORICAL: superseded by commons-photos-depicts.json (P18 + P180
+// depicts selection — the category-based download pulled unrelated files
+// into the cards). Kept in data/raw for provenance; nothing reads it.
 // ---------------------------------------------------------------------------
 
 export interface RawCommonsPhoto {
@@ -242,6 +403,51 @@ export const PHOTO_LICENSE_RE =
  */
 const ATTRIBUTION_LICENSE_RE = /^CC BY(-SA)? \d(\.\d)?$/;
 
+/**
+ * Shared per-photo checks for the raw photo downloads: field types,
+ * unknown keys (the allowed set depends on the file format — the
+ * depicts-based file adds `selection`) and the allowed-license rule.
+ */
+function checkRawCommonsPhoto(
+  photo: unknown,
+  photoWhat: string,
+  allowedKeys: ReadonlySet<string>,
+): void {
+  const p = photo as RawCommonsPhoto | null;
+  if (
+    !isRecord(p) ||
+    typeof p.file !== "string" ||
+    typeof p.pageUrl !== "string" ||
+    typeof p.thumbUrl !== "string" ||
+    typeof p.thumbWidth !== "number" ||
+    typeof p.thumbHeight !== "number" ||
+    !isPositiveNumber(p.width) ||
+    !isPositiveNumber(p.height) ||
+    typeof p.license !== "string" ||
+    !isNullableString(p.licenseUrl) ||
+    !isNullableString(p.author) ||
+    !isNullableString(p.credit) ||
+    !isNullableString(p.description) ||
+    typeof p.isMain !== "boolean"
+  ) {
+    throw new PlacesDataError(
+      `${photoWhat} is not a valid Commons photo entry`,
+    );
+  }
+  const extra = unknownKeys(p, allowedKeys);
+  if (extra.length > 0) {
+    throw new PlacesDataError(
+      `${photoWhat} carries non-Wikimedia field(s): ${extra.join(", ")}`,
+    );
+  }
+  if (!PHOTO_LICENSE_RE.test(p.license)) {
+    throw new PlacesDataError(
+      `${photoWhat} (${p.file}) has a license the card cannot ` +
+        `show: "${p.license}"`,
+    );
+  }
+}
+
 export function assertRawCommonsPhotosDoc(
   value: unknown,
 ): asserts value is RawCommonsPhotosDoc {
@@ -272,37 +478,90 @@ export function assertRawCommonsPhotosDoc(
       );
     }
     for (const [p, photo] of place.photos.entries()) {
+      checkRawCommonsPhoto(photo, `${what}.photos[${p}]`, RAW_PHOTO_KEYS);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Raw input: data/raw/places/commons-photos-depicts.json — the photo list
+// the build actually reads (odd/tasks/maqueta-ajustes-lugares.md). Photos
+// are selected by relevance only: the item's Wikidata main image (P18)
+// plus Commons files whose structured data depicts the place (P180). Same
+// photo shape as the category-based file plus a `selection` tag; there
+// is no commonsCategory (the depicts query does not use categories).
+// ---------------------------------------------------------------------------
+
+/** How a photo reached the list — recorded for provenance. */
+export type RawPhotoSelection = "wikidata-P18" | "commons-depicts-P180";
+
+export interface RawDepictsPhoto extends RawCommonsPhoto {
+  readonly selection: RawPhotoSelection;
+}
+
+export interface RawDepictsPhotosPlace {
+  readonly id: string;
+  readonly photos: readonly RawDepictsPhoto[];
+}
+
+export interface RawDepictsPhotosDoc {
+  readonly description?: string;
+  readonly downloaded?: string;
+  readonly places: readonly RawDepictsPhotosPlace[];
+}
+
+const RAW_DEPICTS_PLACE_KEYS: ReadonlySet<string> = new Set([
+  "id",
+  "photos",
+]);
+const RAW_DEPICTS_PHOTO_KEYS: ReadonlySet<string> = new Set([
+  ...RAW_PHOTO_KEYS,
+  "selection",
+]);
+const RAW_PHOTO_SELECTIONS: ReadonlySet<string> = new Set([
+  "wikidata-P18",
+  "commons-depicts-P180",
+]);
+
+export function assertRawDepictsPhotosDoc(
+  value: unknown,
+): asserts value is RawDepictsPhotosDoc {
+  const doc = value as RawDepictsPhotosDoc | null;
+  if (!isRecord(doc) || !Array.isArray(doc.places)) {
+    throw new PlacesDataError(
+      "commons-photos-depicts.json is missing or has no places array",
+    );
+  }
+  for (const [k, place] of doc.places.entries()) {
+    const what = `commons-photos-depicts.json places[${k}]`;
+    if (
+      !isRecord(place) ||
+      typeof place.id !== "string" ||
+      !/^Q[1-9]\d*$/.test(place.id) ||
+      !Array.isArray(place.photos)
+    ) {
+      throw new PlacesDataError(
+        `${what} is not a valid Commons photos place entry`,
+      );
+    }
+    const extraPlace = unknownKeys(place, RAW_DEPICTS_PLACE_KEYS);
+    if (extraPlace.length > 0) {
+      throw new PlacesDataError(
+        `${what} (id ${place.id}) carries non-Wikimedia field(s): ` +
+          extraPlace.join(", "),
+      );
+    }
+    for (const [p, photo] of place.photos.entries()) {
       const photoWhat = `${what}.photos[${p}]`;
+      checkRawCommonsPhoto(photo, photoWhat, RAW_DEPICTS_PHOTO_KEYS);
+      const selection = (photo as RawDepictsPhoto).selection;
       if (
-        !isRecord(photo) ||
-        typeof photo.file !== "string" ||
-        typeof photo.pageUrl !== "string" ||
-        typeof photo.thumbUrl !== "string" ||
-        typeof photo.thumbWidth !== "number" ||
-        typeof photo.thumbHeight !== "number" ||
-        !isPositiveNumber(photo.width) ||
-        !isPositiveNumber(photo.height) ||
-        typeof photo.license !== "string" ||
-        !isNullableString(photo.licenseUrl) ||
-        !isNullableString(photo.author) ||
-        !isNullableString(photo.credit) ||
-        !isNullableString(photo.description) ||
-        typeof photo.isMain !== "boolean"
+        typeof selection !== "string" ||
+        !RAW_PHOTO_SELECTIONS.has(selection)
       ) {
         throw new PlacesDataError(
-          `${photoWhat} is not a valid Commons photo entry`,
-        );
-      }
-      const extra = unknownKeys(photo, RAW_PHOTO_KEYS);
-      if (extra.length > 0) {
-        throw new PlacesDataError(
-          `${photoWhat} carries non-Wikimedia field(s): ${extra.join(", ")}`,
-        );
-      }
-      if (!PHOTO_LICENSE_RE.test(photo.license)) {
-        throw new PlacesDataError(
-          `${photoWhat} (${photo.file}) has a license the card cannot ` +
-            `show: "${photo.license}"`,
+          `${photoWhat} has no valid selection tag (wikidata-P18 or ` +
+            "commons-depicts-P180)",
         );
       }
     }
@@ -525,6 +784,13 @@ export interface PlaceFacts {
   readonly foundedYear: number | null;
 }
 
+/**
+ * Where the card coordinate came from: the Wikidata P625 value, or the
+ * OpenStreetMap element when the Wikidata precision was too coarse
+ * (schema v5 — see osm-coordinates.json).
+ */
+export type PlaceCoordinateSource = "wikidata" | "osm";
+
 export interface Place {
   /** Wikidata item id ("Q…"). */
   readonly id: string;
@@ -534,6 +800,12 @@ export interface Place {
   readonly description: string | null;
   readonly lat: number;
   readonly lon: number;
+  /**
+   * Provenance of lat/lon: "osm" places carry `osmElementUrl` so the
+   * card can link the element under "© OpenStreetMap contributors".
+   */
+  readonly coordinateSource: PlaceCoordinateSource;
+  readonly osmElementUrl?: string;
   /**
    * The elevation the card reports: the detail-patch sample when one
    * exists, else the full-resolution DEM sample. Rounded to the meter.
@@ -571,6 +843,16 @@ export interface PlacesSources {
     readonly licenseUrl: string;
     readonly file: string;
     readonly sha256: string;
+  };
+  /** OpenStreetMap coordinate overrides applied over Wikidata P625. */
+  readonly coordinateOverrides: {
+    readonly provider: string;
+    readonly attribution: string;
+    readonly license: string;
+    readonly licenseUrl: string;
+    readonly file: string;
+    readonly sha256: string;
+    readonly note: string;
   };
   readonly photos: {
     readonly provider: string;
@@ -675,6 +957,12 @@ function assertPlace(value: unknown, what: string): asserts value is Place {
     typeof p.demElevationMeters !== "number" ||
     (p.detailElevationMeters !== undefined &&
       typeof p.detailElevationMeters !== "number") ||
+    (p.coordinateSource !== "wikidata" && p.coordinateSource !== "osm") ||
+    // The OSM element URL is part of the coordinate's provenance: it is
+    // present exactly when the coordinate came from OpenStreetMap.
+    (p.coordinateSource === "osm"
+      ? typeof p.osmElementUrl !== "string"
+      : p.osmElementUrl !== undefined) ||
     typeof p.department !== "string" ||
     typeof p.wikidataUrl !== "string" ||
     !isNullableString(p.eswikiUrl) ||
@@ -770,6 +1058,106 @@ export const WITHHELD_DESCRIPTIONS: Readonly<Record<string, string>> = {
     "https://www.argentina.travel/novedades/siete-razones-por-las-que-las-salinas-grandes-son-unas-de-las-siete-maravillas-naturales-de-argentina",
 };
 
+/**
+ * Editorial photo exclusions (odd/tasks/maqueta-ajustes-lugares.md): the
+ * depicts selection says these files show the place, but the image does
+ * not belong on the card — commercial objects, promotional graphics,
+ * one-off weather events, portraits, or photos of other localities.
+ * Exact table from the task; extend only via a new task. build-places
+ * drops each listed file and prints it with its reason.
+ */
+export const PHOTO_EXCLUSIONS: readonly {
+  readonly placeId: string;
+  readonly file: string;
+  readonly reason: string;
+}[] = [
+  {
+    placeId: "Q44217", // San Salvador de Jujuy
+    file: "Alfajor de Frutos Rojos marca La Viandita Dulce de San Salvador de Jujuy.jpg",
+    reason: "Objeto comercial, no el lugar",
+  },
+  {
+    placeId: "Q44217",
+    file: "Jujuy, energía viva.jpg",
+    reason: "Pieza gráfica o promocional",
+  },
+  {
+    placeId: "Q3843526", // Maimará
+    file: "Afiche 8 Sintesis Cultural Andina Masi Maky 2018.jpg",
+    reason: "Afiche",
+  },
+  {
+    placeId: "Q3843526",
+    file: "Viento zonda en Maimara con alerta amarilla consecuencias de tormenta de polvo y arena en la zona.jpg",
+    reason: "Evento meteorológico puntual; no muestra el lugar",
+  },
+  {
+    placeId: "Q28061", // Quebrada de Humahuaca
+    file: "Tormenta de tierra y arena en Maimara Jujuy Argentina Junio 2026.jpg",
+    reason: "Otro lugar (Maimará) y evento puntual",
+  },
+  {
+    placeId: "Q28061",
+    file: "Doña Feliza Choique de Cunchilla, 80 años de Carnaval.jpg",
+    reason: "Retrato de una persona",
+  },
+  {
+    placeId: "Q2893104", // Salinas Grandes
+    file: "Protest sign against lithium mining in Salinas Grandes 12.jpg",
+    reason: "Neutralidad: el tema del litio se trata aparte, con fuentes",
+  },
+  {
+    placeId: "Q2096227", // Santa Catalina
+    file: "Capilla, Timón Cruz, Jujuy, Argentina - panoramio (1).jpg",
+    reason: "Muestran otras localidades del departamento, no Santa Catalina",
+  },
+  {
+    placeId: "Q2096227",
+    file: "Escuela primaria Nro 348 - Timón Cruz, Jujuy.jpg",
+    reason: "Muestran otras localidades del departamento, no Santa Catalina",
+  },
+  {
+    placeId: "Q2096227",
+    file: "Corral de ovejas en Yoscaba, Jujuy.jpg",
+    reason: "Muestran otras localidades del departamento, no Santa Catalina",
+  },
+  {
+    placeId: "Q2096227",
+    file: "Oveja con marca de propiedad en la oreja-Yoscaba, Jujuy.jpg",
+    reason: "Muestran otras localidades del departamento, no Santa Catalina",
+  },
+  {
+    placeId: "Q2096227",
+    file: "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina - panoramio.jpg",
+    reason: "Muestran otras localidades del departamento, no Santa Catalina",
+  },
+  {
+    placeId: "Q1817419", // Rinconada
+    file: "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina - panoramio.jpg",
+    reason: "Otra localidad",
+  },
+  {
+    placeId: "Q78803897", // Termas de Reyes
+    file: "Dr Manuel Belgrano, Jujuy, Argentina - panoramio.jpg",
+    reason: "No se puede confirmar que muestre las termas",
+  },
+];
+
+const PHOTO_EXCLUSION_INDEX: ReadonlyMap<string, string> = new Map(
+  PHOTO_EXCLUSIONS.map((e) => [`${e.placeId}${e.file}`, e.reason]),
+);
+
+/**
+ * The exclusion reason for a (place, file) pair from PHOTO_EXCLUSIONS,
+ * or undefined when the photo is kept.
+ */
+export function photoExclusionReason(
+  placeId: string,
+  file: string,
+): string | undefined {
+  return PHOTO_EXCLUSION_INDEX.get(`${placeId}${file}`);
+}
+
 /** Inputs buildPlaceEntry cannot derive from the raw place alone. */
 export interface PlaceSurvey {
   /** Bilinear sample of the full-resolution DEM, in meters. */
@@ -784,6 +1172,15 @@ export interface PlaceSurvey {
    * falls outside the province (reported as "Fuera de Jujuy").
    */
   readonly department?: string;
+  /**
+   * The coordinate the pipeline surveyed (elevation, department and
+   * detail detection all sample this point). Defaults to the Wikidata
+   * coordinates; an OSM override passes the element's lat/lon here.
+   */
+  readonly coordinates?: { readonly lat: number; readonly lon: number };
+  readonly coordinateSource?: PlaceCoordinateSource;
+  /** Canonical OSM element URL; required iff coordinateSource is "osm". */
+  readonly osmElementUrl?: string;
 }
 
 /** Card content merged from the sibling raw files (schema v3). */
@@ -809,12 +1206,22 @@ export function buildPlaceEntry(
       ? undefined
       : Math.round(survey.detailElevationMeters);
   const fromDetail = detailElevationMeters !== undefined;
+  const coordinateSource = survey.coordinateSource ?? "wikidata";
+  if (coordinateSource === "osm" && survey.osmElementUrl === undefined) {
+    throw new PlacesDataError(
+      `${place.id}: osm coordinateSource needs survey.osmElementUrl`,
+    );
+  }
   return {
     id: place.id,
     name: placeDisplayName(place),
     description: placeDescription(place),
-    lat: place.coordinates.lat,
-    lon: place.coordinates.lon,
+    lat: survey.coordinates?.lat ?? place.coordinates.lat,
+    lon: survey.coordinates?.lon ?? place.coordinates.lon,
+    coordinateSource,
+    ...(coordinateSource === "osm"
+      ? { osmElementUrl: survey.osmElementUrl }
+      : {}),
     elevationMeters: fromDetail
       ? detailElevationMeters
       : demElevationMeters,

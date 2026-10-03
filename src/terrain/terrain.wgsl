@@ -52,8 +52,9 @@ struct Params {
   hazeEnd: f32,        // km: distance where the haze saturates
   // Full outer extent [i0, j0, i1, j1] of each live detail patch, in grid
   // coords; only the first patchRectCount slots are valid. Fixed literal
-  // size — vgpu rejects symbolic array lengths.
-  patchRects: array<vec4f, 8>,
+  // size — vgpu rejects symbolic array lengths. Must match
+  // MAX_DETAIL_PATCHES in src/terrain/detail-grids.ts.
+  patchRects: array<vec4f, 16>,
   patchRectCount: f32,
 }
 

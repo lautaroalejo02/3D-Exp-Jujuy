@@ -189,7 +189,7 @@ interface TerrainParamsValue {
   /**
    * Live detail-patch discard rects [i0, j0, i1, j1] in grid coords;
    * only the first patchRectCount slots are read by the shader. Mirrors
-   * `patchRects: array<vec4f, 8>` in terrain.wgsl.
+   * `patchRects: array<vec4f, 16>` in terrain.wgsl.
    */
   patchRects: number[][];
   patchRectCount: number;

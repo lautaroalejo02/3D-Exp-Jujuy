@@ -161,10 +161,12 @@ export function detailSiteSizeKm(grid: GridSpec): readonly [number, number] {
 }
 
 /**
- * Maximum number of detail patches the base terrain can mask at once:
- * the size of the `patchRects` uniform array in terrain.wgsl.
+ * Maximum number of detail patches the shaders handle at once: the
+ * literal size of the `patchRects` uniform array in terrain.wgsl and of
+ * the `patchRects`/`patchCenters` arrays in detail.wgsl — all three must
+ * match this constant.
  */
-export const MAX_DETAIL_PATCHES = 8;
+export const MAX_DETAIL_PATCHES = 16;
 
 /**
  * Linear map between a patch's height-grid coords and the base grid's.
@@ -254,6 +256,23 @@ export function detailPatchRectBaseGrid(
     patchSpec.height - 0.5,
   );
   return [i0, j0, i1, j1];
+}
+
+/**
+ * Patch center in base grid coords — the point the Voronoi overlap
+ * arbitration measures distances to (detail.wgsl + detail-pick.ts).
+ * Equivalent to the rect's midpoint.
+ */
+export function detailPatchCenterBaseGrid(
+  patchSpec: GridSpec,
+  baseSpec: GridSpec,
+): readonly [number, number] {
+  const map = patchBaseGridMap(patchSpec, baseSpec);
+  return patchGridToBaseGrid(
+    map,
+    (patchSpec.width - 1) / 2,
+    (patchSpec.height - 1) / 2,
+  );
 }
 
 /**

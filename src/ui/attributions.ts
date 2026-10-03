@@ -44,7 +44,7 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
     ],
   },
   {
-    title: "Lugares (nombres, descripciones, coordenadas)",
+    title: "Lugares (nombres, descripciones)",
     lines: ["Wikidata"],
     links: [
       {
@@ -54,6 +54,22 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
       {
         label: "Fuente",
         url: "https://www.wikidata.org/",
+      },
+    ],
+  },
+  {
+    title: "Lugares (coordenadas corregidas)",
+    lines: [
+      "OpenStreetMap — © OpenStreetMap contributors (la ficha enlaza al elemento usado)",
+    ],
+    links: [
+      {
+        label: "ODbL 1.0",
+        url: "https://opendatacommons.org/licenses/odbl/1-0/",
+      },
+      {
+        label: "Fuente",
+        url: "https://www.openstreetmap.org/copyright",
       },
     ],
   },
@@ -75,6 +91,7 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
     title: "Fotos de los lugares",
     lines: [
       "Wikimedia Commons — cada foto muestra su autor y licencia junto a ella",
+      "seleccionadas por relevancia (P18 de Wikidata + «depicts» P180 de Commons)",
     ],
     links: [
       {

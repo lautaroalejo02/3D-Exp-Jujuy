@@ -8,13 +8,18 @@
  * — while content differences and fetch failures are failures.
  *
  * The sibling raw files are re-checked too:
- * - commons-photos.json: every photo's license on its Commons file page
- *   (imageinfo extmetadata, batched titles) is compared with the
- *   committed one — a relicensing or a deleted file is a failure, since
- *   the card can only show what stays in the allowed license set;
+ * - commons-photos-depicts.json: every photo's license on its Commons
+ *   file page (imageinfo extmetadata, batched titles) is compared with
+ *   the committed one — a relicensing or a deleted file is a failure,
+ *   since the card can only show what stays in the allowed license set.
+ *   (The older category-based commons-photos.json is historical and no
+ *   longer read by anything.);
  * - wikipedia-extracts.json: every committed revision id is asked back
  *   to es.wikipedia — a revision that no longer resolves is a failure,
- *   since the card's "Fuente" link points at it.
+ *   since the card's "Fuente" link points at it;
+ * - osm-coordinates.json: each recorded OSM element is looked up again
+ *   on Nominatim (sequential, polite) and its lat/lon compared with the
+ *   committed override — a moved or deleted element is a failure.
  *
  * Requests run sequentially with a polite User-Agent and a small delay,
  * like verify-detail's one-URL-at-a-time pass. Nothing is ever written —
@@ -27,7 +32,8 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  assertRawCommonsPhotosDoc,
+  assertRawDepictsPhotosDoc,
+  assertRawOsmCoordinatesDoc,
   assertRawPlacesDoc,
   assertRawWikipediaExtractsDoc,
   type RawCommonsPhoto,
@@ -37,7 +43,10 @@ import {
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RAW_DIR = join(ROOT, "data/raw/places");
 const RAW_PATH = join(RAW_DIR, "wikidata-places.json");
-const RAW_PHOTOS_PATH = join(RAW_DIR, "commons-photos.json");
+const RAW_OSM_PATH = join(RAW_DIR, "osm-coordinates.json");
+// The photo list the build reads (the category-based commons-photos.json
+// is historical and no longer read).
+const RAW_PHOTOS_PATH = join(RAW_DIR, "commons-photos-depicts.json");
 const RAW_EXTRACTS_PATH = join(RAW_DIR, "wikipedia-extracts.json");
 
 const USER_AGENT =
@@ -219,11 +228,11 @@ function licenseUnchanged(
 
 /**
  * Batched imageinfo lookup over every unique file name in
- * commons-photos.json (20 titles per request keeps URLs sane).
+ * commons-photos-depicts.json (20 titles per request keeps URLs sane).
  */
 async function verifyPhotoLicenses(failures: string[]): Promise<void> {
   const doc: unknown = JSON.parse(readFileSync(RAW_PHOTOS_PATH, "utf8"));
-  assertRawCommonsPhotosDoc(doc);
+  assertRawDepictsPhotosDoc(doc);
 
   const byFile = new Map<string, { placeId: string; photo: RawCommonsPhoto }>();
   for (const place of doc.places) {
@@ -310,6 +319,96 @@ interface WikipediaRevisionResponse {
       readonly revisions?: readonly { readonly revid?: number }[];
     }[];
   };
+}
+
+// ---------------------------------------------------------------------------
+// OSM coordinate overrides: re-lookup each element on Nominatim and
+// compare the returned center with the committed lat/lon.
+// ---------------------------------------------------------------------------
+
+interface NominatimLookupResult {
+  readonly osm_type?: string;
+  readonly osm_id?: number;
+  readonly lat?: string;
+  readonly lon?: string;
+}
+
+/** Nominatim osm_ids prefix for an element ref: relation/123 -> "R123". */
+function nominatimOsmId(element: string): string {
+  const [type, id] = element.split("/", 2);
+  const prefix = { node: "N", way: "W", relation: "R" }[type ?? ""];
+  if (prefix === undefined || id === undefined) {
+    throw new Error(`bad OSM element reference "${element}"`);
+  }
+  return `${prefix}${id}`;
+}
+
+/** Center coordinates Nominatim reports can drift ~10 cm per edit. */
+const OSM_COORD_TOLERANCE_DEG = 1e-4;
+
+async function verifyOsmCoordinates(failures: string[]): Promise<void> {
+  const doc: unknown = JSON.parse(readFileSync(RAW_OSM_PATH, "utf8"));
+  assertRawOsmCoordinatesDoc(doc);
+
+  let checked = 0;
+  for (const place of doc.places) {
+    if (checked > 0) await sleep(DELAY_MS);
+    const what = `${place.id} (${place.name}) ${place.osm.element}`;
+    const url =
+      "https://nominatim.openstreetmap.org/lookup?format=jsonv2" +
+      `&osm_ids=${nominatimOsmId(place.osm.element)}`;
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": USER_AGENT,
+          Accept: "application/json",
+        },
+      });
+      if (!res.ok) {
+        failures.push(`${what}: HTTP ${res.status} from Nominatim`);
+        continue;
+      }
+      const results = (await res.json()) as readonly NominatimLookupResult[];
+      const hit = results[0];
+      if (!hit) {
+        failures.push(
+          `${what}: the OSM element no longer resolves on Nominatim`,
+        );
+        continue;
+      }
+      const [wantType] = place.osm.element.split("/", 1);
+      if (hit.osm_type !== wantType) {
+        failures.push(
+          `${what}: Nominatim returned type ${hit.osm_type ?? "?"}`,
+        );
+      }
+      const lat = Number(hit.lat);
+      const lon = Number(hit.lon);
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        failures.push(
+          `${what}: Nominatim returned unreadable coordinates ` +
+            `(${JSON.stringify(hit.lat)}, ${JSON.stringify(hit.lon)})`,
+        );
+        continue;
+      }
+      if (
+        Math.abs(lat - place.osm.lat) > OSM_COORD_TOLERANCE_DEG ||
+        Math.abs(lon - place.osm.lon) > OSM_COORD_TOLERANCE_DEG
+      ) {
+        failures.push(
+          `${what}: coordinates are ${place.osm.lat}, ${place.osm.lon} ` +
+            `locally, ${lat}, ${lon} on Nominatim`,
+        );
+      }
+    } catch (error) {
+      failures.push(
+        `${what}: fetch failed (${error instanceof Error ? error.message : String(error)})`,
+      );
+      continue;
+    }
+    checked += 1;
+  }
+  console.log(`checked ${checked}/${doc.places.length} OSM coordinates`);
 }
 
 async function verifyExtractRevisions(failures: string[]): Promise<void> {
@@ -414,6 +513,7 @@ async function main(): Promise<void> {
 
   await verifyPhotoLicenses(failures);
   await verifyExtractRevisions(failures);
+  await verifyOsmCoordinates(failures);
 
   for (const note of notes) console.log(`note: ${note}`);
 

@@ -1,0 +1,136 @@
+{
+  "description": "Coordinate overrides from OpenStreetMap (via Nominatim) for places whose Wikidata coordinate has coarse precision (>= 0.001 deg, e.g. rounded to the arc-minute ~1.8 km). Each match is the OSM element whose wikidata tag equals the place Q-id. Downloaded once by the coordinator on 2026-10-03 (1 request/s).",
+  "license": "ODbL 1.0 (OpenStreetMap contributors)",
+  "licenseUrl": "https://opendatacommons.org/licenses/odbl/1-0/",
+  "attribution": "© OpenStreetMap contributors",
+  "places": [
+    {
+      "id": "Q1025405",
+      "name": "Purmamarca",
+      "wikidataCoordinate": {
+        "lat": -23.733333333333,
+        "lon": -65.483333333333,
+        "precision": 0.016666666666667
+      },
+      "osm": {
+        "element": "relation/4473250",
+        "type": "administrative",
+        "lat": -23.74655,
+        "lon": -65.4992167,
+        "url": "https://www.openstreetmap.org/relation/4473250"
+      }
+    },
+    {
+      "id": "Q1388407",
+      "name": "Laguna de Guayatayoc",
+      "wikidataCoordinate": {
+        "lat": -23.41666667,
+        "lon": -65.85,
+        "precision": 0.016666666666667
+      },
+      "osm": {
+        "element": "way/278542332",
+        "type": "lake",
+        "lat": -23.3048344,
+        "lon": -65.9024884,
+        "url": "https://www.openstreetmap.org/way/278542332"
+      }
+    },
+    {
+      "id": "Q830120",
+      "name": "Monumento natural Laguna de los Pozuelos",
+      "wikidataCoordinate": {
+        "lat": -22.35,
+        "lon": -66,
+        "precision": 0.016666666666666666
+      },
+      "osm": {
+        "element": "relation/11256269",
+        "type": "protected_area",
+        "lat": -22.3574707,
+        "lon": -66.0043518,
+        "url": "https://www.openstreetmap.org/relation/11256269"
+      }
+    },
+    {
+      "id": "Q55386",
+      "name": "Abra Pampa",
+      "wikidataCoordinate": {
+        "lat": -22.716666666667,
+        "lon": -65.7,
+        "precision": 0.016666666666667
+      },
+      "osm": {
+        "element": "relation/4492232",
+        "type": "administrative",
+        "lat": -22.7227697,
+        "lon": -65.6969972,
+        "url": "https://www.openstreetmap.org/relation/4492232"
+      }
+    },
+    {
+      "id": "Q600706",
+      "name": "Libertador General San Martín",
+      "wikidataCoordinate": {
+        "lat": -23.8,
+        "lon": -64.783333333333,
+        "precision": 0.016666666666667
+      },
+      "osm": {
+        "element": "relation/5843364",
+        "type": "administrative",
+        "lat": -23.8093358,
+        "lon": -64.7921741,
+        "url": "https://www.openstreetmap.org/relation/5843364"
+      }
+    },
+    {
+      "id": "Q1020263",
+      "name": "San Pedro de Jujuy",
+      "wikidataCoordinate": {
+        "lat": -24.233333333333,
+        "lon": -64.866666666667,
+        "precision": 0.016666666666667
+      },
+      "osm": {
+        "element": "node/198422654",
+        "type": "town",
+        "lat": -24.2316261,
+        "lon": -64.8678819,
+        "url": "https://www.openstreetmap.org/node/198422654"
+      }
+    },
+    {
+      "id": "Q6169692",
+      "name": "Yala",
+      "wikidataCoordinate": {
+        "lat": -24.116666666666667,
+        "lon": -65.4,
+        "precision": 0.016666666666666666
+      },
+      "osm": {
+        "element": "relation/4465721",
+        "type": "administrative",
+        "lat": -24.121316,
+        "lon": -65.4017626,
+        "url": "https://www.openstreetmap.org/relation/4465721"
+      }
+    },
+    {
+      "id": "Q16616407",
+      "name": "Parque provincial Potrero de Yala",
+      "wikidataCoordinate": {
+        "lat": -24.1,
+        "lon": -65.46666667,
+        "precision": 0.1
+      },
+      "osm": {
+        "element": "relation/10726213",
+        "type": "protected_area",
+        "lat": -24.1002637,
+        "lon": -65.492871,
+        "url": "https://www.openstreetmap.org/relation/10726213"
+      }
+    }
+  ]
+}

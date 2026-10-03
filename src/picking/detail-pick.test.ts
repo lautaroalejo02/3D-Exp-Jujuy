@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import type { GridSpec } from "../geo/grid";
 import {
+  detailPatchCenterBaseGrid,
   detailPatchRectBaseGrid,
   patchBaseGridMap,
 } from "../terrain/detail-grids";
@@ -58,6 +59,7 @@ const PATCH_SPEC: GridSpec = {
 };
 const PATCH_HEIGHT = 500;
 const EDGE_FADE = 0.05;
+const SPLIT_BAND = 8;
 
 function patch(): DetailPickPatch {
   const heights = new Float32Array(PATCH_SPEC.width * PATCH_SPEC.height);
@@ -65,8 +67,31 @@ function patch(): DetailPickPatch {
   return {
     id: "p",
     rect: detailPatchRectBaseGrid(PATCH_SPEC, BASE_SPEC),
+    center: detailPatchCenterBaseGrid(PATCH_SPEC, BASE_SPEC),
     gridMap: patchBaseGridMap(PATCH_SPEC, BASE_SPEC),
     heightfield: new Heightfield(heights, PATCH_SPEC),
+    edgeFade: EDGE_FADE,
+  };
+}
+
+// A second patch shifted 4 base cells east: rect [6.5, 1.5, 14.5, 5.5],
+// center (10.5, 3.5) — overlapping patch P's [2.5, 1.5, 10.5, 5.5] on
+// i in [6.5, 10.5], with the Voronoi bisector at bi = 8.5.
+const PATCH_B_SPEC: GridSpec = {
+  ...PATCH_SPEC,
+  originPx: [4 * 82048 + 12 + 16, 4 * 147200 + 8],
+};
+const PATCH_B_HEIGHT = 700;
+
+function patchB(): DetailPickPatch {
+  const heights = new Float32Array(PATCH_B_SPEC.width * PATCH_B_SPEC.height);
+  heights.fill(PATCH_B_HEIGHT);
+  return {
+    id: "p2",
+    rect: detailPatchRectBaseGrid(PATCH_B_SPEC, BASE_SPEC),
+    center: detailPatchCenterBaseGrid(PATCH_B_SPEC, BASE_SPEC),
+    gridMap: patchBaseGridMap(PATCH_B_SPEC, BASE_SPEC),
+    heightfield: new Heightfield(heights, PATCH_B_SPEC),
     edgeFade: EDGE_FADE,
   };
 }
@@ -100,10 +125,10 @@ describe("detailSurfaceElevation", () => {
   const p = patch();
 
   it("returns the base bilinear height outside the patch rect", () => {
-    expect(detailSurfaceElevation(base, [p], 2.0, 2.0)).toBe(
+    expect(detailSurfaceElevation(base, [p], 2.0, 2.0, SPLIT_BAND)).toBe(
       base.heightfield.heightAtGrid(2.0, 2.0),
     );
-    expect(detailSurfaceElevation(base, [p], 12.0, 6.0)).toBe(
+    expect(detailSurfaceElevation(base, [p], 12.0, 6.0, SPLIT_BAND)).toBe(
       base.heightfield.heightAtGrid(12.0, 6.0),
     );
   });
@@ -113,16 +138,17 @@ describe("detailSurfaceElevation", () => {
     // reported elevation is exactly the base-mesh surface — the same
     // continuity the shader produces at the patch border.
     for (const bj of [1.5, 3.5, 5.5]) {
-      expect(detailSurfaceElevation(base, [p], 2.5, bj)).toBeCloseTo(
-        baseMeshElevation(base, 2.5, bj),
-        6,
-      );
+      expect(
+        detailSurfaceElevation(base, [p], 2.5, bj, SPLIT_BAND),
+      ).toBeCloseTo(baseMeshElevation(base, 2.5, bj), 6);
     }
   });
 
   it("returns the pure patch height inside the faded band (w = 1)", () => {
     // Patch center: bi=6.5 -> gi=15.5, bj=3.5 -> gj=7.5 (u=v=0.5).
-    expect(detailSurfaceElevation(base, [p], 6.5, 3.5)).toBe(PATCH_HEIGHT);
+    expect(detailSurfaceElevation(base, [p], 6.5, 3.5, SPLIT_BAND)).toBe(
+      PATCH_HEIGHT,
+    );
   });
 
   it("blends with the smoothstep weight inside the fade band", () => {
@@ -130,9 +156,57 @@ describe("detailSurfaceElevation", () => {
     // deep inside (v=0.5) so the band edge is the u side.
     const baseE = baseMeshElevation(base, 2.7, 3.5);
     expect(baseE).toBe(0); // flat part of the fixture
-    expect(detailSurfaceElevation(base, [p], 2.7, 3.5)).toBeCloseTo(
-      (baseE + PATCH_HEIGHT) / 2,
-      6,
+    expect(
+      detailSurfaceElevation(base, [p], 2.7, 3.5, SPLIT_BAND),
+    ).toBeCloseTo((baseE + PATCH_HEIGHT) / 2, 6);
+  });
+});
+
+describe("detailSurfaceElevation overlap (Voronoi split)", () => {
+  const base = baseSurface();
+  const a = patch(); // center (6.5, 3.5), height 500
+  const b = patchB(); // center (10.5, 3.5), height 700
+
+  it("the nearer patch owns the point", () => {
+    // bi=9.5 is inside both rects; dA=3, dB=1 -> B owns. margin 2 ->
+    // splitW = smoothstep(0, 8, 2) = 0.15625; B is deep inside its own
+    // edge band there (u = 12/32 -> edgeW = 1).
+    const expected = PATCH_B_HEIGHT * 0.15625;
+    expect(
+      detailSurfaceElevation(base, [a, b], 9.5, 3.5, SPLIT_BAND),
+    ).toBeCloseTo(expected, 6);
+  });
+
+  it("the lower list index wins the exact bisector", () => {
+    // bi=8.5: equidistant to both centers; patch A (index 0) owns it and
+    // morphs to the base surface (margin ~0 -> w ~0). Reversed list
+    // order must hand the same pixel to B — deterministic either way.
+    const own = detailSurfaceElevation(base, [a, b], 8.5, 3.5, SPLIT_BAND);
+    const rev = detailSurfaceElevation(base, [b, a], 8.5, 3.5, SPLIT_BAND);
+    const baseE = baseMeshElevation(base, 8.5, 3.5);
+    expect(own).toBeCloseTo(baseE, 2); // owner sits at ~w=0
+    expect(rev).toBeCloseTo(baseE, 2);
+  });
+
+  it("a point covered by one patch only ignores the split", () => {
+    // bi=13 is inside B alone (outside A's rect): full B height.
+    expect(detailSurfaceElevation(base, [a, b], 13, 3.5, SPLIT_BAND)).toBe(
+      PATCH_B_HEIGHT,
     );
+  });
+
+  it("surface is continuous across the seam", () => {
+    // Elevation just left and just right of the bisector must agree:
+    // both sides morph toward the base surface, so the split cannot open
+    // a crack.
+    const left = detailSurfaceElevation(base, [a, b], 8.4, 3.5, SPLIT_BAND);
+    const right = detailSurfaceElevation(
+      base,
+      [a, b],
+      8.6,
+      3.5,
+      SPLIT_BAND,
+    );
+    expect(Math.abs(left - right)).toBeLessThan(50);
   });
 });

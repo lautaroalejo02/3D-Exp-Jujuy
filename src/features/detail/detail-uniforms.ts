@@ -25,6 +25,15 @@ import type { TerrainGridUniforms } from "../../terrain/terrain-uniforms";
 export const DETAIL_EDGE_FADE = 0.05;
 
 /**
+ * Width of the overlap Voronoi geomorph band, in BASE grid cells: within
+ * this distance of the line equidistant to the runner-up drawn patch,
+ * the owner morphs back toward the base surface so the two patch
+ * surfaces coincide with the base at the split line (detail.wgsl; the
+ * CPU twin is detail-pick.ts).
+ */
+export const DETAIL_SPLIT_BAND_CELLS = 8;
+
+/**
  * Fraction of clip-space w added to the patch's clip z. With reversed-Z
  * (near -> 1, far -> 0, compare "greater") a positive nudge makes the
  * patch win over the coincident base surface instead of z-fighting. At a

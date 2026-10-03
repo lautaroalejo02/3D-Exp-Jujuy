@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   assertPlacesDoc,
   assertRawCommonsPhotosDoc,
+  assertRawDepictsPhotosDoc,
+  assertRawOsmCoordinatesDoc,
   assertRawPlacesDoc,
   assertRawWikidataFactsDoc,
   assertRawWikipediaExtractsDoc,
@@ -11,8 +13,12 @@ import {
   buildPlaceFacts,
   buildPlacePhoto,
   commonsFullImageUrl,
+  effectiveCoordinate,
   eswikiArticleUrl,
   loadPlaces,
+  OSM_PRECISION_THRESHOLD_DEG,
+  photoExclusionReason,
+  PHOTO_EXCLUSIONS,
   placeDescription,
   placeDisplayName,
   PLACES_SCHEMA_VERSION,
@@ -20,6 +26,8 @@ import {
   unattributablePhoto,
   wikidataTimeYear,
   type RawCommonsPhoto,
+  type RawDepictsPhoto,
+  type RawOsmOverride,
   type RawWikipediaExtract,
   type RawWikidataFacts,
   type RawWikidataPlace,
@@ -651,7 +659,7 @@ describe("raw photos/extracts/facts validators", () => {
   });
 });
 
-describe("assertPlacesDoc schema v4", () => {
+describe("assertPlacesDoc schema v5", () => {
   const survey = { demElevationMeters: 2330, department: "Tumbaya" };
   const entry = buildPlaceEntry(stubRaw(), survey, {
     photos: [buildPlacePhoto(stubPhoto())],
@@ -692,5 +700,294 @@ describe("assertPlacesDoc schema v4", () => {
     const badFacts = JSON.parse(JSON.stringify(doc));
     badFacts.places[0].facts = { instanceOf: "pueblo" };
     expect(() => assertPlacesDoc(badFacts)).toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Task A1 (maqueta-ajustes-lugares): OSM coordinate overrides, depicts-based
+// photos and the editorial exclusion table.
+// ---------------------------------------------------------------------------
+
+function stubOsm(over: Partial<RawOsmOverride> = {}): RawOsmOverride {
+  return {
+    id: "Q1",
+    name: "Nombre",
+    wikidataCoordinate: { lat: -23.5, lon: -65.5, precision: 0.0166667 },
+    osm: {
+      element: "relation/4473250",
+      type: "administrative",
+      lat: -23.74655,
+      lon: -65.4992167,
+      url: "https://www.openstreetmap.org/relation/4473250",
+    },
+    ...over,
+  };
+}
+
+describe("assertRawOsmCoordinatesDoc", () => {
+  it("accepts the committed shape", () => {
+    expect(() =>
+      assertRawOsmCoordinatesDoc({ places: [stubOsm()] }),
+    ).not.toThrow();
+  });
+
+  it("rejects an element reference that is not node/way/relation", () => {
+    expect(() =>
+      assertRawOsmCoordinatesDoc({
+        places: [
+          stubOsm({
+            osm: {
+              ...stubOsm().osm,
+              element: "area/4473250",
+            },
+          }),
+        ],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects an element url that does not match the element ref", () => {
+    expect(() =>
+      assertRawOsmCoordinatesDoc({
+        places: [
+          stubOsm({
+            osm: {
+              ...stubOsm().osm,
+              url: "https://www.openstreetmap.org/way/4473250",
+            },
+          }),
+        ],
+      }),
+    ).toThrow();
+  });
+});
+
+describe("effectiveCoordinate", () => {
+  it("uses the OSM coordinate at or above the precision threshold", () => {
+    const raw = stubRaw({
+      coordinates: {
+        lat: -23.5,
+        lon: -65.5,
+        precision: OSM_PRECISION_THRESHOLD_DEG,
+      },
+    });
+    const coordinate = effectiveCoordinate(raw, stubOsm());
+    expect(coordinate.source).toBe("osm");
+    expect(coordinate.lat).toBe(-23.74655);
+    expect(coordinate.lon).toBe(-65.4992167);
+    expect(coordinate.osmElementUrl).toBe(
+      "https://www.openstreetmap.org/relation/4473250",
+    );
+  });
+
+  it("keeps Wikidata below the threshold or without an override", () => {
+    const precise = stubRaw({
+      coordinates: { lat: -23.5, lon: -65.5, precision: 0.0001 },
+    });
+    expect(effectiveCoordinate(precise, stubOsm()).source).toBe("wikidata");
+    expect(effectiveCoordinate(precise, stubOsm()).lat).toBe(-23.5);
+    const coarseNoOverride = stubRaw();
+    expect(
+      effectiveCoordinate(coarseNoOverride, undefined).source,
+    ).toBe("wikidata");
+  });
+});
+
+describe("buildPlaceEntry OSM provenance", () => {
+  const base = { demElevationMeters: 2330, department: "Tumbaya" };
+
+  it("records the OSM coordinate with its element url", () => {
+    const place = buildPlaceEntry(stubRaw(), {
+      ...base,
+      coordinates: { lat: -23.74655, lon: -65.4992167 },
+      coordinateSource: "osm",
+      osmElementUrl: "https://www.openstreetmap.org/relation/4473250",
+    });
+    expect(place.lat).toBe(-23.74655);
+    expect(place.lon).toBe(-65.4992167);
+    expect(place.coordinateSource).toBe("osm");
+    expect(place.osmElementUrl).toBe(
+      "https://www.openstreetmap.org/relation/4473250",
+    );
+    expect(assertPlacesDocable(place)).toBe(true);
+  });
+
+  it("fails when an osm coordinate lacks its element url", () => {
+    expect(() =>
+      buildPlaceEntry(stubRaw(), {
+        ...base,
+        coordinateSource: "osm",
+      }),
+    ).toThrow(/osmElementUrl/);
+  });
+
+  it("defaults to wikidata and stores no element url", () => {
+    const place = buildPlaceEntry(stubRaw(), base);
+    expect(place.coordinateSource).toBe("wikidata");
+    expect(place.osmElementUrl).toBeUndefined();
+  });
+});
+
+/** Round-trip a built place through the schema validator. */
+function assertPlacesDocable(place: unknown): boolean {
+  try {
+    assertPlacesDoc({
+      schemaVersion: PLACES_SCHEMA_VERSION,
+      pipelineVersion: 6,
+      inputSha256: "0".repeat(64),
+      sources: {},
+      places: [place],
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+describe("assertPlacesDoc coordinate provenance", () => {
+  const survey = { demElevationMeters: 2330, department: "Tumbaya" };
+
+  it("rejects a wikidata place carrying an osmElementUrl", () => {
+    const place = JSON.parse(
+      JSON.stringify(buildPlaceEntry(stubRaw(), survey)),
+    );
+    place.osmElementUrl = "https://www.openstreetmap.org/relation/4473250";
+    expect(() =>
+      assertPlacesDoc({
+        schemaVersion: PLACES_SCHEMA_VERSION,
+        pipelineVersion: 6,
+        inputSha256: "0".repeat(64),
+        sources: {},
+        places: [place],
+      }),
+    ).toThrow();
+  });
+
+  it("rejects an osm place missing its element url", () => {
+    const place = JSON.parse(
+      JSON.stringify(
+        buildPlaceEntry(stubRaw(), {
+          ...survey,
+          coordinateSource: "osm",
+          osmElementUrl: "https://www.openstreetmap.org/relation/4473250",
+        }),
+      ),
+    );
+    delete place.osmElementUrl;
+    expect(() =>
+      assertPlacesDoc({
+        schemaVersion: PLACES_SCHEMA_VERSION,
+        pipelineVersion: 6,
+        inputSha256: "0".repeat(64),
+        sources: {},
+        places: [place],
+      }),
+    ).toThrow();
+  });
+});
+
+describe("assertRawDepictsPhotosDoc", () => {
+  function stubDepictsPhoto(
+    over: Partial<RawDepictsPhoto> = {},
+  ): RawDepictsPhoto {
+    return {
+      ...stubPhoto(),
+      selection: "wikidata-P18",
+      ...over,
+    };
+  }
+
+  it("accepts the committed shape", () => {
+    expect(() =>
+      assertRawDepictsPhotosDoc({
+        places: [{ id: "Q1", photos: [stubDepictsPhoto()] }],
+      }),
+    ).not.toThrow();
+  });
+
+  it("accepts the commons-depicts-P180 selection", () => {
+    expect(() =>
+      assertRawDepictsPhotosDoc({
+        places: [
+          {
+            id: "Q1",
+            photos: [
+              stubDepictsPhoto({ selection: "commons-depicts-P180" }),
+            ],
+          },
+        ],
+      }),
+    ).not.toThrow();
+  });
+
+  it("rejects a photo without a valid selection tag", () => {
+    expect(() =>
+      assertRawDepictsPhotosDoc({
+        places: [
+          {
+            id: "Q1",
+            photos: [stubDepictsPhoto({ selection: "category" as never })],
+          },
+        ],
+      }),
+    ).toThrow(/selection/);
+    expect(() =>
+      assertRawDepictsPhotosDoc({
+        places: [
+          {
+            id: "Q1",
+            photos: [stubPhoto() as unknown as RawDepictsPhoto],
+          },
+        ],
+      }),
+    ).toThrow(/selection/);
+  });
+
+  it("still enforces the allowed-license rule", () => {
+    expect(() =>
+      assertRawDepictsPhotosDoc({
+        places: [
+          {
+            id: "Q1",
+            photos: [stubDepictsPhoto({ license: "CC BY-NC 4.0" })],
+          },
+        ],
+      }),
+    ).toThrow(/license the card cannot show/);
+  });
+});
+
+describe("PHOTO_EXCLUSIONS", () => {
+  it("applies the task's editorial table", () => {
+    expect(PHOTO_EXCLUSIONS.length).toBe(14);
+    for (const exclusion of PHOTO_EXCLUSIONS) {
+      expect(
+        photoExclusionReason(exclusion.placeId, exclusion.file),
+      ).toBe(exclusion.reason);
+    }
+  });
+
+  it("keeps every photo not on the table", () => {
+    expect(
+      photoExclusionReason("Q1", "Una foto cualquiera.jpg"),
+    ).toBeUndefined();
+    expect(
+      photoExclusionReason(
+        "Q44217",
+        "Otra foto de San Salvador de Jujuy.jpg",
+      ),
+    ).toBeUndefined();
+  });
+
+  it("excludes the unrelated San Salvador images that motivated the task", () => {
+    expect(
+      photoExclusionReason(
+        "Q44217",
+        "Alfajor de Frutos Rojos marca La Viandita Dulce de San Salvador de Jujuy.jpg",
+      ),
+    ).toBeDefined();
+    expect(
+      photoExclusionReason("Q44217", "Jujuy, energía viva.jpg"),
+    ).toBeDefined();
   });
 });

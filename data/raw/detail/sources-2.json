@@ -1,0 +1,1738 @@
+{
+  "description": "Second batch of detail patches (San Salvador de Jujuy, Humahuaca, Tilcara), same layers/zooms as sources.json. Downloaded once by the coordinator on 2026-10-03, sequentially.",
+  "sites": [
+    {
+      "id": "san-salvador",
+      "name": "San Salvador de Jujuy",
+      "wikidata": "Q44217",
+      "lat": -24.185555555556,
+      "lon": -65.299444444444,
+      "satellite": {
+        "zoom": 14,
+        "x": [
+          5216,
+          5224
+        ],
+        "y": [
+          9322,
+          9330
+        ],
+        "layer": "s2cloudless_3857",
+        "template": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"
+      },
+      "dem": {
+        "zoom": 12,
+        "x": [
+          1304,
+          1306
+        ],
+        "y": [
+          2330,
+          2332
+        ],
+        "template": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+      },
+      "source": {
+        "kind": "wikidata",
+        "url": "https://www.wikidata.org/wiki/Q44217",
+        "property": "P625"
+      }
+    },
+    {
+      "id": "humahuaca",
+      "name": "Humahuaca",
+      "wikidata": "Q1026833",
+      "lat": -23.20544,
+      "lon": -65.35048,
+      "satellite": {
+        "zoom": 14,
+        "x": [
+          5213,
+          5221
+        ],
+        "y": [
+          9274,
+          9282
+        ],
+        "layer": "s2cloudless_3857",
+        "template": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"
+      },
+      "dem": {
+        "zoom": 12,
+        "x": [
+          1303,
+          1305
+        ],
+        "y": [
+          2318,
+          2320
+        ],
+        "template": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+      },
+      "source": {
+        "kind": "wikidata",
+        "url": "https://www.wikidata.org/wiki/Q1026833",
+        "property": "P625"
+      }
+    },
+    {
+      "id": "tilcara",
+      "name": "Tilcara",
+      "wikidata": "Q604722",
+      "lat": -23.5768095,
+      "lon": -65.3934201,
+      "satellite": {
+        "zoom": 14,
+        "x": [
+          5211,
+          5219
+        ],
+        "y": [
+          9292,
+          9300
+        ],
+        "layer": "s2cloudless_3857",
+        "template": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/{z}/{y}/{x}.jpg"
+      },
+      "dem": {
+        "zoom": 12,
+        "x": [
+          1302,
+          1304
+        ],
+        "y": [
+          2323,
+          2325
+        ],
+        "template": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
+      },
+      "source": {
+        "kind": "wikidata",
+        "url": "https://www.wikidata.org/wiki/Q604722",
+        "property": "P625"
+      }
+    }
+  ],
+  "tiles": [
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5216.jpg",
+      "bytes": 6818,
+      "sha256": "d87c8830d33ea01bbbf3816f5da79ede246fecd218cc7eece57e48615088b6bf"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5216.jpg",
+      "bytes": 4949,
+      "sha256": "75cc84bd6fcc97f1499fa1c5f6b15680fb6c6c872480fb67c5e2266291c71591"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5216.jpg",
+      "bytes": 6918,
+      "sha256": "437b54bf6c526001ef92049ed2a6f1fa8e2f11ead9a64cafb46a77f3a1b94197"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5216.jpg",
+      "bytes": 9992,
+      "sha256": "e3542b5b65feaeda935ca5f2f09d10effe4a71da8fdec24a01ec5feb6bd1c2e8"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5216.jpg",
+      "bytes": 7682,
+      "sha256": "5ba77a7d56483b27e3f26b1905db9e9f1af5ebb8bf7b794835e7d4c7ac46eabf"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5216.jpg",
+      "bytes": 5273,
+      "sha256": "067bdf3fce4714a5932139479d7381c7da189bf0b77b51d89644ba72b5254347"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5216.jpg",
+      "bytes": 6368,
+      "sha256": "f122e46e93190569034e60ca0fb0e81253e58ecbc737878d958f153ed8ccc19b"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5216.jpg",
+      "bytes": 6010,
+      "sha256": "85b5f90777a0a93e05be80481c91e9bb96baf6a490bccc90e9132c072337a0cf"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5216_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5216.jpg",
+      "bytes": 5604,
+      "sha256": "715971633a8adc639ac3bcb97baf01fba3a018d83f7d4f8887cffdb6afd62aba"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5217.jpg",
+      "bytes": 6476,
+      "sha256": "7e1faec7638fd497191bfa108e0c6f6802932b6cfc39394ee3bc3fcfba42b1f7"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5217.jpg",
+      "bytes": 6108,
+      "sha256": "a004d8f1c35358db2893e1db6b791fb4b0360afcfa2d24ff3f896df88780a353"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5217.jpg",
+      "bytes": 5734,
+      "sha256": "a4a1bf5394babafeed4f7b73866023c4abb75507fb737b200c79b8ef1f0724e2"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5217.jpg",
+      "bytes": 6705,
+      "sha256": "2fbc6a5c7e2ad10d1df4f047e169acea98aab6f2c868314f37070dec59accd61"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5217.jpg",
+      "bytes": 10012,
+      "sha256": "29afd4db1936cebc39acd1257dbced108400f899c55703da521f1500c0b6b142"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5217.jpg",
+      "bytes": 4473,
+      "sha256": "f1e472d1302259200fb47288a86c4bfbe485de7284d9ae18c18669959baef941"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5217.jpg",
+      "bytes": 6747,
+      "sha256": "8283e1f2a3d14edb073ff65cb9851af74d710dc1ee1a4c900e29f70bff45f32a"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5217.jpg",
+      "bytes": 6429,
+      "sha256": "5c3564b3837ec3b84bf39e925aa952050c6d5999a0a91492ec0eefc176d12eb4"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5217_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5217.jpg",
+      "bytes": 6367,
+      "sha256": "80b5551f1df1801c9301ebfd93a74d53d1c2ee4199f8065d52cc33c17fe2602c"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5218.jpg",
+      "bytes": 6405,
+      "sha256": "df364783cdb01f46ad2a534d198eaf0f018190397fa8b6a0abe8562d3338c471"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5218.jpg",
+      "bytes": 7335,
+      "sha256": "92db6eecc95de023fa710a5c30eef9594198ec4dec4f7e6c9ec46cfc89853276"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5218.jpg",
+      "bytes": 6287,
+      "sha256": "2bcd597373a26047d32faa9d5080e0458d3792592e86cee35fcd88be5ac35a33"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5218.jpg",
+      "bytes": 7632,
+      "sha256": "5e5bad52141c4cac46ca645ac14109b4a266570bf24b06dc77751b87ea85902e"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5218.jpg",
+      "bytes": 12023,
+      "sha256": "91287b3e4917de9930b7c405a87737bde1fe81164b07136fcc346f58247ca569"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5218.jpg",
+      "bytes": 6851,
+      "sha256": "a70875ddde8eb09c4692b80fcdf3e7874afbe01147a2b9d177436bf462be1803"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5218.jpg",
+      "bytes": 4743,
+      "sha256": "183727fa5f67a332b3ec043a18039ccb00e36981ffd400dfe7e5e2fab9872602"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5218.jpg",
+      "bytes": 5145,
+      "sha256": "ddc535163e2c19cf374e8b8914e7dc988ee524c1bfee8010550d2d6c7ce8caaa"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5218_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5218.jpg",
+      "bytes": 6110,
+      "sha256": "c8c3d58aa110d2fdacebe2e889cc57c1be0dd5a0dfe0b9054cba95c6961522d0"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5219.jpg",
+      "bytes": 6810,
+      "sha256": "cf522d2b2414f2b4b5ad5d4a033f73f7d50dbb30a7884724a0f81c352d502b8d"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5219.jpg",
+      "bytes": 5906,
+      "sha256": "10a541bdeef00cc6545da0966d11f2797abcbec62770322edaaade73c3f0929e"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5219.jpg",
+      "bytes": 5842,
+      "sha256": "f778ea79e65cf54b506459bc931df5685c32994357c28ce7ab5560e3843bcfe0"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5219.jpg",
+      "bytes": 5759,
+      "sha256": "0b1e0456268c8158b846f416b44fd91b294afcfb0a31c497e19e4b6aa5088033"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5219.jpg",
+      "bytes": 14806,
+      "sha256": "503d29f35c3f4013f7b2d31e4f91b80219c8e4baebef646b2c58c0adc90024b8"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5219.jpg",
+      "bytes": 12872,
+      "sha256": "c29550e5eeed73a75fa3ab098b50db5edb1c1a055962c03987c21a358646acb2"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5219.jpg",
+      "bytes": 4464,
+      "sha256": "bea326f709683e3b3813642e6c2f80421e9b1ebdefb23811a66ae3ff4dd974cb"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5219.jpg",
+      "bytes": 4296,
+      "sha256": "15e1fc28de1da2d63ab24da5ec36797c75234ac88bfd5d2492a3d5eaa8624ddb"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5219_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5219.jpg",
+      "bytes": 5374,
+      "sha256": "88b5f20bbeb080609fb443e0b0c431dc96ff5b74d9c0c19437ef5d722352ba86"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5220.jpg",
+      "bytes": 5931,
+      "sha256": "edd12a0fa424a3864946c5fb5072d250c6b5a12965a476c32d70680a6e7c5b44"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5220.jpg",
+      "bytes": 5111,
+      "sha256": "a5d76f6f7440817e5d7c85abc8d037dcbb20b613ca21e632b0ede0a5d155c106"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5220.jpg",
+      "bytes": 6328,
+      "sha256": "efed99e48cf3207024f34b359e37d50b2a0844329ff847cb74951a48a2e73bec"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5220.jpg",
+      "bytes": 7889,
+      "sha256": "8d853841905cd96ba9c92c31cc219af2a6a38c8e5e645e6c7e1420e68b535304"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5220.jpg",
+      "bytes": 13352,
+      "sha256": "3b4291fc91f6e9d7fff1e6006143dab7a94eef4e4700c199564f244d2c13209c"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5220.jpg",
+      "bytes": 15351,
+      "sha256": "a85bdd332bcb03af55109e222b50f91c3503b9a2df8f2ed7a5e9562714acbaa2"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5220.jpg",
+      "bytes": 9224,
+      "sha256": "2fee5d64e12e37cdf43e644dca910097a3bd073125ef0187238c263ec7c201d1"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5220.jpg",
+      "bytes": 5129,
+      "sha256": "713dba5c452a0cd537232afe589fa9f733d43bfeca10310e23db32dfbd3083a3"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5220_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5220.jpg",
+      "bytes": 3991,
+      "sha256": "00353ed416e4a34a20a6a6d1cdc9d342628c7ace6e3128581d8126209d5713d6"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5221.jpg",
+      "bytes": 5355,
+      "sha256": "a3be5f153b5f7cbf3d99806cfca389badd0da5e60908322c8d7759690480cce5"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5221.jpg",
+      "bytes": 4782,
+      "sha256": "b6b2e2c5bfe6a52af8522b03fcb2a60e632b8becbad4d2cb585a99bd20b9e7f8"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5221.jpg",
+      "bytes": 4243,
+      "sha256": "63a71ec75861852ba26d765070bcfe96fe63fd4e2741082f19d54ac21a4457b5"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5221.jpg",
+      "bytes": 4323,
+      "sha256": "f63fa259b158d8a1eddfb8eaaa7b900ef23efa9582281718b3912681e07704ad"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5221.jpg",
+      "bytes": 9094,
+      "sha256": "c9ea060ca6bfb9b904911ea38987b443cb8890a6365992d9816166934081368e"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5221.jpg",
+      "bytes": 13174,
+      "sha256": "2668799dd3e4b3bf115fd54511f629831e4fc8d3aaba37c87b3394bfd6eb20ba"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5221.jpg",
+      "bytes": 13900,
+      "sha256": "87dc41accb1774d92739c1e7d4952e09adab0632c173c3601f85a9d16a22a18d"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5221.jpg",
+      "bytes": 13286,
+      "sha256": "f7bcd16425cee592fcae92a744acc2ec40efcddaca9f0e0da77f771e4f522725"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5221_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5221.jpg",
+      "bytes": 9894,
+      "sha256": "5cec67c97ab5d024879ede792ccb1c5a1f39066b3d821f47b0fbe45625cc405d"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5222.jpg",
+      "bytes": 5139,
+      "sha256": "f9d80f3fba254bad2ee508516d0611c2ac7a4947750eca4b8b7eb48c2689e856"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5222.jpg",
+      "bytes": 4771,
+      "sha256": "0841587ee65c13a310646654c3fb23ef1bce87c1d09c81f2fda3d10d0c795a67"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5222.jpg",
+      "bytes": 4443,
+      "sha256": "6b96c7bee78d2f57ae231555b2212755b1fba3a32beaaa86d6d6b48393daf271"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5222.jpg",
+      "bytes": 4182,
+      "sha256": "9ff1b54da7b5803cd463d6f6dbc2cc63b5e2c829a6dbfc53f183f43d13b0bc62"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5222.jpg",
+      "bytes": 4166,
+      "sha256": "1bfabe3fb49e204dd7788e277796813a2cd1a02c985dd7ebdafd47214cc2b7ac"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5222.jpg",
+      "bytes": 5482,
+      "sha256": "e3d624f991a3ab3dab25099024cbc6521a7e753f8e86ec9094ae75bfe4ee6eda"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5222.jpg",
+      "bytes": 10225,
+      "sha256": "e9e20033c70d271e04da022454a30716c60c331f9e64cb728b7183cf4479d8b0"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5222.jpg",
+      "bytes": 10975,
+      "sha256": "5d63e57e69a22c48a6720b6dff71b3f4436ed82cac966f35b2fbe0a02a62aeae"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5222_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5222.jpg",
+      "bytes": 10208,
+      "sha256": "0c78b54a799b655dd35258ec79b8120f8da3665fb39578e6637acf044c6cc6d0"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5223.jpg",
+      "bytes": 4784,
+      "sha256": "9fddd674a383038cda646758703eb37a03176e6e9f238ca8e95af8c149b2749c"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5223.jpg",
+      "bytes": 5540,
+      "sha256": "256d70357bd250dfb36fdd7a6f669c435342ca9bc1e2c7170f19ec004b967893"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5223.jpg",
+      "bytes": 5495,
+      "sha256": "cc25f533c5c8b679db37ba7057ed858edc13809d04235dbb2a5208bb0c062538"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5223.jpg",
+      "bytes": 4840,
+      "sha256": "a567a373b48e96490ea9e9c16266bbfc03b7a4b2350bd5f9c96a0976c327fc63"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5223.jpg",
+      "bytes": 4950,
+      "sha256": "4264ca70d83a2df791c0ecc32f4cc1e97dc5d07c60177cafa03461e5519b270f"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5223.jpg",
+      "bytes": 5505,
+      "sha256": "3ad05c1b41df6097af69cb9149ed6fec8267720cbed980b4606bf2a9142088cb"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5223.jpg",
+      "bytes": 6456,
+      "sha256": "8aa0e2018323d0cebb260986381e5316761f9f5bca42a843b490337078d56799"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5223.jpg",
+      "bytes": 9226,
+      "sha256": "8c0aa4bf27c396ed92a7ae100f5a52101c936cf0d8d98c472cd4dfc5bb892ec9"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5223_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5223.jpg",
+      "bytes": 12663,
+      "sha256": "06ca11be22c99e93c930fd6d716823c789546f76281ea6f1e82dd706bca42e2d"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9322.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9322/5224.jpg",
+      "bytes": 5852,
+      "sha256": "c16d3209e8ad264fab529c3604d318fa48c3c98b18fc0e827b7b46714e8f173e"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9323.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9323/5224.jpg",
+      "bytes": 4612,
+      "sha256": "d7447eb117c2cf7129287198866a607018e773bb022684236f21e03b134a4446"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9324.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9324/5224.jpg",
+      "bytes": 4580,
+      "sha256": "9245080ec7499b14e1cfcd6246248bbf707997eb1e43d3ace68384f24e59db12"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9325.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9325/5224.jpg",
+      "bytes": 5366,
+      "sha256": "fc94c4c8984db3d8948d532c56c7e55fe2c8c99b5e723d09e617447de3efd445"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9326.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9326/5224.jpg",
+      "bytes": 4576,
+      "sha256": "0aec0a4ce040cdcb7ef1a045838fcd78552c0688416a3c92fcc0c6ffb3f209c0"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9327.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9327/5224.jpg",
+      "bytes": 3125,
+      "sha256": "dc61fb939ecc32146a9d4883186ffdef48f5f499b2ddc5306965cf0eb6897221"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9328.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9328/5224.jpg",
+      "bytes": 5490,
+      "sha256": "5c28bbb3eb9c89401413f8c3ed4e5da54237bb73686bf2f32df0bf1fe925b088"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9329.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9329/5224.jpg",
+      "bytes": 9552,
+      "sha256": "b45836519bdb504eb51b28427cf59eb7a8ce03f1220abd3aba0e348cfbc4ec30"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/satellite/14_5224_9330.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9330/5224.jpg",
+      "bytes": 13957,
+      "sha256": "76a4a454df1ccceee364e01e9748b571c10bf7e08f686346fe95ad7d3033335a"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1304_2330.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2330.png",
+      "bytes": 52976,
+      "sha256": "fca892fcd366ecec89fb9b6544340bf79018b6398b1e0fd87304483a4e06d651"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1304_2331.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2331.png",
+      "bytes": 44422,
+      "sha256": "53ce1d32a5d5baee24a7b27b5c0310fc64cc974655848129bdd24b4b10004d8c"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1304_2332.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2332.png",
+      "bytes": 46936,
+      "sha256": "1632265ae416717cfdb6451df6deef0011851817b6a093c5bc76cef5d63a8c63"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1305_2330.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2330.png",
+      "bytes": 51835,
+      "sha256": "dda49ba6f8f8bc65fee03a7eacd53b9f7268722f40f5ef8380d1aa093a0f86dd"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1305_2331.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2331.png",
+      "bytes": 41964,
+      "sha256": "45cec3b6b936a2da0bf57c98b31f32c759045d433b44d5ba950fcb7b14c2d09e"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1305_2332.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2332.png",
+      "bytes": 31352,
+      "sha256": "c02121d2d12656807cd00e793a7d96e63624c58e2e314a91d8a059604e8f7c40"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1306_2330.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1306/2330.png",
+      "bytes": 50217,
+      "sha256": "af7b969dd0d34b3ec21bbc36980dc59d766cd035cee3528c38bdc92e965f7210"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1306_2331.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1306/2331.png",
+      "bytes": 43783,
+      "sha256": "933c10c416d3e242650f145f9f328ae41643c9c04cf720680b3ebee5b2e9b875"
+    },
+    {
+      "file": "data/raw/detail/san-salvador/dem/12_1306_2332.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1306/2332.png",
+      "bytes": 30674,
+      "sha256": "ab77edb8a93e93e7c9224db0ebac4fed17e0891726da92d33709e22c6076b8aa"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5213.jpg",
+      "bytes": 8895,
+      "sha256": "f85bdd571a91a5d86c431a6878fc8e7789cb8b944706eddcab4b2ba417368353"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5213.jpg",
+      "bytes": 8580,
+      "sha256": "61e31058dde9c920536aaf701ebaf40ebc4f0a82892571453b66f49c5bf9c73b"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5213.jpg",
+      "bytes": 9237,
+      "sha256": "4f23dccc960ce5567c4a1cab91d062be8c51a85031fb14e3736ee2480141cdb0"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5213.jpg",
+      "bytes": 9365,
+      "sha256": "e68f3bb679e79f5532519cf021ceb3879ebd27e4dcdb90b3f1eb702f71c611e8"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5213.jpg",
+      "bytes": 8448,
+      "sha256": "90f7fbe1563dd8d7d54721dc4f3b43ffcc894bf1aae2cbcdfc528635bf0bea6e"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5213.jpg",
+      "bytes": 9120,
+      "sha256": "08ade9d3361eb474d5c423cc4fe006f1a8a5fb0c185d272991b23e33b43dc782"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5213.jpg",
+      "bytes": 8964,
+      "sha256": "e40602559dbbf858c804d0927a853e1c0b461bbdb17c4e3eac129822836f1793"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5213.jpg",
+      "bytes": 9331,
+      "sha256": "0774f12fd37bca731e2f534e8f8120a6e1ccb2db2f44d14e4c3e5ed42db5a187"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5213_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5213.jpg",
+      "bytes": 8772,
+      "sha256": "34d98cf80f26d8cade4da9753e495b32dc581ff632171a24cfe47e836759f74d"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5214.jpg",
+      "bytes": 9411,
+      "sha256": "f868053cf32f1d8e6871519f6271821c9be03b658898b915eda8c2ec63e9795c"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5214.jpg",
+      "bytes": 8244,
+      "sha256": "eba53333b082eeca24fdf3a632b5e9309d27415ff13bf9a148f9a7e561b845a7"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5214.jpg",
+      "bytes": 9121,
+      "sha256": "7b1f8cb1b73ef6f7af0279c629ed1559a069ad6025651fc69e5a840ca1a83b1f"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5214.jpg",
+      "bytes": 9076,
+      "sha256": "bb361ac7c239cab29aa6bc932b7ea2c43e8c95db897ed9520cf37a21cd4f05fc"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5214.jpg",
+      "bytes": 10216,
+      "sha256": "fd79b3cc93b0a7d2235bd3c22e5b73f75d95ec9a31616c672421e420150503d7"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5214.jpg",
+      "bytes": 9322,
+      "sha256": "1f6390b9aa5769f8a47757a1919a241eaaea741b1bdacd14bc17b0eccfb0e0ee"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5214.jpg",
+      "bytes": 8870,
+      "sha256": "ca0b6ea2c8352f9f45fcf1856f9277bd97b4c09a39d43a0f9cea6eca1a127246"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5214.jpg",
+      "bytes": 10146,
+      "sha256": "e2f6e04dab8cf5e81780b05562e92aed3a8af440d2913b13f1ab5bde088f9ecf"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5214_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5214.jpg",
+      "bytes": 8223,
+      "sha256": "a7161b1c732179913fe850554dfe93bffd2f79225cfe168346bab94629be6c88"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5215.jpg",
+      "bytes": 8202,
+      "sha256": "fb416559522eb6dd7d253def3e3e29c5498f6d24efb58684e7109afcb9c4a6ec"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5215.jpg",
+      "bytes": 8257,
+      "sha256": "dc1c60823b8510dfd2263dc581ed55aafb723fa53966d59b8db771afc9847fd4"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5215.jpg",
+      "bytes": 8394,
+      "sha256": "74fb7146ccb60eb05ff3557bbb14981607a8de69d1de891fff9ea3e7b122b047"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5215.jpg",
+      "bytes": 8520,
+      "sha256": "40bf42381ebe0adc31ed2c6729008d2d67b44a8b9c0eb2ae48a04a55480d99ce"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5215.jpg",
+      "bytes": 7904,
+      "sha256": "cb79a7d53b287f3d06e648b525c840c84775a4025df0f0145fc39cd68eddc44c"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5215.jpg",
+      "bytes": 8142,
+      "sha256": "f18f7ea02580bdb07dd724a638478d091538b375397f3bce5f819ae93f3642e1"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5215.jpg",
+      "bytes": 8375,
+      "sha256": "722da94f8c4820a5728c51dc514961909c27870cd9e38156d51e8f32fb398eb2"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5215.jpg",
+      "bytes": 9125,
+      "sha256": "3108edb6ee11e29873a5d9c1fdc53da1e50352572b5a4fc078c47c6088bf110f"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5215_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5215.jpg",
+      "bytes": 7522,
+      "sha256": "71c0acfff02f6731918d4ea9092a166f507118dde8fbeca47fb21901fc147279"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5216.jpg",
+      "bytes": 9665,
+      "sha256": "d2a695207677d59fc9858205d93c5bbd86e6766998d8b32e53465da0de882902"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5216.jpg",
+      "bytes": 9377,
+      "sha256": "37c8ec39c516edbb95dc4b360353417ef3f9b71621bd01e0c1748d880ba186c6"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5216.jpg",
+      "bytes": 9246,
+      "sha256": "37f14be6f07af7b6c31b3c9b7b03320abfad4ed427361f695a37be7872307876"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5216.jpg",
+      "bytes": 9458,
+      "sha256": "a74d1597a93d6d9abc1bc97c174a6e18805a5ba8af6f49ca8e2fbe1a90c2f22d"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5216.jpg",
+      "bytes": 9165,
+      "sha256": "7e9e7cc5a3452ea1fac12f182f32aa173851be8d21ed0652ae657288a4060405"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5216.jpg",
+      "bytes": 9114,
+      "sha256": "b35697466f5058c4867cdfa32d1abda08bb20413ab2af8f5cd69dccfe86e68d5"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5216.jpg",
+      "bytes": 9699,
+      "sha256": "537d68135bdd9f6bab5440a914e79411c1fab5ce9b15fed6bc57219e4b80b992"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5216.jpg",
+      "bytes": 9489,
+      "sha256": "159313ef99ffbc161615d4b0cbb0d392b8e30b276f7caabb65c7b6799e538d70"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5216_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5216.jpg",
+      "bytes": 8566,
+      "sha256": "1d60c7def7a2b652509c47e12ba932c476dd9e261df74afa19a732b1c779afc0"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5217.jpg",
+      "bytes": 9798,
+      "sha256": "a478e870d8b5714e8389f8b0326c4395d0f24f3d05cf7953540df1b9d03b7657"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5217.jpg",
+      "bytes": 8676,
+      "sha256": "dec43439adafa6682beebc62c10317d291f9f7cd593a401506d1b99851abaa0a"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5217.jpg",
+      "bytes": 9582,
+      "sha256": "36b71225550fecfad348acc2bde8eb282ae63efce6c4ffe54a975216c021e74a"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5217.jpg",
+      "bytes": 11792,
+      "sha256": "6b427a29dbc8b7ece35e4fc8bb3784e86f749963b9e98232f8003f24bdf94fe6"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5217.jpg",
+      "bytes": 11035,
+      "sha256": "ac22c2df3d75499b4452f085e7b3050efcde9f5f485b4f8d39b18c7a611a59a8"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5217.jpg",
+      "bytes": 11834,
+      "sha256": "8de90e59ff0af1ca0104e9f41b5785ebc6d0fc75c5cb869f5a57ead19a9ce5b5"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5217.jpg",
+      "bytes": 12033,
+      "sha256": "967dfa3caaca4d630d2915c1757ec71e939822467f0fc7c7d8691f41a7626d30"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5217.jpg",
+      "bytes": 10556,
+      "sha256": "3ddcc9e887e0ebd14e2dee9e0b267a29a0d395fbcb461e7c540cd472b55ac3aa"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5217_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5217.jpg",
+      "bytes": 10789,
+      "sha256": "0c76f9662c1d68f8e02ea90db061fbf01524dc54381b44557ee1375c042e6f63"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5218.jpg",
+      "bytes": 7908,
+      "sha256": "c8941d11e18e61b1351379bc2233474f18dc8e08fe4dcda736e20103ad4378f4"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5218.jpg",
+      "bytes": 8078,
+      "sha256": "31387502c7e521f25018c12ce25b0903ffbb94a71b6a1db8af55c11ce37d7bf2"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5218.jpg",
+      "bytes": 9314,
+      "sha256": "ce4fe0735bcb2ae470ddde3843e6eb9ac2b958cffa1567fc9d332636b8d5d3b5"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5218.jpg",
+      "bytes": 12268,
+      "sha256": "bf2687aabee7f2d39406096aeb3f87722defa520589c8efad0752da055892e57"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5218.jpg",
+      "bytes": 11677,
+      "sha256": "d3c9c3e28d1a192793aab8a7d3522cc67331c4a3b83d2ce882023009bb13214a"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5218.jpg",
+      "bytes": 8394,
+      "sha256": "a10e1c2dbc314d897220509a87da29e7704df60a950100b9bc9b2973d19b013f"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5218.jpg",
+      "bytes": 10734,
+      "sha256": "ba684e1daa053d9d39e1ca5ba6554efe78043c67b3db7cfb909df8835442785c"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5218.jpg",
+      "bytes": 6615,
+      "sha256": "1785203ca473eec965212ecfd48ff12e14ebaf4926f65a11ed5eefe16135d781"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5218_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5218.jpg",
+      "bytes": 7693,
+      "sha256": "97206fa9e9581b31fe558f53ce7ae9a1bd0a0e3c8a302bf17745eb7d9afebe6a"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5219.jpg",
+      "bytes": 7954,
+      "sha256": "7c3d5ef2664bb27324f204576ef0004135d2e354ea60479ce22d3a03ca2f69b0"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5219.jpg",
+      "bytes": 7365,
+      "sha256": "b6460c1ffc5c65809b085ad9f7dfaa4768915a52bb6bd47efb9099ef88ed42ca"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5219.jpg",
+      "bytes": 9520,
+      "sha256": "aabe6d734c5e66b5d4ff21b9f6a1b0d856d9be22db34c5d3b02364e602d03e45"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5219.jpg",
+      "bytes": 9600,
+      "sha256": "5e5ec52642208a88a9090c2ab7186295c712966d97f7e3560297fe59087274c9"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5219.jpg",
+      "bytes": 8422,
+      "sha256": "25706d44a252a2d034ed8d1f769d428dda10d9697d7c0e25af7dd06c0388a6c1"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5219.jpg",
+      "bytes": 9145,
+      "sha256": "fef825081c78b9b12e7d479773a7994953e08472568e8893e4cb15dca46ee648"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5219.jpg",
+      "bytes": 10296,
+      "sha256": "dabcfdaf227d42dad066dd64eee4aad33dc39cb69f8d98791b1b906571832275"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5219.jpg",
+      "bytes": 7107,
+      "sha256": "8443c52d5e73e5d690ad162c7f36b0c37028c07c367d1402f9ef6080cf1393b5"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5219_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5219.jpg",
+      "bytes": 7206,
+      "sha256": "ff72cc67585c0610baa68d5db1ce5305f2d2bb8a3d1db62ae196244bc46451f8"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5220.jpg",
+      "bytes": 7895,
+      "sha256": "3107f82ecdf0f9024e3f396b678d6dcbb8e96d0b96b358287066a9ca672a7fa6"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5220.jpg",
+      "bytes": 9407,
+      "sha256": "cec2909cdce8c88ba5e07ab22b9320512fb2fc4d3e216f0a2c39a38aa224527a"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5220.jpg",
+      "bytes": 8468,
+      "sha256": "79f1c3052badd3d00341ac0eb993f5b1e708ad2adf57140505bac938a00dd36b"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5220.jpg",
+      "bytes": 8349,
+      "sha256": "e3e7e70f67ff132ab209ebd9d9d343494cf57d9b6e877eb71d869776d6fa365f"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5220.jpg",
+      "bytes": 7527,
+      "sha256": "eb129cce4a699043dcee2e4e19923926576924a96395276873e18a384a88d6ba"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5220.jpg",
+      "bytes": 10268,
+      "sha256": "37f66d71206e5a65314d8e2ce4acda83b5aac50a2a8375c30a6ae54e67f205e7"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5220.jpg",
+      "bytes": 8832,
+      "sha256": "1d0fbec00886e2c7392cf6ee5c1b22e8beb2bc377621cd66c7f1e8b27e22db00"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5220.jpg",
+      "bytes": 6708,
+      "sha256": "5dde472deac827c4e87d57c3f299595cde27cee7e3553f88313fa526b2d2b879"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5220_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5220.jpg",
+      "bytes": 7632,
+      "sha256": "023a07f9019045ab992b870e3a8471985d42ecf1c432d74501595b22e586d35c"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9274.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9274/5221.jpg",
+      "bytes": 7800,
+      "sha256": "28aaa010697c2235e3a324e8e41ee1e3c0d79076040aaafcdf483d4b570f0414"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9275.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9275/5221.jpg",
+      "bytes": 7549,
+      "sha256": "21dccaafd65e696a0598b7a86f60dff5cb2d212245bf50d5e2788b7a9e0dad38"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9276.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9276/5221.jpg",
+      "bytes": 6904,
+      "sha256": "d5581c3682bb0acbf8c48758a18d44d67dd2d3a4c6785a4d662d81f7a1f2aa33"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9277.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9277/5221.jpg",
+      "bytes": 8495,
+      "sha256": "87bb92c2e5fa5b98c4ac0989d3be63b3cc62f80247999d98ab1e0fbede189c69"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9278.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9278/5221.jpg",
+      "bytes": 6832,
+      "sha256": "b624e50a700a3d8d6e4840172f81ce4cdb8d4630f4bf846b1eedc5360030cc81"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9279.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9279/5221.jpg",
+      "bytes": 11200,
+      "sha256": "4d8666a6f3b421a354d5d3c77216251d0fa0cfb12bce0eca5ea3110636dccd14"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9280.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9280/5221.jpg",
+      "bytes": 8783,
+      "sha256": "7a995b25be92aafc355428172e228cda32e6fff44f992838bb835a3c35c6041b"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9281.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9281/5221.jpg",
+      "bytes": 7468,
+      "sha256": "92498740896c9f7a89f65a954637e58caad02fc16f5984452eee58c6e37b8876"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/satellite/14_5221_9282.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9282/5221.jpg",
+      "bytes": 8195,
+      "sha256": "764b9d0fe62274d19134116ac2f139f988cb4780fc3bf3b2dfaaaba41bb5c63c"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1303_2318.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2318.png",
+      "bytes": 49904,
+      "sha256": "0c519937f6216097f5c415b51f21d0d54721896d435d097ed76964d483e89f93"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1303_2319.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2319.png",
+      "bytes": 50526,
+      "sha256": "bcec6d52af5adf01dede4c2c74e949e6a0960f556ccc4b1fdfece24fe0fe01d3"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1303_2320.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2320.png",
+      "bytes": 52847,
+      "sha256": "9cf1a0b6edb568d3b93815ab84222d978e40d7bbb6ff2b750b086f85f5891755"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1304_2318.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2318.png",
+      "bytes": 41245,
+      "sha256": "4e9f45cf7c4af7f7d61508d373e9ad7fee2525f5c4a4855f6f1882365c2c9621"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1304_2319.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2319.png",
+      "bytes": 39085,
+      "sha256": "fd7b6794baa1e8d510bd82a42127c54793f1c78a4f5e127bac18bfed227b32fb"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1304_2320.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2320.png",
+      "bytes": 43189,
+      "sha256": "06f63525ea66136790d6a6c94e30cab8d153556c7e2fbcf7b14aea29bb360686"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1305_2318.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2318.png",
+      "bytes": 48106,
+      "sha256": "ba268aaa18dd8bd36e90116e3745e69691bd61fb6094c8450f2d1526c1697e03"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1305_2319.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2319.png",
+      "bytes": 43347,
+      "sha256": "9b49662f57981a2959d2e0cc441bf141745f3e8f0f42c36c4706bd645d8f37f8"
+    },
+    {
+      "file": "data/raw/detail/humahuaca/dem/12_1305_2320.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1305/2320.png",
+      "bytes": 48279,
+      "sha256": "476466da5e2817f46985a4fd0f390edfd2d7cf6c98fa13455c7e2220868bdeb4"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5211.jpg",
+      "bytes": 9002,
+      "sha256": "cb312db899d32b8bf7d5464f845c75fdba4f00ba134022328afb80ede114bfc4"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5211.jpg",
+      "bytes": 9633,
+      "sha256": "b1536f762783adeb9e52e93d336056f627d39f7b23021620b137e779bf154cfb"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5211.jpg",
+      "bytes": 10404,
+      "sha256": "01df97573939e337f52d70a7dc5657ec692b2e956c97aecb969c814b71215a83"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5211.jpg",
+      "bytes": 10140,
+      "sha256": "22073c3ee77e56f7a60061e8b25664db4dcedb075f78517634bb28133ed9aa12"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5211.jpg",
+      "bytes": 9980,
+      "sha256": "6f9f042dab5be5766c8c9bc8dfccee2f0535c7f20cd73891f055b68259868f27"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5211.jpg",
+      "bytes": 8665,
+      "sha256": "86ef1b459e43dde3051b4b3064170fc382ff1bf916eaaa7198174b2368570aac"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5211.jpg",
+      "bytes": 8902,
+      "sha256": "aa3d07f46b629467a9017a6ebe19f99422d026d6aad708155d1d9b3e7ba26371"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5211.jpg",
+      "bytes": 10127,
+      "sha256": "5ba70096ae83a0c57a22009461c86de69f4a4a292684c02054eab775891dede4"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5211_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5211.jpg",
+      "bytes": 9309,
+      "sha256": "fb8669eed3f312eb6d05ae98bff1229e4355cf1a291d9829cd622c542240f0ee"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5212.jpg",
+      "bytes": 9047,
+      "sha256": "0d558b7feea8d41460f121f4705bf6df5583f52508e73dede9968fb9aad39e1a"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5212.jpg",
+      "bytes": 8323,
+      "sha256": "6438ee2e9ecf0803aca2afe6303c949f2dce1985d1dcccd721e2375f715ae291"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5212.jpg",
+      "bytes": 8910,
+      "sha256": "cc4a32360e7ac3e07b153e49f751026868e29078e5a78ca8a2954d5831474452"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5212.jpg",
+      "bytes": 9176,
+      "sha256": "56ff179c9248452d6924e269e16853ab2f12760416a40c03cfde872850c8d618"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5212.jpg",
+      "bytes": 7809,
+      "sha256": "dc0d61255698addcf1445c6a1692d0404aeff2ac450e133e5d33c80504354e7f"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5212.jpg",
+      "bytes": 7693,
+      "sha256": "36ed8d95663f2ccd5b2fd21af0f8f73789ccfd37f4df27ed9a192237ea45e1a1"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5212.jpg",
+      "bytes": 8843,
+      "sha256": "66486657b01f0c416e1693247a86ebc80490c532aefda9a5ed3de5dc44f99870"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5212.jpg",
+      "bytes": 9231,
+      "sha256": "1c91c5bc1b6e44c1a1f3670142af3ec3a6a94f7ebc15967f9a8de35a7665f9fd"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5212_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5212.jpg",
+      "bytes": 10282,
+      "sha256": "1958903674476e8dcb9fe1267905f96f07cd4068971562b6d119a8c3aec7e264"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5213.jpg",
+      "bytes": 8114,
+      "sha256": "c140b28ff99a5bee1df6bed044acfb83c18912b44b49fa9d7ab632bad3b51d4b"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5213.jpg",
+      "bytes": 8115,
+      "sha256": "348eb621cd034b322d22dc97cc2cc68ad9d088d16c0c9152b97afc709bec5483"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5213.jpg",
+      "bytes": 8428,
+      "sha256": "56eb5841880b8231028345ca5ce78f919be4ca9123bd177f260cf6c83c0c48b0"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5213.jpg",
+      "bytes": 7856,
+      "sha256": "494c225f08a0fc371641b10e12eaecd74b6033f9856e2a109f2cca77723fc405"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5213.jpg",
+      "bytes": 8478,
+      "sha256": "ce6913142eb06f99ee226225430c284ab6c719202927b81ae5731700ded1137c"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5213.jpg",
+      "bytes": 9850,
+      "sha256": "e06ecfde583430e6c2c0e23ce7be0769575fce14794d6f74b684441bd7806eca"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5213.jpg",
+      "bytes": 9897,
+      "sha256": "cf0a61acf54597f04ad6d04ec057912fb730f05c67704063501cd613063abc0d"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5213.jpg",
+      "bytes": 11799,
+      "sha256": "37f615895144a257ed1f071dded7bb4db53c35ebe8d3d8976eb84dc34ea3857f"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5213_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5213.jpg",
+      "bytes": 11028,
+      "sha256": "da863c605714c2feb7e5a9e867490c1bee238a00355a7639b78b3b53d08e56e1"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5214.jpg",
+      "bytes": 7563,
+      "sha256": "9a712e103f4bef7140a738b744e0a1de3a619a087537c00fa549164e368bec94"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5214.jpg",
+      "bytes": 8643,
+      "sha256": "c371c0bebc5762549d524b09f1a29e66dce0a0efc41797790517ce181537b12d"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5214.jpg",
+      "bytes": 9735,
+      "sha256": "fbf17266d365c97582d54fb0e4b03db06c2965eb9b8bf1112fda35f924ab4713"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5214.jpg",
+      "bytes": 11535,
+      "sha256": "00131a77dbbffe9693c16977717bf6f35e6d42fd0f86cb57984b50a045c414b7"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5214.jpg",
+      "bytes": 11528,
+      "sha256": "8bdc84cc406055473f6e7dea48dd6f618adf24ee475d87aa2f4066af79cd0381"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5214.jpg",
+      "bytes": 11701,
+      "sha256": "afa360640839105412e909e2340612955d3e7615a0a28b46912e7c322c17a0c8"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5214.jpg",
+      "bytes": 11788,
+      "sha256": "1027a12c98b86b3657b05eb36cb96e80bdfb47511f237cb570ba29ef7650dbea"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5214.jpg",
+      "bytes": 11226,
+      "sha256": "f8d6a109654579fe57de96d73d822d97db20a2f148d09c58ebf4215213d0b79e"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5214_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5214.jpg",
+      "bytes": 10945,
+      "sha256": "d83953f3e53031b93dc5a6e9e049dd4af532181c248636f4ab3dc178abaa92c4"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5215.jpg",
+      "bytes": 9824,
+      "sha256": "0b0d294d9a2adda9aa469ed2622aef45c19eb200c43297ab5fd321f05fe5f7c5"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5215.jpg",
+      "bytes": 12374,
+      "sha256": "c541a34778176483186ab20c39e5487ab2e4f2548a9567c4b056b27d53af0662"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5215.jpg",
+      "bytes": 10726,
+      "sha256": "ce65597c32c9a9ce2b5d7e2094d44ddef8718b8294572cebfe63584380d15826"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5215.jpg",
+      "bytes": 10330,
+      "sha256": "315d8e0b69248d94ff27108c45d4aeedfe0827a36cf089711072981e1e0a5636"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5215.jpg",
+      "bytes": 12614,
+      "sha256": "ffa6762dc807eb06888b520d9b03a3677cb83ca8c768869e061cfae2f048529e"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5215.jpg",
+      "bytes": 10496,
+      "sha256": "c47445ed3399e77a2b2e18537bb42b017641a74644f2059eeeb22a8bb5b9c71d"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5215.jpg",
+      "bytes": 12127,
+      "sha256": "e92d9c438f69d43f050ac720a4e2ed756c8dd1dca6a64427f13cfe1733587f2c"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5215.jpg",
+      "bytes": 11698,
+      "sha256": "7c8441aa73f3dde923c85ae0b1cd4db3148105caa758aeaaaff65d3fa968da57"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5215_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5215.jpg",
+      "bytes": 9579,
+      "sha256": "0bf4b83a7399b4ad24dce839fee56425004a26090fc9bcd6ff970cfae186d948"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5216.jpg",
+      "bytes": 11633,
+      "sha256": "3ff21600ae0ca32463bfdc88bdedd538d21e8a0da85bfc6c7efd78eb2ef63502"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5216.jpg",
+      "bytes": 10963,
+      "sha256": "fed65c3d1f668d4592d42789bfdcba958c343cf559a4fe383e14254cc4eada38"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5216.jpg",
+      "bytes": 11360,
+      "sha256": "61807b3dafb3168c0f2cb285deea3d9736c44a1c9460d90e3b5507abe62ac3f6"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5216.jpg",
+      "bytes": 10668,
+      "sha256": "e647384eb20d878b69cec66b21545f128746a847dd9ff7bee7dc7890ab0c8ecb"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5216.jpg",
+      "bytes": 10270,
+      "sha256": "aac73a356d7cb117fc00abadf12fa6fac52669da13a68952c63c158acb88a52e"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5216.jpg",
+      "bytes": 9419,
+      "sha256": "459a3e1073916d3f0438c4535db8afbeb034166b216cd37db2f58582af5e51f6"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5216.jpg",
+      "bytes": 8932,
+      "sha256": "1ef2e0508bc2aed2fcbb40ea09f6ec5fa90e604da4aa1cbc201c80360e2864fc"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5216.jpg",
+      "bytes": 8532,
+      "sha256": "0306b112aac1cdea60dfcbad96a4c843327b09d430e1c8c4bedcdfb0fe5921fa"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5216_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5216.jpg",
+      "bytes": 8503,
+      "sha256": "b15ad8e4cc4d92c3a08085fd74d942f1af7240a08fb563eb6cb4be9909ff981a"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5217.jpg",
+      "bytes": 9700,
+      "sha256": "8456c98515cdff7fde734080c9c836fb96842be79ef0d7ddb5bbc7cd261c0e10"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5217.jpg",
+      "bytes": 8310,
+      "sha256": "7d078882944f2d12fa1829c27053746a9908c7cad0318fe242864ca7f1fa3e79"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5217.jpg",
+      "bytes": 7221,
+      "sha256": "f138e2b1e817bddbc16e37ddd93ea3998ba8a0fa4556c30ebba1b074480e34c8"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5217.jpg",
+      "bytes": 6485,
+      "sha256": "829ee1d9f278f0e001b831d40c864fe061e57a14b793625b4a6c07d32671962a"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5217.jpg",
+      "bytes": 8340,
+      "sha256": "0122e8fad2d583ba35c56dd862a99747b0d9d420e92d563fd4d5d88a759a8def"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5217.jpg",
+      "bytes": 9543,
+      "sha256": "b91749af278b3d16b2c8acbeb810b0e4217552c11914da41b8bace0b89cbbc35"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5217.jpg",
+      "bytes": 9632,
+      "sha256": "c33b2ebd427821f09909ceac3696bbb790b110bdcb68e2f53b4604b01f8c4139"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5217.jpg",
+      "bytes": 9392,
+      "sha256": "08eec5118920267a3e367de4fbc9c0f15fa99d118fa6d7790f7726bc6e01d206"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5217_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5217.jpg",
+      "bytes": 9258,
+      "sha256": "100a094a98396c3d273562c8dbde9858de83d779db418041a76a4e57f224145e"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5218.jpg",
+      "bytes": 9057,
+      "sha256": "23e4f5d961b42019c31b6618a1dfa0e620351976e5d50a33cc7b979d63e5e6c2"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5218.jpg",
+      "bytes": 8917,
+      "sha256": "617d8ce0191caf5f860eadeb75d56dd0461082d9c7feddc2f482f75f06abbc85"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5218.jpg",
+      "bytes": 8107,
+      "sha256": "3cb7cf44207031c1b8c2b47c72e743b6297404ad35571bf048763f38ccf9120f"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5218.jpg",
+      "bytes": 8571,
+      "sha256": "3266b208c828d7978aae9a2422ed874760790fede313917bda815f909774582d"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5218.jpg",
+      "bytes": 9700,
+      "sha256": "0b8476997ca51a4d4c5700cc19a52399eb97538bbd791cbb12dcb83bb6b1ede7"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5218.jpg",
+      "bytes": 9487,
+      "sha256": "1c54f1abc5d56dd66b4b7567db44053dc302936043aeafa1ac5e1aafa04d62ed"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5218.jpg",
+      "bytes": 8645,
+      "sha256": "f7a4a60bf5465381cf11ca0352abfa33d6d4081acb61ce1a1332d067dd7cd091"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5218.jpg",
+      "bytes": 8264,
+      "sha256": "5e1bbdd52c5773c4fe6432f8ec9dd0ae914d5863afbf11d7134c94005073bd60"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5218_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5218.jpg",
+      "bytes": 8326,
+      "sha256": "20ec95424c1c34e85217b54b7ff804943654186a67f4cd9affa61efcfe117494"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9292.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9292/5219.jpg",
+      "bytes": 7988,
+      "sha256": "5ba9961bb5387d6885c1d983289bb3d70050153b8c1204754e8808afccb67e15"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9293.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9293/5219.jpg",
+      "bytes": 7407,
+      "sha256": "e147583242177d8a8748f55af55070c3b25572cca0a38ceb5ef57f7b3db8c044"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9294.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9294/5219.jpg",
+      "bytes": 6969,
+      "sha256": "d9f932c06e5650a851843f6e5f8c5b456034f58e6fb8c5bb470a82c3d760b210"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9295.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9295/5219.jpg",
+      "bytes": 7229,
+      "sha256": "2304af7c1eaf9f05cd247e4204a791f5c3866c79f4d9011e1ffeb91166070ea2"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9296.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9296/5219.jpg",
+      "bytes": 7951,
+      "sha256": "d98ed733017bbf6854bad7e8b8d42dfefc977f75d033957c87e94621816ba7bd"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9297.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9297/5219.jpg",
+      "bytes": 7638,
+      "sha256": "42a06e96ed78743f01e631dc0a074e0f79ee89b2d245c40f3cffc746bf26c809"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9298.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9298/5219.jpg",
+      "bytes": 7517,
+      "sha256": "8c5b562ac72f03e19d7e8f52bffd2f58f31eb393f68e6f75990e7d914904aaa0"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9299.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9299/5219.jpg",
+      "bytes": 7798,
+      "sha256": "d6dfd875c9af278d0e1abd5eb3068734f13f95c5579303d41084166aa52bc5ad"
+    },
+    {
+      "file": "data/raw/detail/tilcara/satellite/14_5219_9300.jpg",
+      "url": "https://tiles.maps.eox.at/wmts/1.0.0/s2cloudless_3857/default/g/14/9300/5219.jpg",
+      "bytes": 6618,
+      "sha256": "103eef8a8db71de6f0606ff17d0186e8c87ae6e14f45674ba5623101928d5367"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1302_2323.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1302/2323.png",
+      "bytes": 53831,
+      "sha256": "aa52d1789f7a6be7488fb7a3d81bd9f11265c9b4de86b7b8ace7a2ba90273445"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1302_2324.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1302/2324.png",
+      "bytes": 51293,
+      "sha256": "497f9ea8a9bd6856d2c9b9e4379dcdb3b25e6b242f22182f77f8d1f0c639a03a"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1302_2325.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1302/2325.png",
+      "bytes": 52589,
+      "sha256": "a5b4eed9d1f1491aac7f98d3e69abdf64664256064127e58cf0073cea62d0a00"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1303_2323.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2323.png",
+      "bytes": 55505,
+      "sha256": "3509ecf300ff014f8201a0cb4f7e65d33287d5006fd130f35a64d5b229904a8e"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1303_2324.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2324.png",
+      "bytes": 52746,
+      "sha256": "338d42334f637ac7798055356438cec136cb36bf4ab544d244bb4469c78566d8"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1303_2325.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1303/2325.png",
+      "bytes": 53094,
+      "sha256": "5dc38441b363a8a73c023db58484af74e38cd76779ff723a745821edd2f907ec"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1304_2323.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2323.png",
+      "bytes": 50303,
+      "sha256": "ebd1523938bf72063c447f98d26c5d32c2a56e4da72f57a4e895c22095f09344"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1304_2324.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2324.png",
+      "bytes": 50384,
+      "sha256": "7bfa3f7e6244532bf4edf705e8d8e66f48abea19e87deee23be69f53d3e0cfe6"
+    },
+    {
+      "file": "data/raw/detail/tilcara/dem/12_1304_2325.png",
+      "url": "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/12/1304/2325.png",
+      "bytes": 49577,
+      "sha256": "e8cebe99467cb7a4beefdbb2f993bc9ca3c0716212a4e8ea4944bb74fe36d259"
+    }
+  ]
+}

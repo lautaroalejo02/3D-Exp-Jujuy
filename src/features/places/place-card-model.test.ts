@@ -57,6 +57,7 @@ function stubPlace(over: Partial<Place> = {}): Place {
     description: "localidad de la provincia de Jujuy, Argentina",
     lat: -23.74,
     lon: -65.49,
+    coordinateSource: "wikidata",
     elevationMeters: 2329,
     elevationSource: "dem",
     demElevationMeters: 2329,

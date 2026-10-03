@@ -1,10 +1,11 @@
 /**
  * Verifies the detail-patch raw tiles (data/raw/detail/<site>/) against
- * their recorded sources:
+ * their recorded sources — both data/raw/detail/sources.json and
+ * sources-2.json (the second batch: san-salvador, humahuaca, tilcara):
  *
- * 1. every tile declared in data/raw/detail/sources.json is fetched again
- *    from its recorded `url` and its sha256 compared with the recorded
- *    hash (the file is never written — data/raw/ is read-only, AGENTS.md);
+ * 1. every tile declared in either manifest is fetched again from its
+ *    recorded `url` and its sha256 compared with the recorded hash (the
+ *    file is never written — data/raw/ is read-only, AGENTS.md);
  * 2. the copy on disk is also hashed and compared, so local corruption is
  *    reported in the same run.
  *
@@ -19,7 +20,10 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
-const SOURCES_PATH = join(ROOT, "data/raw/detail/sources.json");
+const SOURCES_PATHS = [
+  join(ROOT, "data/raw/detail/sources.json"),
+  join(ROOT, "data/raw/detail/sources-2.json"),
+];
 
 interface SourcesTile {
   readonly file: string;
@@ -39,13 +43,22 @@ function sha256(bytes: Uint8Array): string {
 }
 
 async function main(): Promise<void> {
-  const sources = JSON.parse(
-    readFileSync(SOURCES_PATH, "utf8"),
-  ) as SourcesDoc;
+  // Merge every declared tile across the source manifests, remembering
+  // which file declared it for the failure messages.
+  const tiles: { record: SourcesTile; manifest: string }[] = [];
+  for (const sourcesPath of SOURCES_PATHS) {
+    const manifest = sourcesPath.split(/[\\/]/).pop() ?? sourcesPath;
+    const sources = JSON.parse(
+      readFileSync(sourcesPath, "utf8"),
+    ) as SourcesDoc;
+    for (const record of sources.tiles) {
+      tiles.push({ record, manifest });
+    }
+  }
   const failures: string[] = [];
   let checked = 0;
 
-  for (const tile of sources.tiles) {
+  for (const { record: tile, manifest } of tiles) {
     checked++;
     // Local copy vs recorded hash.
     const path = join(ROOT, tile.file);
@@ -56,14 +69,14 @@ async function main(): Promise<void> {
       const localSha = sha256(local);
       if (local.length !== tile.bytes) {
         failures.push(
-          `${tile.file}: ${local.length} B on disk, sources.json ` +
+          `${tile.file}: ${local.length} B on disk, ${manifest} ` +
             `recorded ${tile.bytes} B`,
         );
       }
       if (localSha !== tile.sha256) {
         failures.push(
           `${tile.file}: sha256 on disk ${localSha} != recorded ` +
-            `${tile.sha256}`,
+            `${tile.sha256} (${manifest})`,
         );
       }
     }
@@ -89,8 +102,8 @@ async function main(): Promise<void> {
       );
     }
 
-    if (checked % 30 === 0 || checked === sources.tiles.length) {
-      console.log(`checked ${checked}/${sources.tiles.length} tiles`);
+    if (checked % 30 === 0 || checked === tiles.length) {
+      console.log(`checked ${checked}/${tiles.length} tiles`);
     }
   }
 
@@ -102,7 +115,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
   console.log(
-    `OK: all ${sources.tiles.length} tiles match sources.json ` +
+    `OK: all ${tiles.length} tiles match the sources manifests ` +
       `(sha256 verified on disk and against a fresh download)`,
   );
 }

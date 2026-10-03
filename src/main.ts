@@ -23,7 +23,10 @@ import {
   createDetailLayer,
   type DetailSiteData,
 } from "./features/detail/detail-layer";
-import { DETAIL_EDGE_FADE } from "./features/detail/detail-uniforms";
+import {
+  DETAIL_EDGE_FADE,
+  DETAIL_SPLIT_BAND_CELLS,
+} from "./features/detail/detail-uniforms";
 import detailShader from "./features/detail/detail.wgsl";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
@@ -44,6 +47,7 @@ import {
 } from "./terrain/departments";
 import {
   buildDetailPatchRects,
+  detailPatchCenterBaseGrid,
   patchBaseGridMap,
 } from "./terrain/detail-grids";
 import {
@@ -446,6 +450,10 @@ async function main(): Promise<void> {
     pickPatchById.set(d.site.id, {
       id: d.site.id,
       rect,
+      center: detailPatchCenterBaseGrid(
+        d.heightfield.spec,
+        data.heightfield.spec,
+      ),
       gridMap: patchBaseGridMap(d.heightfield.spec, data.heightfield.spec),
       heightfield: d.heightfield,
       edgeFade: DETAIL_EDGE_FADE,
@@ -496,6 +504,7 @@ async function main(): Promise<void> {
       coveringPickPatches(),
       i,
       j,
+      DETAIL_SPLIT_BAND_CELLS,
     );
 
   const terrain = createTerrainLayer({

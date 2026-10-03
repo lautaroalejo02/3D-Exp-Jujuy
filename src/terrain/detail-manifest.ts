@@ -66,7 +66,7 @@ export interface DetailManifest {
   readonly schemaVersion: number;
   /** Version of the detail pipeline; part of the build cache key. */
   readonly pipelineVersion: number;
-  /** sha256 of the raw sources.json the outputs were built from. */
+  /** sha256 over every raw sources manifest (sources*.json) used. */
   readonly inputSha256: string;
   readonly sites: readonly DetailSite[];
 }

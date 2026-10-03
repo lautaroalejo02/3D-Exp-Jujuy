@@ -240,10 +240,28 @@ export function createPlaceCard(
 
     const sourceNote = doc.createElement("p");
     sourceNote.className = "pick-panel-note";
+    if (
+      place.coordinateSource === "osm" &&
+      typeof place.osmElementUrl === "string"
+    ) {
+      // The coordinate comes from the OpenStreetMap element (ODbL) —
+      // name and description still come from Wikidata.
+      sourceNote.append(
+        doc.createTextNode("Nombre y descripción: "),
+        externalLink(doc, place.wikidataUrl, "Wikidata"),
+        doc.createTextNode(" (CC0). Coordenadas: "),
+        externalLink(doc, place.osmElementUrl, "OpenStreetMap"),
+        doc.createTextNode(" (ODbL)."),
+      );
+    } else {
+      sourceNote.append(
+        doc.createTextNode("Nombre, descripción y coordenadas: "),
+        externalLink(doc, place.wikidataUrl, "Wikidata"),
+        doc.createTextNode(" (CC0)."),
+      );
+    }
     sourceNote.append(
-      doc.createTextNode("Nombre, descripción y coordenadas: "),
-      externalLink(doc, place.wikidataUrl, "Wikidata"),
-      doc.createTextNode(" (CC0). Departamento: "),
+      doc.createTextNode(" Departamento: "),
       externalLink(doc, BOUNDARIES_SOURCE_URL, "geoBoundaries / IGN"),
       doc.createTextNode(" (CC BY 3.0 IGO)."),
     );

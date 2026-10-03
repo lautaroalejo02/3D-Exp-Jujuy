@@ -31,6 +31,8 @@ export interface DetailPickPatch {
   readonly id: string;
   /** Full outer extent in base grid coords: [i0, j0, i1, j1]. */
   readonly rect: readonly [number, number, number, number];
+  /** Patch center in base grid coords (Voronoi arbitration point). */
+  readonly center: readonly [number, number];
   /** Patch<->base grid coord map (from patchBaseGridMap). */
   readonly gridMap: PatchBaseGridMap;
   /** Patch heights (the finer DEM the visible surface comes from). */
@@ -80,28 +82,82 @@ export function baseMeshElevation(
   return h11 + (h10 - h11) * (1 - fy) + (h01 - h11) * (1 - fx);
 }
 
+/** Rect contain test, same bounds convention as detail.wgsl. */
+function contains(
+  rect: readonly [number, number, number, number],
+  bi: number,
+  bj: number,
+): boolean {
+  return bi >= rect[0] && bi <= rect[2] && bj >= rect[1] && bj <= rect[3];
+}
+
+/**
+ * CPU twin of splitMargin in detail.wgsl: the owning patch's signed
+ * margin — distance to the nearest competing covering patch's center
+ * minus its own, in base grid cells — or a negative value when a
+ * competitor is nearer (the shader discards those fragments). The exact
+ * bisector goes to the lower list index, applied symmetrically, so both
+ * sides of the seam agree and ownership is deterministic.
+ */
+function splitMargin(
+  patches: readonly DetailPickPatch[],
+  self: number,
+  bi: number,
+  bj: number,
+): number {
+  const selfPatch = patches[self];
+  if (selfPatch === undefined) return -Infinity; // unreachable by caller
+  const dSelf = Math.hypot(
+    bi - selfPatch.center[0],
+    bj - selfPatch.center[1],
+  );
+  let margin = Infinity;
+  for (let q = 0; q < patches.length; q++) {
+    const other = patches[q];
+    if (q === self || other === undefined) continue;
+    if (!contains(other.rect, bi, bj)) continue;
+    let m =
+      Math.hypot(bi - other.center[0], bj - other.center[1]) - dSelf;
+    if (Math.abs(m) <= 0.001) {
+      m = q < self ? -0.001 : 0.001;
+    }
+    margin = Math.min(margin, m);
+  }
+  return margin;
+}
+
 /**
  * The elevation the user sees at base grid coords (bi, bj): inside a
  * covering patch's rect, the geomorphed blend of the base-mesh surface
  * and the patch DEM (w = smoothstep over the border band); everywhere
  * else, the base heightfield's bilinear sample — the same value the
  * unmodified pick path reports.
+ *
+ * Overlaps follow the shader's Voronoi split: among covering patches the
+ * one whose center is nearest owns the point (lower index on the exact
+ * bisector), and within `splitBand` base cells of the seam the owner
+ * morphs back to the base surface — the drawn surface stays continuous.
  */
 export function detailSurfaceElevation(
   base: BaseMeshSurface,
   patches: readonly DetailPickPatch[],
   bi: number,
   bj: number,
+  splitBand: number,
 ): number {
-  for (const patch of patches) {
-    const [i0, j0, i1, j1] = patch.rect;
-    if (bi < i0 || bi > i1 || bj < j0 || bj > j1) continue;
+  for (let p = 0; p < patches.length; p++) {
+    const patch = patches[p];
+    if (patch === undefined) continue;
+    if (!contains(patch.rect, bi, bj)) continue;
+    const margin = splitMargin(patches, p, bi, bj);
+    if (margin < 0) continue; // a nearer patch owns this point
     const [gi, gj] = baseGridToPatchGrid(patch.gridMap, bi, bj);
     const spec = patch.heightfield.spec;
     const u = (gi + 0.5) / spec.width;
     const v = (gj + 0.5) / spec.height;
     const edge = Math.min(Math.min(u, 1 - u), Math.min(v, 1 - v));
-    const w = smoothstep(0, patch.edgeFade, edge);
+    const w =
+      smoothstep(0, patch.edgeFade, edge) * smoothstep(0, splitBand, margin);
     const baseE = baseMeshElevation(base, bi, bj);
     return baseE + (patch.heightfield.heightAtGrid(gi, gj) - baseE) * w;
   }

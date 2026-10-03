@@ -14,12 +14,22 @@
  *
  * Names, descriptions, coordinates and links pass through from the raw
  * Wikidata extract (CC0); `npm run verify:places` re-checks them against
- * Wikidata. Each place also merges its Commons photos (per-photo author,
- * license and links; CC BY / CC BY-SA / CC0 / public domain — approved
- * by Lautaro 2026-10-03), its es.wikipedia lead extract (CC BY-SA 4.0,
+ * Wikidata — except places whose Wikidata P625 precision is >= 0.001 deg
+ * and have an entry in osm-coordinates.json: those take the OpenStreetMap
+ * element's coordinate (ODbL, "© OpenStreetMap contributors"; the card
+ * links the element), and every survey below uses the FINAL coordinate.
+ * verify-places re-checks the OSM coordinates against Nominatim.
+ *
+ * Each place also merges its Commons photos (per-photo author, license
+ * and links; CC BY / CC BY-SA / CC0 / public domain — approved by
+ * Lautaro 2026-10-03), its es.wikipedia lead extract (CC BY-SA 4.0,
  * verbatim with revision) and its structured Wikidata facts (CC0) from
  * the three sibling raw files; verify-places re-checks the photo
- * licenses and the extract revisions.
+ * licenses and the extract revisions. Photos come from
+ * commons-photos-depicts.json (P18 + depicts P180 — the older
+ * category-based commons-photos.json is kept in data/raw as historical
+ * input and is no longer read), minus the task's editorial exclusions
+ * (PHOTO_EXCLUSIONS — each dropped file is printed with its reason).
  *
  * Re-runnable and deterministic: no timestamps, stable key order. When
  * data/build/places.json already records the current PIPELINE_VERSION and
@@ -54,7 +64,8 @@ import {
 } from "../src/terrain/heightfield";
 import {
   assertPlacesDoc,
-  assertRawCommonsPhotosDoc,
+  assertRawDepictsPhotosDoc,
+  assertRawOsmCoordinatesDoc,
   assertRawPlacesDoc,
   assertRawWikidataFactsDoc,
   assertRawWikipediaExtractsDoc,
@@ -62,6 +73,8 @@ import {
   buildPlaceExtract,
   buildPlaceFacts,
   buildPlacePhoto,
+  effectiveCoordinate,
+  photoExclusionReason,
   unattributablePhoto,
   PLACES_SCHEMA_VERSION,
   type Place,
@@ -71,7 +84,10 @@ import {
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const RAW_DIR = join(ROOT, "data/raw/places");
 const RAW_PATH = join(RAW_DIR, "wikidata-places.json");
-const RAW_PHOTOS_PATH = join(RAW_DIR, "commons-photos.json");
+const RAW_OSM_PATH = join(RAW_DIR, "osm-coordinates.json");
+// commons-photos.json (the category-based download) stays in data/raw as
+// historical input and is NOT read — the depicts-based file replaced it.
+const RAW_PHOTOS_PATH = join(RAW_DIR, "commons-photos-depicts.json");
 const RAW_EXTRACTS_PATH = join(RAW_DIR, "wikipedia-extracts.json");
 const RAW_FACTS_PATH = join(RAW_DIR, "wikidata-facts.json");
 const BUILD_DIR = join(ROOT, "data/build");
@@ -81,7 +97,7 @@ const OUT_PATH = join(BUILD_DIR, "places.json");
  * Output format version, written to places.json and part of the cache
  * key. Bump whenever the place fields or their derivation change.
  */
-const PIPELINE_VERSION = 5;
+const PIPELINE_VERSION = 6;
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -149,9 +165,13 @@ async function main(): Promise<void> {
   const rawDoc: unknown = JSON.parse(placesBytes.toString("utf8"));
   assertRawPlacesDoc(rawDoc);
 
+  const osmBytes = readFileSync(RAW_OSM_PATH);
+  const osmDoc: unknown = JSON.parse(osmBytes.toString("utf8"));
+  assertRawOsmCoordinatesDoc(osmDoc);
+
   const photosBytes = readFileSync(RAW_PHOTOS_PATH);
   const photosDoc: unknown = JSON.parse(photosBytes.toString("utf8"));
-  assertRawCommonsPhotosDoc(photosDoc);
+  assertRawDepictsPhotosDoc(photosDoc);
 
   const extractsBytes = readFileSync(RAW_EXTRACTS_PATH);
   const extractsDoc: unknown = JSON.parse(extractsBytes.toString("utf8"));
@@ -168,6 +188,7 @@ async function main(): Promise<void> {
     return bytes;
   };
   hash.update(placesBytes);
+  hash.update(osmBytes);
   hash.update(photosBytes);
   hash.update(extractsBytes);
   hash.update(factsBytes);
@@ -228,11 +249,13 @@ async function main(): Promise<void> {
   const photoById = new Map(photosDoc.places.map((p) => [p.id, p]));
   const extractById = new Map(extractsDoc.places.map((e) => [e.id, e]));
   const factsById = new Map(factsDoc.places.map((f) => [f.id, f]));
+  const osmById = new Map(osmDoc.places.map((o) => [o.id, o]));
   const placeIds = new Set(rawDoc.places.map((p) => p.id));
   for (const [name, ids] of [
-    ["commons-photos.json", photoById],
+    ["commons-photos-depicts.json", photoById],
     ["wikipedia-extracts.json", extractById],
     ["wikidata-facts.json", factsById],
+    ["osm-coordinates.json", osmById],
   ] as const) {
     for (const id of ids.keys()) {
       if (!placeIds.has(id)) {
@@ -245,25 +268,32 @@ async function main(): Promise<void> {
   // cannot meet the license's attribution requirement — drop them from
   // the output (public domain / CC0 may ship authorless) and list them.
   const droppedPhotos: string[] = [];
+  // Editorial exclusions (the task's table): dropped before the license
+  // filter, each printed with its reason.
+  const excludedPhotos: string[] = [];
 
   const places: Place[] = rawDoc.places.map((raw) => {
+    // The FINAL coordinate — OSM override when the Wikidata precision is
+    // too coarse and osm-coordinates.json covers the place. Elevation,
+    // department and detail-patch detection all sample this point.
+    const coordinate = effectiveCoordinate(raw, osmById.get(raw.id));
     const demElevationMeters = heightfield.heightAtLonLat(
-      raw.coordinates.lon,
-      raw.coordinates.lat,
+      coordinate.lon,
+      coordinate.lat,
     );
     if (demElevationMeters === undefined) {
       throw new Error(
         `${raw.id} (${raw.label.es ?? raw.label.en ?? "?"}) at ` +
-          `${raw.coordinates.lat}, ${raw.coordinates.lon} falls outside ` +
-          `the DEM grid — the place list needs reviewing`,
+          `${coordinate.lat}, ${coordinate.lon} (${coordinate.source}) ` +
+          `falls outside the DEM grid — the place list needs reviewing`,
       );
     }
     let detailElevationMeters: number | undefined;
     let detailSiteId: string | undefined;
     for (const d of detailHeightfields) {
       const sample = d.heightfield.heightAtLonLat(
-        raw.coordinates.lon,
-        raw.coordinates.lat,
+        coordinate.lon,
+        coordinate.lat,
       );
       if (sample !== undefined) {
         detailElevationMeters = sample;
@@ -273,12 +303,17 @@ async function main(): Promise<void> {
     }
     const [di, dj] = lonLatToGrid(
       departments.grid,
-      raw.coordinates.lon,
-      raw.coordinates.lat,
+      coordinate.lon,
+      coordinate.lat,
     );
     const rawExtract = extractById.get(raw.id);
     const rawFacts = factsById.get(raw.id);
     const rawPhotos = photoById.get(raw.id)?.photos.filter((photo) => {
+      const reason = photoExclusionReason(raw.id, photo.file);
+      if (reason !== undefined) {
+        excludedPhotos.push(`${raw.id} ${photo.file} — ${reason}`);
+        return false;
+      }
       if (!unattributablePhoto(photo)) return true;
       droppedPhotos.push(`${raw.id} ${photo.file}`);
       return false;
@@ -291,6 +326,11 @@ async function main(): Promise<void> {
           ? { detailElevationMeters }
           : {}),
         department: departmentNameAt(departments, di, dj),
+        coordinates: coordinate,
+        coordinateSource: coordinate.source,
+        ...(coordinate.osmElementUrl !== undefined
+          ? { osmElementUrl: coordinate.osmElementUrl }
+          : {}),
       },
       {
         photos: rawPhotos?.map(buildPlacePhoto),
@@ -302,9 +342,24 @@ async function main(): Promise<void> {
     if (detailSiteId !== undefined) {
       console.log(`  ${entry.id} inside detail patch "${detailSiteId}"`);
     }
+    if (coordinate.source === "osm") {
+      console.log(
+        `  ${entry.id} coordinate: OpenStreetMap ` +
+          `${coordinate.osmElementUrl ?? "?"} ` +
+          `(Wikidata ${raw.coordinates.lat}, ${raw.coordinates.lon} ` +
+          `→ ${coordinate.lat}, ${coordinate.lon})`,
+      );
+    }
     return entry;
   });
 
+  if (excludedPhotos.length > 0) {
+    console.log(
+      `excluded ${excludedPhotos.length} photo(s) by the editorial ` +
+        "table (odd/tasks/maqueta-ajustes-lugares.md):",
+    );
+    for (const file of excludedPhotos) console.log(`  ${file}`);
+  }
   if (droppedPhotos.length > 0) {
     console.warn(
       `WARNING: dropped ${droppedPhotos.length} photo(s) — CC BY*/` +
@@ -325,17 +380,34 @@ async function main(): Promise<void> {
         file: "data/raw/places/wikidata-places.json",
         sha256: sha256(placesBytes),
       },
+      coordinateOverrides: {
+        provider: "OpenStreetMap (via Nominatim)",
+        attribution: "© OpenStreetMap contributors",
+        license: "ODbL 1.0",
+        licenseUrl: "https://opendatacommons.org/licenses/odbl/1-0/",
+        file: "data/raw/places/osm-coordinates.json",
+        sha256: sha256(osmBytes),
+        note:
+          "Applied to places whose Wikidata P625 precision is >= 0.001 " +
+          "deg; the coordinate comes from the OSM element whose wikidata " +
+          "tag matches the Q-id, linked from the card. " +
+          "https://www.openstreetmap.org/copyright",
+      },
       photos: {
         provider: "Wikimedia Commons",
         license:
           "CC BY / CC BY-SA / CC0 / public domain (per photo, shown " +
           "with each image)",
-        file: "data/raw/places/commons-photos.json",
+        file: "data/raw/places/commons-photos-depicts.json",
         sha256: sha256(photosBytes),
         note:
-          "Thumbnails and full images are fetched at runtime from " +
-          "upload.wikimedia.org; author, license and file page travel " +
-          "with every photo. CC BY-SA approved by Lautaro 2026-10-03.",
+          "Selected by relevance only (Wikidata P18 + Commons depicts " +
+          "P180), minus the task's editorial exclusions. Thumbnails and " +
+          "full images are fetched at runtime from upload.wikimedia.org; " +
+          "author, license and file page travel with every photo. " +
+          "CC BY-SA approved by Lautaro 2026-10-03. The earlier " +
+          "category-based commons-photos.json is kept as historical " +
+          "input and is no longer read.",
       },
       extracts: {
         provider: "Wikipedia en español (REST v1 page summaries)",
@@ -391,9 +463,11 @@ async function main(): Promise<void> {
   for (const place of places) {
     const detailTag =
       place.elevationSource === "detail-dem" ? " (detail DEM)" : "";
+    const coordTag =
+      place.coordinateSource === "osm" ? " · coords OSM" : "";
     console.log(
       `  ${place.id} ${place.name}: ${place.elevationMeters} m` +
-        `${detailTag} · ${place.department}` +
+        `${detailTag} · ${place.department}${coordTag}` +
         (place.photos.length > 0 ? ` · ${place.photos.length} fotos` : ""),
     );
   }

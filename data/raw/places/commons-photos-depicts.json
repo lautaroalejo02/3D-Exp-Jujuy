@@ -1,0 +1,1326 @@
+{
+  "description": "Wikimedia Commons photos per place, selected ONLY by relevance: the Wikidata main image (P18) plus files whose Commons structured data says they depict the place (P180 = place Q-id). Replaces the earlier category-based selection, which included unrelated photos (Lautaro, 2026-10-03). Filtered to CC BY / CC BY-SA / CC0 / public domain, width >= 600 px, author or credit required unless CC0/PD, max 5 per place. Downloaded once by the coordinator on 2026-10-03.",
+  "downloaded": "2026-10-03",
+  "places": [
+    {
+      "id": "Q1025405",
+      "photos": [
+        {
+          "file": "Calle en Purmamarca.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Calle_en_Purmamarca.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/53/Calle_en_Purmamarca.jpg/960px-Calle_en_Purmamarca.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1067,
+          "width": 1600,
+          "height": 2133,
+          "license": "CC BY 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/2.0",
+          "author": "https://www.flickr.com/people/danielpgauer/",
+          "credit": "https://www.flickr.com/photos/danielpgauer/4489663769/",
+          "description": "Street in the village of Purmamarca, Jujuy Province, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Cerro de los Siete Colores 05.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_de_los_Siete_Colores_05.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e9/Cerro_de_los_Siete_Colores_05.jpg/960px-Cerro_de_los_Siete_Colores_05.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 4995,
+          "height": 3330,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "The Hill of Seven Colors, Purmamarca, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cerro de los Siete Colores 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_de_los_Siete_Colores_01.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/10/Cerro_de_los_Siete_Colores_01.jpg/960px-Cerro_de_los_Siete_Colores_01.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 4575,
+          "height": 3050,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "The Hill of Seven Colors, Purmamarca, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cerro de los Siete Colores 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_de_los_Siete_Colores_02.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/df/Cerro_de_los_Siete_Colores_02.jpg/960px-Cerro_de_los_Siete_Colores_02.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 4514,
+          "height": 3009,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "The Hill of Seven Colors, Purmamarca, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cerro de los Siete Colores 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_de_los_Siete_Colores_04.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3c/Cerro_de_los_Siete_Colores_04.jpg/960px-Cerro_de_los_Siete_Colores_04.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 450,
+          "width": 4914,
+          "height": 2764,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "The Hill of Seven Colors, Purmamarca, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q1056078",
+      "photos": [
+        {
+          "file": "Cerro de los siete colores.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_de_los_siete_colores.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/0a/Cerro_de_los_siete_colores.jpg/960px-Cerro_de_los_siete_colores.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1600,
+          "height": 1200,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+          "author": "Augusto Sarita",
+          "credit": "This picture was taken by Augusto Sarita on a recent trip to Bolivia and north of Argentina. Permission is granted to redistribute them.",
+          "description": "Cerro de los siete colores (seven-coloured hill) in Jujuy, Argentina.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "CERRO DE LOS SIETE COLORES- PURMAMARCA.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:CERRO_DE_LOS_SIETE_COLORES-_PURMAMARCA.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/03/CERRO_DE_LOS_SIETE_COLORES-_PURMAMARCA.jpg/960px-CERRO_DE_LOS_SIETE_COLORES-_PURMAMARCA.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2592,
+          "height": 1944,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "JuliSarki",
+          "credit": "Own work",
+          "description": "Cerro de los siete colores, Purmamarca, Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Purmamarca - Cerro de los Siete Colores (Hill of Seven Colors).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Purmamarca_-_Cerro_de_los_Siete_Colores_(Hill_of_Seven_Colors).jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/12/Purmamarca_-_Cerro_de_los_Siete_Colores_%28Hill_of_Seven_Colors%29.jpg/960px-Purmamarca_-_Cerro_de_los_Siete_Colores_%28Hill_of_Seven_Colors%29.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 511,
+          "width": 5959,
+          "height": 3804,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "P. Hughes",
+          "credit": "Own work",
+          "description": "Cerro de los Siete Colores (Hill of Seven Colors), near the town of Purmamarca, Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Jujuy-Purmamarca-P3120100.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jujuy-Purmamarca-P3120100.JPG",
+          "thumbUrl": "https://upload.wikimedia.org/wikipedia/commons/4/40/Jujuy-Purmamarca-P3120100.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 800,
+          "height": 600,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "http://creativecommons.org/licenses/by-sa/3.0/",
+          "author": "Marianocecowski",
+          "credit": "No machine-readable source provided. Own work assumed (based on copyright claims).",
+          "description": "View of the Cerro de Siete Colores, Purmamarca, Jujuy. 2005",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q3843526",
+      "photos": [
+        {
+          "file": "Maimará.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Maimar%C3%A1.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/68/Maimar%C3%A1.JPG/960px-Maimar%C3%A1.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2048,
+          "height": 1536,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Sjacques",
+          "credit": "Own work",
+          "description": "Town of Maimará, Jujuy province, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Viento zonda en Maimara con alerta amarilla consecuencias de tormenta de polvo y arena en la zona.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Viento_zonda_en_Maimara_con_alerta_amarilla_consecuencias_de_tormenta_de_polvo_y_arena_en_la_zona.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Viento_zonda_en_Maimara_con_alerta_amarilla_consecuencias_de_tormenta_de_polvo_y_arena_en_la_zona.jpg/960px-Viento_zonda_en_Maimara_con_alerta_amarilla_consecuencias_de_tormenta_de_polvo_y_arena_en_la_zona.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4080,
+          "height": 3060,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "AnnRio",
+          "credit": "Own work",
+          "description": "Consecuencia de las fuertes ráfagas de viento en Maimara Jujuy Argentina 18/06/26",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Afiche 8 Sintesis Cultural Andina Masi Maky 2018.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Afiche_8_Sintesis_Cultural_Andina_Masi_Maky_2018.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/Afiche_8_Sintesis_Cultural_Andina_Masi_Maky_2018.jpg/960px-Afiche_8_Sintesis_Cultural_Andina_Masi_Maky_2018.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 522,
+          "width": 1280,
+          "height": 835,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Andreacelez",
+          "credit": "Own work",
+          "description": "Afiche 8 Sintesis Cultural Andina Masi Maky 2018",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cerro Paleta del Pintor nevado, Agosto 2016 Maimara Jujuy Argentina.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cerro_Paleta_del_Pintor_nevado,_Agosto_2016_Maimara_Jujuy_Argentina.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/66/Cerro_Paleta_del_Pintor_nevado%2C_Agosto_2016_Maimara_Jujuy_Argentina.jpg/960px-Cerro_Paleta_del_Pintor_nevado%2C_Agosto_2016_Maimara_Jujuy_Argentina.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2592,
+          "height": 1944,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "AnnRio",
+          "credit": "Own work",
+          "description": "Las bajas temperaturas de este año produjeron este suceso único de observar, cerro en la quebrada de Humahuaca nevado.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Feria Artesanal Masi Maky Maimará Jujuy 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Feria_Artesanal_Masi_Maky_Maimar%C3%A1_Jujuy_2026.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6f/Feria_Artesanal_Masi_Maky_Maimar%C3%A1_Jujuy_2026.jpg/960px-Feria_Artesanal_Masi_Maky_Maimar%C3%A1_Jujuy_2026.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 450,
+          "width": 4080,
+          "height": 2296,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "AnnRio",
+          "credit": "Own work",
+          "description": "Grupo musical dentro de la feria Masi Maky en la plaza central de Maimara.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q604722",
+      "photos": [
+        {
+          "file": "Tilcara (8), Iglesia.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tilcara_(8),_Iglesia.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/38/Tilcara_%288%29%2C_Iglesia.JPG/960px-Tilcara_%288%29%2C_Iglesia.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2048,
+          "height": 1536,
+          "license": "CC BY 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+          "author": "Elemaki",
+          "credit": "Own work",
+          "description": "Iglesia de Tilcara (NOA)",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Calles de Tilcara 2021 02.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Calles_de_Tilcara_2021_02.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/73/Calles_de_Tilcara_2021_02.jpg/960px-Calles_de_Tilcara_2021_02.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1067,
+          "width": 3234,
+          "height": 4312,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "César Pérez",
+          "credit": "Own work",
+          "description": "Calles en la localidad de Tilcara en la provincia de Jujuy. Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Desentierro en Tilcara, comparsa Los Canchis Canchis 13 de febrero 2026 03.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Desentierro_en_Tilcara,_comparsa_Los_Canchis_Canchis_13_de_febrero_2026_03.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/42/Desentierro_en_Tilcara%2C_comparsa_Los_Canchis_Canchis_13_de_febrero_2026_03.jpg/960px-Desentierro_en_Tilcara%2C_comparsa_Los_Canchis_Canchis_13_de_febrero_2026_03.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 800,
+          "width": 2992,
+          "height": 2992,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "1985Idea",
+          "credit": "Own work",
+          "description": "Desentierro en Tilcara, comparsa Los Canchis Canchis 13 de febrero 2026. Ceremonia realizada en el cerro cerca del la estación de Tren solar.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Diablo en el jueves de Comadres en el Mercado de Tilcara Carnaval 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Diablo_en_el_jueves_de_Comadres_en_el_Mercado_de_Tilcara_Carnaval_2026.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Diablo_en_el_jueves_de_Comadres_en_el_Mercado_de_Tilcara_Carnaval_2026.jpg/960px-Diablo_en_el_jueves_de_Comadres_en_el_Mercado_de_Tilcara_Carnaval_2026.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1067,
+          "width": 3024,
+          "height": 4032,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Maju Planas (WMAR)",
+          "credit": "Own work",
+          "description": "Diablo en el jueves de Comadres en el Mercado de Tilcara Carnaval 2026",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Comparsa por las calles de Tilcara en el Carnaval 2026 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Comparsa_por_las_calles_de_Tilcara_en_el_Carnaval_2026_2.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Comparsa_por_las_calles_de_Tilcara_en_el_Carnaval_2026_2.jpg/960px-Comparsa_por_las_calles_de_Tilcara_en_el_Carnaval_2026_2.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1067,
+          "width": 3024,
+          "height": 4032,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Maju Planas (WMAR)",
+          "credit": "Own work",
+          "description": "Comparsa por las calles de Tilcara en el Carnaval 2026 2",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q2062241",
+      "photos": [
+        {
+          "file": "Pucará de Tilcara 02.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pucar%C3%A1_de_Tilcara_02.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Pucar%C3%A1_de_Tilcara_02.JPG/960px-Pucar%C3%A1_de_Tilcara_02.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1600,
+          "height": 1200,
+          "license": "Public domain",
+          "licenseUrl": null,
+          "author": null,
+          "credit": null,
+          "description": null,
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Paisaje-montañoso-01134.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Paisaje-monta%C3%B1oso-01134.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/ba/Paisaje-monta%C3%B1oso-01134.jpg/960px-Paisaje-monta%C3%B1oso-01134.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 461,
+          "width": 5456,
+          "height": 3142,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Ezarate",
+          "credit": "Own work",
+          "description": "Mountain landscape of Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Pucará de Tilcara, Argentina 04.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pucar%C3%A1_de_Tilcara,_Argentina_04.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8d/Pucar%C3%A1_de_Tilcara%2C_Argentina_04.jpg/960px-Pucar%C3%A1_de_Tilcara%2C_Argentina_04.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5091,
+          "height": 3394,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Pucará de Tilcara, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Pucará de Tilcara, Argentina 06.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pucar%C3%A1_de_Tilcara,_Argentina_06.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c0/Pucar%C3%A1_de_Tilcara%2C_Argentina_06.jpg/960px-Pucar%C3%A1_de_Tilcara%2C_Argentina_06.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 4896,
+          "height": 3264,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Pucará de Tilcara, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Pucará de Tilcara, Argentina 08.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pucar%C3%A1_de_Tilcara,_Argentina_08.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/9e/Pucar%C3%A1_de_Tilcara%2C_Argentina_08.jpg/960px-Pucar%C3%A1_de_Tilcara%2C_Argentina_08.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5067,
+          "height": 3378,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Pucará de Tilcara, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q3552109",
+      "photos": [
+        {
+          "file": "Uquía visto desde el Mirador la Cruz (cropped).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Uqu%C3%ADa_visto_desde_el_Mirador_la_Cruz_(cropped).jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4f/Uqu%C3%ADa_visto_desde_el_Mirador_la_Cruz_%28cropped%29.jpg/960px-Uqu%C3%ADa_visto_desde_el_Mirador_la_Cruz_%28cropped%29.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 362,
+          "width": 2708,
+          "height": 1224,
+          "license": "CC0",
+          "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+          "author": "Mx._Granger",
+          "credit": "Own work",
+          "description": "Pueblo de Uquía visto desde el Mirador la Cruz.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q1026833",
+      "photos": [
+        {
+          "file": "HumahuacaCityMontage.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:HumahuacaCityMontage.jpg",
+          "thumbUrl": "https://upload.wikimedia.org/wikipedia/commons/b/bc/HumahuacaCityMontage.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1197,
+          "width": 891,
+          "height": 1333,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Quilmeño89",
+          "credit": "Montage of photos available on Wiki Commons File:Humahuaca02.jpg by Idobi File:Provincia de Jujuy - Humahuaca - Iglesia de Humahuaca.JPG Humahuaca Cathedral by Galio File:Humahuaca04.jpg Humahuaca City Hall by Idobi File:Torre de Santa Bárbara, Humahuaca, Jujuy.JPG by Yosoychato File:Callecita.JPG by Abeljorge File:Humahuaca01.jpg by Idobi",
+          "description": "Mosaico fotográfico de la ciudad de Humahuaca.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "BIBLIO MITRE.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:BIBLIO_MITRE.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fa/BIBLIO_MITRE.jpg/960px-BIBLIO_MITRE.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1040,
+          "height": 780,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Eduvegatic",
+          "credit": "Own work",
+          "description": "Fachada Biblioteca Mitre Humahuaca",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Calleja de Humahuaca, 1924.png",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Calleja_de_Humahuaca,_1924.png",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6e/Calleja_de_Humahuaca%2C_1924.png/960px-Calleja_de_Humahuaca%2C_1924.png",
+          "thumbWidth": 800,
+          "thumbHeight": 625,
+          "width": 1020,
+          "height": 797,
+          "license": "Public domain",
+          "licenseUrl": null,
+          "author": "Revista argentina Plus Ultra. Octubre de 1924",
+          "credit": "http://publicaciones.bn.gob.ar/s1/001208786/1924/BNA_S001208786_19241000N00102.pdf",
+          "description": "Calleja de Humahuaca, 1924",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "CALLE TÍPICA DE HUMAHUACA.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:CALLE_T%C3%8DPICA_DE_HUMAHUACA.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ef/CALLE_T%C3%8DPICA_DE_HUMAHUACA.JPG/960px-CALLE_T%C3%8DPICA_DE_HUMAHUACA.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2048,
+          "height": 1536,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Anitich",
+          "credit": "Own work",
+          "description": "This is a photo of an Argentine monument identified by the ID",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Artesanías en Humahuaca 2021.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Artesan%C3%ADas_en_Humahuaca_2021.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Artesan%C3%ADas_en_Humahuaca_2021.jpg/960px-Artesan%C3%ADas_en_Humahuaca_2021.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4608,
+          "height": 3456,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "César Pérez",
+          "credit": "Own work",
+          "description": "Artesanías de Humahuaca, Jujuy, Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q16630587",
+      "photos": [
+        {
+          "file": "Serranía de Hornocal 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Serran%C3%ADa_de_Hornocal_01.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b4/Serran%C3%ADa_de_Hornocal_01.jpg/960px-Serran%C3%ADa_de_Hornocal_01.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 352,
+          "width": 6547,
+          "height": 2878,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Serranía de Hornocal, Jujuy province, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Serranía de Hornocal up close near Humahuaca.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Serran%C3%ADa_de_Hornocal_up_close_near_Humahuaca.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/24/Serran%C3%ADa_de_Hornocal_up_close_near_Humahuaca.jpg/960px-Serran%C3%ADa_de_Hornocal_up_close_near_Humahuaca.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5760,
+          "height": 3840,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Havardtl",
+          "credit": "Own work",
+          "description": "Serranía de Hornocal near Huamahuaca, Jujuy Province in Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Serranía de Hornocal 09.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Serran%C3%ADa_de_Hornocal_09.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Serran%C3%ADa_de_Hornocal_09.jpg/960px-Serran%C3%ADa_de_Hornocal_09.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5184,
+          "height": 3456,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Serranía de Hornocal, province of Jujuy, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Serranía de Hornocal 07.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Serran%C3%ADa_de_Hornocal_07.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Serran%C3%ADa_de_Hornocal_07.jpg/960px-Serran%C3%ADa_de_Hornocal_07.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5039,
+          "height": 3359,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Serranía de Hornocal, province of Jujuy, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Serranía de Hornocal 08.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Serran%C3%ADa_de_Hornocal_08.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/20/Serran%C3%ADa_de_Hornocal_08.jpg/960px-Serran%C3%ADa_de_Hornocal_08.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5184,
+          "height": 3456,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Serranía de Hornocal, province of Jujuy, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q28061",
+      "photos": [
+        {
+          "file": "AR378-Quebrada de Humahuaca.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:AR378-Quebrada_de_Humahuaca.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/d/db/AR378-Quebrada_de_Humahuaca.jpg/960px-AR378-Quebrada_de_Humahuaca.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 5184,
+          "height": 3456,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Bernard Gagnon",
+          "credit": "Own work",
+          "description": "Quebrada de Humahuaca near Tilcara, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "La Huerta- Huacalera, Jujuy, Argentina.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Huerta-_Huacalera,_Jujuy,_Argentina.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/99/La_Huerta-_Huacalera%2C_Jujuy%2C_Argentina.jpg/960px-La_Huerta-_Huacalera%2C_Jujuy%2C_Argentina.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1063,
+          "width": 1204,
+          "height": 1600,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Maxihuacalera",
+          "credit": "Own work",
+          "description": "La Huerta desde el antigal hacia el inicio de Las Tuchas, al pie del cerro \"El Rosado\"",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Amanecer en Humahuaca 3.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Amanecer_en_Humahuaca_3.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Amanecer_en_Humahuaca_3.jpg/960px-Amanecer_en_Humahuaca_3.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 445,
+          "width": 4032,
+          "height": 2245,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Manuela Abuela",
+          "credit": "Own work",
+          "description": "La foto fue tomada desde los primeros escalones del sendero que conduce al Monumento de los Héroes de la Independencia.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Tormenta de tierra y arena en Maimara Jujuy Argentina Junio 2026.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tormenta_de_tierra_y_arena_en_Maimara_Jujuy_Argentina_Junio_2026.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8f/Tormenta_de_tierra_y_arena_en_Maimara_Jujuy_Argentina_Junio_2026.jpg/960px-Tormenta_de_tierra_y_arena_en_Maimara_Jujuy_Argentina_Junio_2026.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4080,
+          "height": 3060,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "AnnRio",
+          "credit": "Own work",
+          "description": "Consecuencia del viento zonda producido en la Zona de la quebrada de Humahuaca, con alerta amarilla por fuertes ráfagas de viento, se contempla el paisaje obstruido por una pared de arena y tierra que se alza tapando el cielo y sol radiante detras",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Doña Feliza Choique de Cunchilla, 80 años de Carnaval.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Do%C3%B1a_Feliza_Choique_de_Cunchilla,_80_a%C3%B1os_de_Carnaval.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/b/b8/Do%C3%B1a_Feliza_Choique_de_Cunchilla%2C_80_a%C3%B1os_de_Carnaval.jpg/960px-Do%C3%B1a_Feliza_Choique_de_Cunchilla%2C_80_a%C3%B1os_de_Carnaval.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 1200,
+          "height": 800,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Viajeroargentina",
+          "credit": "Own work",
+          "description": "In La Quebrada, the woman is responsible for preserving and transmitting cultural tradition. Doña Feliza, 87 years old, has participated in the Bajada del Cerro for 8 decades, being the godmother of the devil troupe.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q5793997",
+      "photos": [
+        {
+          "file": "Cuesta de Lipán.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cuesta_de_Lip%C3%A1n.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/3f/Cuesta_de_Lip%C3%A1n.jpg/960px-Cuesta_de_Lip%C3%A1n.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 517,
+          "width": 1192,
+          "height": 770,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Diegoarielvega",
+          "credit": "Own work",
+          "description": "Cuesta de Lipán (entre Purmamarca y Salinas Grandes) - Jujuy - Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "RN 52 Cuesta de Lipán (argentine).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:RN_52_Cuesta_de_Lip%C3%A1n_(argentine).JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/a3/RN_52_Cuesta_de_Lip%C3%A1n_%28argentine%29.JPG/960px-RN_52_Cuesta_de_Lip%C3%A1n_%28argentine%29.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 3072,
+          "height": 2048,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Bachelot Pierre J-P",
+          "credit": "Own work",
+          "description": "Route Nationale 52, la côte de Lipán, departamento de Tumbaya, provincia de Jujuy, Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cuesta del Lipán.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cuesta_del_Lip%C3%A1n.jpg",
+          "thumbUrl": "https://upload.wikimedia.org/wikipedia/commons/3/3f/Cuesta_del_Lip%C3%A1n.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1200,
+          "width": 640,
+          "height": 960,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Lucas Rafael Tenllado Gil",
+          "credit": "Own work",
+          "description": "Cuesta del Lipán, Jujuy, Argentina.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Cuesta de Lipán 2.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Cuesta_de_Lip%C3%A1n_2.jpg",
+          "thumbUrl": "https://upload.wikimedia.org/wikipedia/commons/5/55/Cuesta_de_Lip%C3%A1n_2.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1146,
+          "width": 770,
+          "height": 1103,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Diegoarielvega",
+          "credit": "Own work",
+          "description": "Cuesta de Lipán (entre Purmamarca y Salinas Grandes) - Jujuy - Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q2893104",
+      "photos": [
+        {
+          "file": "Salinas Grandes.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Salinas_Grandes.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/1a/Salinas_Grandes.jpg/960px-Salinas_Grandes.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 601,
+          "width": 2832,
+          "height": 2128,
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "Jaan-Cornelius K.",
+          "credit": "Flickr: Salinas Grandes",
+          "description": "Die Grosse Salzwüste in Salta. So weiss, dass man fast blind wird. Las Salinas Grandes en Salta. Tan blanco que uno se queda ciego.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Salinasgrandes.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Salinasgrandes.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/98/Salinasgrandes.jpg/960px-Salinasgrandes.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2576,
+          "height": 1932,
+          "license": "Public domain",
+          "licenseUrl": null,
+          "author": "User:Hugopujszo",
+          "credit": "Own work",
+          "description": "Artesanías realizadas en Salinas Grandes, Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Protest sign against lithium mining in Salinas Grandes 12.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Protest_sign_against_lithium_mining_in_Salinas_Grandes_12.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/06/Protest_sign_against_lithium_mining_in_Salinas_Grandes_12.jpg/960px-Protest_sign_against_lithium_mining_in_Salinas_Grandes_12.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 533,
+          "width": 4003,
+          "height": 2669,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Luisfff2812",
+          "credit": "Own work",
+          "description": "Cartel de protesta de madera colocado en Salinas Grandes (Jujuy y Salta, Argentina) que expresa oposición a la minería de litio en territorio de comunidades originaries. El cartel forma parte de la resistencia ambiental y territorial local en un ecosistema de salar afectado por proyectos de extracci",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q1388407",
+      "photos": []
+    },
+    {
+      "id": "Q830120",
+      "photos": [
+        {
+          "file": "Monumento Natural Laguna de los Pozuelos, Jujuy, Argentina - panoramio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Monumento_Natural_Laguna_de_los_Pozuelos,_Jujuy,_Argentina_-_panoramio.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/ed/Monumento_Natural_Laguna_de_los_Pozuelos%2C_Jujuy%2C_Argentina_-_panoramio.jpg/960px-Monumento_Natural_Laguna_de_los_Pozuelos%2C_Jujuy%2C_Argentina_-_panoramio.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 503,
+          "width": 2172,
+          "height": 1367,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "rodoluca",
+          "credit": "https://web.archive.org/web/20161017134732/http://www.panoramio.com/photo/49146915",
+          "description": "Monumento Natural Laguna de los Pozuelos, Jujuy, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q55386",
+      "photos": [
+        {
+          "file": "Abrapampa levelcross.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Abrapampa_levelcross.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/96/Abrapampa_levelcross.jpg/960px-Abrapampa_levelcross.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1280,
+          "height": 960,
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "Galio",
+          "credit": "here",
+          "description": "Level crossing in Abra Pampa in Jujuy Province of Argentina.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q693381",
+      "photos": [
+        {
+          "file": "La Quiaca 01.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:La_Quiaca_01.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/ab/La_Quiaca_01.jpg/960px-La_Quiaca_01.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1065,
+          "width": 3472,
+          "height": 4624,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Laura Fiorucci",
+          "credit": "Own work",
+          "description": "Ciudad del norte de Argentina, ubicada al norte de la provincia de Jujuy",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q1024040",
+      "photos": [
+        {
+          "file": "216.Yavi (9).JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:216.Yavi_(9).JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/35/216.Yavi_%289%29.JPG/960px-216.Yavi_%289%29.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2048,
+          "height": 1536,
+          "license": "CC BY 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+          "author": "Elemaki",
+          "credit": "Own work",
+          "description": "Calle principal de Yavi (Argentina).",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Yavi en 1923.png",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Yavi_en_1923.png",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/50/Yavi_en_1923.png/960px-Yavi_en_1923.png",
+          "thumbWidth": 800,
+          "thumbHeight": 587,
+          "width": 1024,
+          "height": 751,
+          "license": "Public domain",
+          "licenseUrl": null,
+          "author": "Revista argentina Plus Ultra. Enero de 1923.",
+          "credit": "http://publicaciones.bn.gob.ar/s1/001208786/1923/BNA_S001208786_19230100N00081.pdf",
+          "description": "Yavi en 1923",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q1495796",
+      "photos": [
+        {
+          "file": "Pueblo de Susques.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pueblo_de_Susques.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/e0/Pueblo_de_Susques.jpg/960px-Pueblo_de_Susques.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 379,
+          "width": 1032,
+          "height": 489,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Fatima120",
+          "credit": "Own work",
+          "description": "Esta imagen de una parte del Pueblo que tome desde el mirador el día 02 de Febrero del año 2020a hs. 16:19.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q16589099",
+      "photos": []
+    },
+    {
+      "id": "Q147206",
+      "photos": [
+        {
+          "file": "Volcan Zapaleri Chile Bolivia Argentina.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Volcan_Zapaleri_Chile_Bolivia_Argentina.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/2/21/Volcan_Zapaleri_Chile_Bolivia_Argentina.jpg/960px-Volcan_Zapaleri_Chile_Bolivia_Argentina.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4320,
+          "height": 3240,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Mquarg",
+          "credit": "Own work",
+          "description": "The Picture shows the volcan zapaleri. The Volcan is the border between Chile Argentinia and Bolivia. It was taken during an ascent on 09/03/2011.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q994862",
+      "photos": []
+    },
+    {
+      "id": "Q1817419",
+      "photos": [
+        {
+          "file": "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina - panoramio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Valle_de_la_Luna_Juje%C3%B1o,_Cercan%C3%ADas_de_Cusi-Cusi,_Jujuy,_Argentina_-_panoramio.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Valle_de_la_Luna_Juje%C3%B1o%2C_Cercan%C3%ADas_de_Cusi-Cusi%2C_Jujuy%2C_Argentina_-_panoramio.jpg/960px-Valle_de_la_Luna_Juje%C3%B1o%2C_Cercan%C3%ADas_de_Cusi-Cusi%2C_Jujuy%2C_Argentina_-_panoramio.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 529,
+          "width": 2069,
+          "height": 1367,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "rodoluca",
+          "credit": "https://web.archive.org/web/20161017085905/http://www.panoramio.com/photo/43909120",
+          "description": "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q1105115",
+      "photos": []
+    },
+    {
+      "id": "Q2096227",
+      "photos": [
+        {
+          "file": "Capilla, Timón Cruz, Jujuy, Argentina - panoramio (1).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Capilla,_Tim%C3%B3n_Cruz,_Jujuy,_Argentina_-_panoramio_(1).jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/a/aa/Capilla%2C_Tim%C3%B3n_Cruz%2C_Jujuy%2C_Argentina_-_panoramio_%281%29.jpg/960px-Capilla%2C_Tim%C3%B3n_Cruz%2C_Jujuy%2C_Argentina_-_panoramio_%281%29.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 529,
+          "width": 2069,
+          "height": 1367,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "rodoluca",
+          "credit": "https://web.archive.org/web/20161016131741/http://www.panoramio.com/photo/43909130",
+          "description": "Capilla, Timón Cruz, Jujuy, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        },
+        {
+          "file": "Corral de ovejas en Yoscaba, Jujuy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Corral_de_ovejas_en_Yoscaba,_Jujuy.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/6/6b/Corral_de_ovejas_en_Yoscaba%2C_Jujuy.jpg/960px-Corral_de_ovejas_en_Yoscaba%2C_Jujuy.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4128,
+          "height": 3096,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Mayyg21",
+          "credit": "Own work",
+          "description": "Corral tradicional de ganado ovino en la localidad de Yoscaba, Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Oveja con marca de propiedad en la oreja-Yoscaba, Jujuy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Oveja_con_marca_de_propiedad_en_la_oreja-Yoscaba,_Jujuy.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/93/Oveja_con_marca_de_propiedad_en_la_oreja-Yoscaba%2C_Jujuy.jpg/960px-Oveja_con_marca_de_propiedad_en_la_oreja-Yoscaba%2C_Jujuy.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4128,
+          "height": 3096,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Mayyg21",
+          "credit": "Own work",
+          "description": "Detalle de una oveja con una marca de identificación tradicional en la oreja izquierda.",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina - panoramio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Valle_de_la_Luna_Juje%C3%B1o,_Cercan%C3%ADas_de_Cusi-Cusi,_Jujuy,_Argentina_-_panoramio.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fd/Valle_de_la_Luna_Juje%C3%B1o%2C_Cercan%C3%ADas_de_Cusi-Cusi%2C_Jujuy%2C_Argentina_-_panoramio.jpg/960px-Valle_de_la_Luna_Juje%C3%B1o%2C_Cercan%C3%ADas_de_Cusi-Cusi%2C_Jujuy%2C_Argentina_-_panoramio.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 529,
+          "width": 2069,
+          "height": 1367,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "rodoluca",
+          "credit": "https://web.archive.org/web/20161017085905/http://www.panoramio.com/photo/43909120",
+          "description": "Valle de la Luna Jujeño, Cercanías de Cusi-Cusi, Jujuy, Argentina",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Escuela primaria Nro 348 - Timón Cruz, Jujuy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Escuela_primaria_Nro_348_-_Tim%C3%B3n_Cruz,_Jujuy.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Escuela_primaria_Nro_348_-_Tim%C3%B3n_Cruz%2C_Jujuy.jpg/960px-Escuela_primaria_Nro_348_-_Tim%C3%B3n_Cruz%2C_Jujuy.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1600,
+          "height": 1200,
+          "license": "CC0",
+          "licenseUrl": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+          "author": "MilagrosJUY",
+          "credit": "Own work",
+          "description": "Fachada de la escuela primaria Nro 348 en la localidad de Timón Cruz, departamento de santa Catalina, Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q829260",
+      "photos": [
+        {
+          "file": "Calilegua National Park - View of San Lorenzo Rio.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Calilegua_National_Park_-_View_of_San_Lorenzo_Rio.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/9/97/Calilegua_National_Park_-_View_of_San_Lorenzo_Rio.JPG/960px-Calilegua_National_Park_-_View_of_San_Lorenzo_Rio.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 350,
+          "width": 6870,
+          "height": 3005,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Laurent",
+          "credit": "Own work",
+          "description": "View of San Lorenzo Rio in Calilegua National Park.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q600706",
+      "photos": [
+        {
+          "file": "Ledesma - Jujuy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Ledesma_-_Jujuy.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/37/Ledesma_-_Jujuy.jpg/960px-Ledesma_-_Jujuy.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 532,
+          "width": 3001,
+          "height": 1995,
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "Valerio Pillar",
+          "credit": "originally posted to Flickr as DSC_4087.JPG",
+          "description": "Ledesma, Jujuy.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q1020263",
+      "photos": [
+        {
+          "file": "San Pedro de Jujuy's town hall front view.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:San_Pedro_de_Jujuy%27s_town_hall_front_view.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/49/San_Pedro_de_Jujuy%27s_town_hall_front_view.JPG/960px-San_Pedro_de_Jujuy%27s_town_hall_front_view.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4288,
+          "height": 3216,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Pertile",
+          "credit": "Own work",
+          "description": "Vista frontal de la sede de la Municipalidad de San Pedro de Jujuy, Argentina.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q1015185",
+      "photos": []
+    },
+    {
+      "id": "Q44217",
+      "photos": [
+        {
+          "file": "Estación de trenes de Jujuy (Belgrano).jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Estaci%C3%B3n_de_trenes_de_Jujuy_(Belgrano).jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c1/Estaci%C3%B3n_de_trenes_de_Jujuy_%28Belgrano%29.jpg/960px-Estaci%C3%B3n_de_trenes_de_Jujuy_%28Belgrano%29.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 413,
+          "width": 2776,
+          "height": 1432,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Dpalma01",
+          "credit": "Own work",
+          "description": "Estación de trenes de Jujuy (Belgrano)",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Vista desde el Parque Botanico.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Vista_desde_el_Parque_Botanico.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Vista_desde_el_Parque_Botanico.jpg/960px-Vista_desde_el_Parque_Botanico.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 1067,
+          "width": 3120,
+          "height": 4160,
+          "license": "CC BY 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+          "author": "Anabela plos",
+          "credit": "Own work",
+          "description": "Parque Botánico, San Salvador de Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Alfajor de Frutos Rojos marca La Viandita Dulce de San Salvador de Jujuy.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Alfajor_de_Frutos_Rojos_marca_La_Viandita_Dulce_de_San_Salvador_de_Jujuy.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/4b/Alfajor_de_Frutos_Rojos_marca_La_Viandita_Dulce_de_San_Salvador_de_Jujuy.jpg/960px-Alfajor_de_Frutos_Rojos_marca_La_Viandita_Dulce_de_San_Salvador_de_Jujuy.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 4000,
+          "height": 3000,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "MegateriumAmericanum",
+          "credit": "Own work",
+          "description": "Red Fruit Alfajor from the La Viandita Dulce brand from San Salvador de Jujuy",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        },
+        {
+          "file": "Jujuy, energía viva.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Jujuy,_energ%C3%ADa_viva.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/1/16/Jujuy%2C_energ%C3%ADa_viva.jpg/960px-Jujuy%2C_energ%C3%ADa_viva.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 534,
+          "width": 6008,
+          "height": 4008,
+          "license": "CC BY-SA 4.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+          "author": "Preyes",
+          "credit": "Own work",
+          "description": "Lema de San Salvador de Jujuy, en la plaza de Belgrano de la ciudad",
+          "isMain": false,
+          "selection": "commons-depicts-P180"
+        }
+      ]
+    },
+    {
+      "id": "Q55385",
+      "photos": [
+        {
+          "file": "Pal6.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Pal6.jpg",
+          "thumbUrl": "https://upload.wikimedia.org/wikipedia/commons/1/1e/Pal6.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 720,
+          "height": 540,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Cattadur",
+          "credit": "Own work",
+          "description": "Plaza Altos Hornos Zapla",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q6169692",
+      "photos": [
+        {
+          "file": "Puente del FCGB sobre el Río Yala.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Puente_del_FCGB_sobre_el_R%C3%ADo_Yala.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/5/52/Puente_del_FCGB_sobre_el_R%C3%ADo_Yala.jpg/960px-Puente_del_FCGB_sobre_el_R%C3%ADo_Yala.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 1280,
+          "height": 960,
+          "license": "CC BY-SA 2.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+          "author": "galio",
+          "credit": "Puente sobre el río Yala Uploaded by alpertron",
+          "description": "Puente del Ferrocarril General Manuel Belgrano sobre el Río Yala en la Provincia de Jujuy, Argentina.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q78803897",
+      "photos": [
+        {
+          "file": "Dr Manuel Belgrano, Jujuy, Argentina - panoramio.jpg",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Dr_Manuel_Belgrano,_Jujuy,_Argentina_-_panoramio.jpg",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/79/Dr_Manuel_Belgrano%2C_Jujuy%2C_Argentina_-_panoramio.jpg/960px-Dr_Manuel_Belgrano%2C_Jujuy%2C_Argentina_-_panoramio.jpg",
+          "thumbWidth": 800,
+          "thumbHeight": 450,
+          "width": 3072,
+          "height": 1728,
+          "license": "CC BY 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by/3.0",
+          "author": "Va de Carro",
+          "credit": "https://web.archive.org/web/20161027230950/http://www.panoramio.com/photo/102082737",
+          "description": "Dr Manuel Belgrano, Jujuy, Argentina",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q16616407",
+      "photos": []
+    },
+    {
+      "id": "Q4016103",
+      "photos": [
+        {
+          "file": "Volcán (Jujuy) 089.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Volc%C3%A1n_(Jujuy)_089.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c9/Volc%C3%A1n_%28Jujuy%29_089.JPG/960px-Volc%C3%A1n_%28Jujuy%29_089.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 600,
+          "width": 2816,
+          "height": 2112,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Claudio Elias",
+          "credit": "Own work",
+          "description": "Centro del visitante en la localidad de Volcán (Jujuy), en la antigua estación del ferrocarril General Belgrano que unía las ciudades de La Quiaca y Tucumán.",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q2302575",
+      "photos": [
+        {
+          "file": "Tumbaya.JPG",
+          "pageUrl": "https://commons.wikimedia.org/wiki/File:Tumbaya.JPG",
+          "thumbUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/88/Tumbaya.JPG/960px-Tumbaya.JPG",
+          "thumbWidth": 800,
+          "thumbHeight": 501,
+          "width": 2606,
+          "height": 1633,
+          "license": "CC BY-SA 3.0",
+          "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+          "author": "Claudio Elias",
+          "credit": "Own work",
+          "description": "Tumbaya, Jujuy, Argentina . Ruta nacional 9 (Quebrada de Humahuaca)",
+          "isMain": true,
+          "selection": "wikidata-P18"
+        }
+      ]
+    },
+    {
+      "id": "Q6746083",
+      "photos": []
+    }
+  ]
+}

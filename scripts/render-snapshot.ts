@@ -22,6 +22,12 @@
  *                          occlusion against the base DEM) so they sit
  *                          where the DOM markers would. Labels/cards are
  *                          DOM-only and not represented here.
+ * - purmamarca.png         close view of Purmamarca with its marker dot —
+ *                          the coordinate comes from the built
+ *                          places.json (OSM override, task A1), so the
+ *                          dot must land on the town, not the hill
+ * - san-salvador.png       the san-salvador detail patch drawn over the
+ *                          city (task A1 — one of the three new sites)
  * - regions.png            overview with the regions layer ON: the four
  *                          PIP Jujuy regions tinted with thin borders
  *
@@ -111,6 +117,16 @@ const HUMAHUACA = { lon: -65.35048, lat: -23.20544 } as const;
  * https://www.wikidata.org/wiki/Q2893104
  */
 const SALINAS_GRANDES = { lon: -65.894441666667, lat: -23.63325 } as const;
+
+/**
+ * Camera framing target for the Purmamarca snapshot (not educational
+ * data; the marker dot itself comes from the built places.json).
+ * Source: OpenStreetMap relation/4473250 "Purmamarca" via Nominatim
+ * (ODbL, © OpenStreetMap contributors),
+ * https://www.openstreetmap.org/relation/4473250 — the same override
+ * data/raw/places/osm-coordinates.json records.
+ */
+const PURMAMARCA = { lon: -65.4992167, lat: -23.74655 } as const;
 
 /**
  * FetchLike over data/build/: lets the headless script reuse the same
@@ -507,11 +523,16 @@ async function main(): Promise<void> {
    * skipped when off-screen or occluded (isOccluded, base DEM only — the
    * patch blend is not geomorphed here). Dots only: no labels or cards.
    */
-  const drawPlaceDots = (png: PNG, camera: OrbitCamera): void => {
+  const drawPlaceDots = (
+    png: PNG,
+    camera: OrbitCamera,
+    onlyPlaceId?: string,
+  ): void => {
     if (!placesDoc) return;
     const viewProjection = camera.viewProjectionMatrix();
     const eye = camera.eye();
     for (const place of placesDoc.places) {
+      if (onlyPlaceId !== undefined && place.id !== onlyPlaceId) continue;
       const [i, j] = lonLatToGrid(heightfield.spec, place.lon, place.lat);
       const elevationMeters = heightfield.heightAtGrid(i, j);
       const world = gridToWorld(heightfield.spec, i, j, {
@@ -532,6 +553,35 @@ async function main(): Promise<void> {
       stampDisc(png, p.x, p.y, 6, [248, 249, 251]);
       stampDisc(png, p.x, p.y, 4, [123, 167, 222]);
     }
+  };
+
+  /**
+   * Close-up of Purmamarca from the east — the Quebrada de Purmamarca
+   * opens toward the Quebrada de Humahuaca in that direction, so the
+   * town reads against the siete-colores slope behind it; inside the
+   * patch's draw distance, so the shot also shows the detail layer.
+   * The marker dot stamps the place's coordinate from places.json (the
+   * OSM override), which must sit on the town.
+   */
+  const purmamarcaCamera = (): OrbitCamera => {
+    const elevationMeters =
+      heightfield.heightAtLonLat(PURMAMARCA.lon, PURMAMARCA.lat) ?? 0;
+    const target3 = lonLatToWorld(
+      heightfield.spec,
+      PURMAMARCA.lon,
+      PURMAMARCA.lat,
+      { elevationMeters, verticalExaggeration: EXAGGERATION },
+    );
+    return new OrbitCamera({
+      target: target3,
+      distanceKm: 14,
+      azimuthDeg: 100,
+      elevationDeg: 35,
+      fovDeg: 45,
+      aspect: WIDTH / HEIGHT,
+      nearKm: 0.2,
+      minDistanceKm: 5,
+    });
   };
 
   const shots: {
@@ -652,6 +702,29 @@ async function main(): Promise<void> {
             output,
             size: [WIDTH, HEIGHT] as const,
           },
+          // Task A1: the new San Salvador patch over the city.
+          {
+            name: "san-salvador",
+            camera: detailCamera("san-salvador", 150, 45),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          // Task A1: the OSM-corrected Purmamarca marker must land on the
+          // town, not inside the mountain the coarse Wikidata P625 put it
+          // on. The dot comes from the built places.json, not the
+          // hardcoded camera target.
+          {
+            name: "purmamarca",
+            camera: purmamarcaCamera(),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+            drawExtras: (png: PNG, camera: OrbitCamera) =>
+              drawPlaceDots(png, camera, "Q1025405"),
+          },
         ] satisfies {
           name: string;
           camera: OrbitCamera;
@@ -659,6 +732,7 @@ async function main(): Promise<void> {
           scene: ReturnType<typeof createSceneRenderer>;
           output: ReturnType<typeof target>;
           size: readonly [number, number];
+          drawExtras?: (png: PNG, camera: OrbitCamera) => void;
         }[])
       : []),
     {
