@@ -11,6 +11,7 @@ import {
 } from "vgpu";
 
 import type { Layer, LayerContext, LayerState } from "../app/layers";
+import { CARTOGRAPHIC_SUN } from "./terrain-layer";
 import { hazeRangeKm, type TerrainGridUniforms } from "./terrain-uniforms";
 
 /**
@@ -139,8 +140,8 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
     opts.grid.meshSize,
   );
 
-  const ambient = opts.ambient ?? 0.42;
-  const lightStrength = opts.lightStrength ?? 0.85;
+  const ambient = opts.ambient ?? CARTOGRAPHIC_SUN.ambient[0];
+  const lightStrength = opts.lightStrength ?? CARTOGRAPHIC_SUN.color[0];
   const params: DioramaParamsValue = {
     viewProjection: [...IDENTITY_MAT4],
     cameraPos: [0, 0, 0],
@@ -162,7 +163,7 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
     // grey ambient — the shipped look until the sun mode drives it.
     sunColor: [lightStrength, lightStrength, lightStrength],
     ambientColor: [ambient, ambient, ambient],
-    sunDir: [-0.5, 0.7071067811865476, -0.5],
+    sunDir: [...CARTOGRAPHIC_SUN.direction],
     shadowStrength: 0,
   };
   const sky: SkyParamsValue = {

@@ -14,8 +14,9 @@
 // reaches across the whole block for sunset-long shadows.
 
 struct Params {
-  gridSize: vec2f,  // height grid size in cells
-  sunDir: vec3f,    // TO the sun, world space (X east, Y up, Z south)
+  gridSize: vec2f,    // height grid size in cells
+  virtualSize: vec2f, // march grid size; smaller than the texture = blocky write
+  sunDir: vec3f,      // TO the sun, world space (X east, Y up, Z south)
   exaggeration: f32,
   cellKm: f32,      // ground km per height-grid cell
   stepKm: f32,      // first march step, in km of horizontal distance
@@ -52,13 +53,19 @@ fn heightAt(i: f32, j: f32) -> f32 {
 @compute @workgroup_size(8, 8)
 fn cs_main(@builtin(global_invocation_id) id: vec3u) {
   let dims = textureDimensions(shadowTex);
-  if (id.x >= dims.x || id.y >= dims.y) {
+  // The march grid may be coarser than the texture (interactive quality
+  // while the sun is scrubbed): each thread then covers a block of
+  // output texels — the cheap part of the pass is writing texels, the
+  // expensive part is the march itself.
+  let vx = u32(params.virtualSize.x);
+  let vy = u32(params.virtualSize.y);
+  if (id.x >= vx || id.y >= vy) {
     return;
   }
 
-  // Height-grid coords of this shadow texel's center.
-  let gi = (f32(id.x) + 0.5) * params.gridSize.x / f32(dims.x) - 0.5;
-  let gj = (f32(id.y) + 0.5) * params.gridSize.y / f32(dims.y) - 0.5;
+  // Height-grid coords of this march-cell's center.
+  let gi = (f32(id.x) + 0.5) * params.gridSize.x / params.virtualSize.x - 0.5;
+  let gj = (f32(id.y) + 0.5) * params.gridSize.y / params.virtualSize.y - 0.5;
 
   // Drawn height in world km (elevation/1000 * exaggeration), like the
   // terrain vertex displacement.
@@ -100,9 +107,20 @@ fn cs_main(@builtin(global_invocation_id) id: vec3u) {
     visibility = clamp(vis, 0.0, 1.0);
   }
 
-  textureStore(
-    shadowTex,
-    vec2i(id.xy),
-    vec4f(visibility, visibility, visibility, 1.0),
-  );
+  // Write the texel block this march cell covers (exactly one texel at
+  // full resolution — the integer ranges never overlap and always tile
+  // the whole texture).
+  let x0 = id.x * dims.x / vx;
+  let x1 = (id.x + 1u) * dims.x / vx;
+  let y0 = id.y * dims.y / vy;
+  let y1 = (id.y + 1u) * dims.y / vy;
+  for (var y = y0; y < y1; y = y + 1u) {
+    for (var x = x0; x < x1; x = x + 1u) {
+      textureStore(
+        shadowTex,
+        vec2i(i32(x), i32(y)),
+        vec4f(visibility, visibility, visibility, 1.0),
+      );
+    }
+  }
 }

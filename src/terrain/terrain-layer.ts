@@ -19,7 +19,11 @@ import {
   type GpuMemoryReport,
 } from "../render/gpu-memory";
 import { generateMipmaps } from "../render/mipmap";
-import { createShadowEngine, type ShadowEngine } from "../sun/shadow-engine";
+import {
+  createShadowEngine,
+  type ShadowEngine,
+  type ShadowQuality,
+} from "../sun/shadow-engine";
 import { createTerrainControls } from "../ui/controls";
 import {
   MAX_DETAIL_PATCHES,
@@ -38,6 +42,17 @@ import {
  * the headless snapshot renderer so captures match the shipped view.
  */
 export const DEFAULT_VERTICAL_EXAGGERATION = 3;
+
+/**
+ * The shipped cartographic light: fixed NW 45 deg sun, grey direct and
+ * grey ambient. The Sol mode restores this look when it exits; the
+ * diorama layer shares the same values.
+ */
+export const CARTOGRAPHIC_SUN = {
+  direction: [-0.5, 0.7071067811865476, -0.5],
+  color: [0.85, 0.85, 0.85],
+  ambient: [0.42, 0.42, 0.42],
+} as const;
 
 /** Mesh resolution in vertices, independent from the height grid. */
 export interface MeshSize {
@@ -101,6 +116,11 @@ export interface TerrainLayerOptions {
   readonly shadows?: {
     readonly shader: string | ShaderSource;
     readonly plan: ShadowPlan;
+    /**
+     * Coarser march used while the sun input moves (slider drag, clock
+     * play); a "final" update refines the texture in place afterwards.
+     */
+    readonly interactive?: ShadowPlan;
   };
   /**
    * Boundary rasters for the province mask. When absent, 1x1 fallbacks are
@@ -183,6 +203,13 @@ export interface TerrainLayer extends Layer {
   ): void;
   /** Fade the cast-shadow term in (the sun mode is on) or out. */
   setShadowsEnabled(enabled: boolean): void;
+  /**
+   * March quality for the next shadow recompute: "interactive" is the
+   * coarse in-place march for scrubs and playback; "final" refines the
+   * same texture at the device-profile resolution. Just a switch — no
+   * dispatch happens here.
+   */
+  setShadowQuality(quality: ShadowQuality): void;
   /** The shadow visibility texture (or the 1x1 lit fallback). */
   shadowTexture(): Texture;
   /** Milliseconds of the last shadow recompute, if it ran. */
@@ -293,10 +320,18 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       : [1, 1],
     exaggeration: opts.verticalExaggeration ?? DEFAULT_VERTICAL_EXAGGERATION,
     // Default light reproduces the long-standing cartographic look:
-    // NW 45 deg sun, grey direct and grey ambient.
-    sunColor: [opts.lightStrength ?? 0.85, opts.lightStrength ?? 0.85, opts.lightStrength ?? 0.85],
-    ambientColor: [opts.ambient ?? 0.42, opts.ambient ?? 0.42, opts.ambient ?? 0.42],
-    sunDir: [-0.5, 0.7071067811865476, -0.5],
+    // NW 45 deg sun, grey direct and grey ambient (CARTOGRAPHIC_SUN).
+    sunColor: [
+      opts.lightStrength ?? CARTOGRAPHIC_SUN.color[0],
+      opts.lightStrength ?? CARTOGRAPHIC_SUN.color[1],
+      opts.lightStrength ?? CARTOGRAPHIC_SUN.color[2],
+    ],
+    ambientColor: [
+      opts.ambient ?? CARTOGRAPHIC_SUN.ambient[0],
+      opts.ambient ?? CARTOGRAPHIC_SUN.ambient[1],
+      opts.ambient ?? CARTOGRAPHIC_SUN.ambient[2],
+    ],
+    sunDir: [...CARTOGRAPHIC_SUN.direction],
     shadowStrength: 0,
     overlayOpacity: opts.showRegions ? regionTintStrength : 0,
     dimStrength: opts.dimStrength ?? 0.55,
@@ -319,6 +354,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
   let shadowTex: Texture | undefined;
   let shadowEngine: ShadowEngine | undefined;
   let shadowsEnabled = false;
+  let shadowQuality: ShadowQuality = "final";
   let terrainDraw: Draw | undefined;
 
   const layer: TerrainLayer = {
@@ -454,6 +490,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           grid: gridUniforms,
           shader: opts.shadows.shader,
           plan: opts.shadows.plan,
+          interactive: opts.shadows.interactive,
         });
         shadowTex = shadowEngine.texture;
       } else {
@@ -525,6 +562,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         shadowEngine?.update(
           params.sunDir as [number, number, number],
           value,
+          shadowQuality,
         );
       }
       opts.onExaggeration?.(value);
@@ -542,7 +580,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
       });
       if (shadowsEnabled) {
-        shadowEngine?.update(direction, params.exaggeration);
+        shadowEngine?.update(direction, params.exaggeration, shadowQuality);
       }
     },
 
@@ -553,12 +591,17 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       terrainDraw?.set({ params: { shadowStrength: params.shadowStrength } });
       if (enabled) {
         // First activation (or re-activation after the inputs moved)
-        // triggers the march; the engine itself dedupes identical inputs.
+        // triggers the march; the engine itself dedupes stale inputs.
         shadowEngine?.update(
           params.sunDir as [number, number, number],
           params.exaggeration,
+          shadowQuality,
         );
       }
+    },
+
+    setShadowQuality(quality: ShadowQuality): void {
+      shadowQuality = quality;
     },
 
     shadowTexture(): Texture {

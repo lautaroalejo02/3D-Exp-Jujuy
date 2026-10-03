@@ -141,7 +141,7 @@ const PURMAMARCA = { lon: -65.4992167, lat: -23.74655 } as const;
 /**
  * Solar reference point for the sun shots: San Salvador de Jujuy — the
  * same coordinate the solar unit tests are checked against (Wikidata
- * P625 of Q44295). The sun direction is practically constant across the
+ * P625 of Q44217). The sun direction is practically constant across the
  * province, so one coordinate drives every sun shot.
  */
 const JUJUY_SOLAR = { lat: -24.1856, lon: -65.2994 } as const;

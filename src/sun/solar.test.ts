@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  angularDistanceDeg,
   ARGENTINA_UTC_OFFSET_MS,
   argentinaLocalToUtc,
   skyAmbientColor,
@@ -16,7 +17,8 @@ import {
 
 /**
  * Reference point: San Salvador de Jujuy.
- * Coordinates from the task spec (matches the city's Wikidata P625).
+ * Coordinates from the task spec (matches the city's Wikidata P625 of
+ * Q44217 — https://www.wikidata.org/wiki/Q44217).
  */
 const JUJUY = { lat: -24.1856, lon: -65.2994 } as const;
 
@@ -131,6 +133,25 @@ describe("sunDirectionWorld", () => {
   });
 });
 
+describe("angularDistanceDeg", () => {
+  it("is zero for identical directions", () => {
+    const d = sunDirectionWorld(300, 7.8);
+    expect(angularDistanceDeg(d, d)).toBeCloseTo(0, 9);
+  });
+
+  it("measures the angle between two sun directions", () => {
+    // Same azimuth, 0.3 deg of elevation apart.
+    const a = sunDirectionWorld(300, 7.8);
+    const b = sunDirectionWorld(300, 8.1);
+    expect(angularDistanceDeg(a, b)).toBeCloseTo(0.3, 3);
+    // 90 deg apart in azimuth at the same low elevation is much larger
+    // than the 0.25 deg shadow-recompute threshold.
+    const c = sunDirectionWorld(0, 30);
+    const e = sunDirectionWorld(90, 30);
+    expect(angularDistanceDeg(c, e)).toBeGreaterThan(1);
+  });
+});
+
 describe("argentinaLocalToUtc", () => {
   it("converts ART (UTC-3, no DST) to UTC", () => {
     expect(argentinaLocalToUtc(2026, 6, 21, 18, 0).toISOString()).toBe(
@@ -140,18 +161,57 @@ describe("argentinaLocalToUtc", () => {
   });
 });
 
+/**
+ * Published solstice instants (UTC), from timeanddate.com's
+ * equinox/solstice listings. Ours are computed with the NOAA solar
+ * equations — https://gml.noaa.gov/grad/solcalc/solareqns.PDF — by
+ * searching the declination extremum to the hour; tolerance one day.
+ */
+const SOLSTICES: readonly {
+  year: number;
+  juneUtc: string;
+  decemberUtc: string;
+}[] = [
+  { year: 2024, juneUtc: "2024-06-20T20:51:00Z", decemberUtc: "2024-12-21T09:20:00Z" },
+  { year: 2025, juneUtc: "2025-06-21T02:42:00Z", decemberUtc: "2025-12-21T15:03:00Z" },
+  { year: 2026, juneUtc: "2026-06-21T08:25:00Z", decemberUtc: "2026-12-21T20:50:00Z" },
+  { year: 2027, juneUtc: "2027-06-21T14:11:00Z", decemberUtc: "2027-12-22T02:42:00Z" },
+  { year: 2028, juneUtc: "2028-06-20T20:02:00Z", decemberUtc: "2028-12-21T08:20:00Z" },
+  { year: 2029, juneUtc: "2029-06-21T01:48:00Z", decemberUtc: "2029-12-21T14:14:00Z" },
+  { year: 2030, juneUtc: "2030-06-21T07:31:00Z", decemberUtc: "2030-12-21T20:09:00Z" },
+];
+
+describe("solstices", () => {
+  const DAY_MS = 24 * 3_600_000;
+  const localDate = (utc: Date): Date =>
+    new Date(utc.getTime() + ARGENTINA_UTC_OFFSET_MS);
+
+  for (const s of SOLSTICES) {
+    it(`${s.year}: winter solstice falls on a Jun 20-22 local date`, () => {
+      const d = winterSolstice(s.year);
+      const local = localDate(d);
+      expect(local.getUTCMonth()).toBe(5); // June, in ART
+      expect(local.getUTCDate()).toBeGreaterThanOrEqual(20);
+      expect(local.getUTCDate()).toBeLessThanOrEqual(22);
+      expect(Math.abs(d.getTime() - Date.parse(s.juneUtc))).toBeLessThanOrEqual(
+        DAY_MS,
+      );
+    });
+
+    it(`${s.year}: summer solstice falls on a Dec 20-22 local date`, () => {
+      const d = summerSolstice(s.year);
+      const local = localDate(d);
+      expect(local.getUTCMonth()).toBe(11); // December, in ART
+      expect(local.getUTCDate()).toBeGreaterThanOrEqual(20);
+      expect(local.getUTCDate()).toBeLessThanOrEqual(22);
+      expect(
+        Math.abs(d.getTime() - Date.parse(s.decemberUtc)),
+      ).toBeLessThanOrEqual(DAY_MS);
+    });
+  }
+});
+
 describe("presets", () => {
-  it("summerSolstice is Dec 21 local noon", () => {
-    const d = summerSolstice(2026);
-    // Local noon = 15:00 UTC.
-    expect(d.getTime()).toBe(argentinaLocalToUtc(2026, 12, 21, 12, 0).getTime());
-  });
-
-  it("winterSolstice is Jun 21 local noon", () => {
-    const d = winterSolstice(2026);
-    expect(d.getTime()).toBe(argentinaLocalToUtc(2026, 6, 21, 12, 0).getTime());
-  });
-
   it("today returns today's date at the given local time", () => {
     const d = today(9, 30);
     const shifted = new Date(d.getTime() + ARGENTINA_UTC_OFFSET_MS);

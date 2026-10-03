@@ -7,8 +7,9 @@
  *
  * Mode content lives in one host section per mode inside the mode
  * sheet's scrollable content; switching modes swaps the visible host and
- * retitles the sheet. `#sheet-sol` stays empty on purpose — it is the
- * mount point the sun-mode stage attaches to.
+ * retitles the sheet. Unimplemented hosts keep a "Próximamente"
+ * placeholder; `#sheet-sol` is the mount point the Sol mode fills with
+ * its sheet.
  */
 import {
   createModeBar,
@@ -42,6 +43,11 @@ export interface AppMenu {
    * to the snap it had before the detail opened.
    */
   dismissDetail(): void;
+  /**
+   * Subscribe to mode switches; fires after the tabs, title and hosts
+   * are swapped — the hook modes use to enter/leave their scene state.
+   */
+  onModeChange(listener: (mode: AppMode) => void): void;
 }
 
 const MODES: readonly AppMode[] = ["explorar", "sol", "perfil", "agua"];
@@ -131,6 +137,7 @@ export function createAppMenu(
     modeSheet.contentEl.appendChild(host);
   }
 
+  const modeListeners: ((mode: AppMode) => void)[] = [];
   const setMode = (next: AppMode): void => {
     mode = next;
     for (const id of MODES) hosts[id].hidden = id !== next;
@@ -138,6 +145,7 @@ export function createAppMenu(
     bar.setActive(next);
     // A mode tap is intent to see its content — lift a minimized sheet.
     if (modeSheet.snap() === "min") modeSheet.setSnap("half");
+    for (const listener of modeListeners) listener(next);
   };
 
   const bar = createModeBar({ initial: mode, onSelect: setMode }, doc);
@@ -164,6 +172,9 @@ export function createAppMenu(
     dismissDetail(): void {
       if (stackedLayout()) dispatch({ type: "close-detail" });
       else detailSheet.hide();
+    },
+    onModeChange(listener) {
+      modeListeners.push(listener);
     },
   };
 }

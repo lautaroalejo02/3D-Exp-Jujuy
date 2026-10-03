@@ -248,9 +248,34 @@ async function main() {
 
       {
         const { page } = await openApp(mobile, base);
-        await page.locator('[data-mode="sol"]').tap();
-        await page.waitForSelector("#sheet-sol .mode-placeholder");
+
+        // Quebrada framing like the sun-quebrada 3D snapshots: open the
+        // list, fly to Humahuaca, close the card (the camera stays).
+        await page.locator("#sheet-mode .sheet-head").tap();
+        await page.waitForSelector('#sheet-mode[data-snap="half"]');
+        await page
+          .locator(".explorar-places-name", { hasText: "Humahuaca" })
+          .first()
+          .tap();
+        await page.waitForSelector("#sheet-detail[data-sheet-open]");
+        await sleep(1800); // camera flight
+        await page.locator(".place-card .pick-panel-close").tap();
         await sleep(450);
+
+        // Enter Sol: the tab lift leaves the sheet at the half snap.
+        await page.locator('[data-mode="sol"]').tap();
+        await page.waitForSelector("#sheet-sol .sol");
+
+        // Winter solstice at 18:00 — matches sun-quebrada-sunset.png.
+        await page
+          .locator(".sol-preset", { hasText: "invierno" })
+          .tap();
+        await page.locator(".sol-time-slider").evaluate((el) => {
+          el.value = "1080";
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        await sleep(900); // let the final-quality shadow march land
         await page.screenshot({
           path: join(OUT_DIR, "mobile-sol.png"),
         });
@@ -276,6 +301,36 @@ async function main() {
         await sleep(1700);
         await page.screenshot({
           path: join(OUT_DIR, "desktop-place-card.png"),
+        });
+        await page.close();
+      }
+      {
+        const { page } = await openApp(desktop, base);
+
+        // Same Sol state as the mobile shot: Quebrada framing (fly to
+        // Humahuaca, close the card), winter solstice at 18:00.
+        await page
+          .locator(".explorar-places-name", { hasText: "Humahuaca" })
+          .first()
+          .click();
+        await page.waitForSelector("#sheet-detail[data-sheet-open]");
+        await sleep(1800);
+        await page.locator(".place-card .pick-panel-close").click();
+        await sleep(450);
+
+        await page.locator('[data-mode="sol"]').click();
+        await page.waitForSelector("#sheet-sol .sol");
+        await page
+          .locator(".sol-preset", { hasText: "invierno" })
+          .click();
+        await page.locator(".sol-time-slider").evaluate((el) => {
+          el.value = "1080";
+          el.dispatchEvent(new Event("input", { bubbles: true }));
+          el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        await sleep(900);
+        await page.screenshot({
+          path: join(OUT_DIR, "desktop-sol.png"),
         });
         await page.close();
       }

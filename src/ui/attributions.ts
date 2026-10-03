@@ -144,6 +144,18 @@ export const ATTRIBUTIONS: readonly AttributionSource[] = [
       },
     ],
   },
+  {
+    title: "Posición del sol (modo Sol)",
+    lines: [
+      "NOAA Solar Calculator — algoritmo de posición solar y salida/puesta, calculado en el dispositivo",
+    ],
+    links: [
+      {
+        label: "Fuente",
+        url: "https://gml.noaa.gov/grad/solcalc/azel.html",
+      },
+    ],
+  },
 ];
 
 const COLLAPSED_BELOW_PX = 640;

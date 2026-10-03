@@ -157,6 +157,18 @@ export function sunDirectionWorld(
 }
 
 /**
+ * Angle between two unit direction vectors, in degrees. Used by the
+ * shadow engine to skip recomputes when the sun barely moved.
+ */
+export function angularDistanceDeg(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): number {
+  const dot = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+  return Math.acos(Math.min(1, Math.max(-1, dot))) / DEG;
+}
+
+/**
  * Argentina local date/time -> UTC instant. Argentina keeps UTC−3 all
  * year; there is no daylight-saving adjustment to consider.
  */
@@ -172,14 +184,48 @@ export function argentinaLocalToUtc(
   );
 }
 
-/** Local noon on the December solstice, in UTC. */
-export function summerSolstice(year: number): Date {
-  return argentinaLocalToUtc(year, 12, 21, 12, 0);
+/**
+ * UTC instant of a solstice, to the hour: the extremum of the NOAA
+ * solar declination around the 21st of the solstice month. The
+ * declination stays within ~1e-4 rad of its peak for a full day, so a
+ * plain hourly argmax drifts up to a day off the true instant —
+ * instead the hourly samples over +/-4 days are projected onto the
+ * annual sine/cosine and the fitted phase locates the extremum of the
+ * dominant yearly harmonic (matches published instants to ~half a
+ * day; the caller only needs the Argentina-local date).
+ */
+function solsticeUtc(year: number, month: 6 | 12): Date {
+  const center = Date.UTC(year, month - 1, 21, 12);
+  const omega = (2 * Math.PI) / (365 * 24); // annual frequency, per hour
+  const sign = month === 6 ? 1 : -1;
+  let sCos = 0;
+  let sSin = 0;
+  for (let h = -4 * 24; h < 4 * 24; h++) {
+    const decl =
+      sign *
+      equationOfTimeAndDeclination(new Date(center + h * 3_600_000))
+        .declinationRad;
+    sCos += decl * Math.cos(omega * h);
+    sSin += decl * Math.sin(omega * h);
+  }
+  const peakHours = Math.atan2(sSin, sCos) / omega;
+  return new Date(center + Math.round(peakHours) * 3_600_000);
 }
 
-/** Local noon on the June solstice, in UTC. */
+/**
+ * UTC instant of the December solstice of `year` (southern summer) —
+ * computed, never hardcoded to the 21st: it drifts Dec 20-22.
+ */
+export function summerSolstice(year: number): Date {
+  return solsticeUtc(year, 12);
+}
+
+/**
+ * UTC instant of the June solstice of `year` (southern winter) —
+ * computed the same way: it drifts Jun 20-22.
+ */
 export function winterSolstice(year: number): Date {
-  return argentinaLocalToUtc(year, 6, 21, 12, 0);
+  return solsticeUtc(year, 6);
 }
 
 /** Today's date at the given Argentina local time, in UTC. */

@@ -1168,6 +1168,237 @@
           left: calc(23rem + env(safe-area-inset-left));
         }
       }
+      /* --- Sol sheet ------------------------------------------------
+         Sun arc on top, the time slider as the main thumb control, then
+         playback, date and the numeric readout. Reuses the design
+         tokens; same look mobile and in the desktop side panel. */
+      .sol {
+        display: flex;
+        flex-direction: column;
+        gap: 0.7rem;
+      }
+      .sol-arc-row {
+        position: relative;
+      }
+      .sol-arc {
+        display: block;
+        width: min(17rem, 85%);
+        margin: 0 auto;
+      }
+      .sol-arc-horizon {
+        stroke: var(--text-dim);
+        stroke-width: 1;
+        opacity: 0.45;
+      }
+      .sol-arc-path {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.4;
+        stroke-dasharray: 3 3;
+        opacity: 0.7;
+      }
+      .sol-arc-end {
+        fill: var(--text-dim);
+      }
+      .sol-arc-dot {
+        fill: #ffd27a;
+        stroke: #fff;
+        stroke-width: 1;
+      }
+      .sol-arc-dot--night {
+        fill: #8b93a5;
+        stroke: var(--text-dim);
+      }
+      .sol-night {
+        position: absolute;
+        top: 0;
+        right: 0;
+        padding: 0.1rem 0.5rem;
+        border-radius: var(--radius-pill);
+        background: var(--control-bg);
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .sol-time {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 500;
+      }
+      /* Same cross-browser range styling as the exaggeration slider:
+         the 44px input box is the touch hit area, the track a thin line
+         whose fill comes from the --fill property. */
+      .sol-time-slider {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: 1;
+        min-width: 0;
+        height: var(--touch);
+        margin: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .sol-time-slider:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+        border-radius: var(--radius-pill);
+      }
+      .sol-time-slider::-webkit-slider-runnable-track {
+        height: 6px;
+        border-radius: 3px;
+        background: linear-gradient(
+          to right,
+          var(--accent) 0%,
+          var(--accent) var(--fill, 50%),
+          rgb(255 255 255 / 0.18) var(--fill, 50%)
+        );
+      }
+      .sol-time-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        margin-top: -7px;
+        border: none;
+        border-radius: 50%;
+        background: #f4f1ec;
+        box-shadow:
+          0 0 0 2px var(--accent),
+          0 1px 4px rgb(0 0 0 / 0.5);
+      }
+      .sol-time-slider::-moz-range-track {
+        height: 6px;
+        border-radius: 3px;
+        background: rgb(255 255 255 / 0.18);
+      }
+      .sol-time-slider::-moz-range-progress {
+        height: 6px;
+        border-radius: 3px;
+        background: var(--accent);
+      }
+      .sol-time-slider::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border: none;
+        border-radius: 50%;
+        background: #f4f1ec;
+        box-shadow:
+          0 0 0 2px var(--accent),
+          0 1px 4px rgb(0 0 0 / 0.5);
+      }
+      .sol-time-value {
+        min-width: 2.7rem;
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-dim);
+      }
+      .sol-play-row {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+      }
+      /* The play button is the sheet's one primary action. */
+      .sol-play {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--touch);
+        height: var(--touch);
+        padding: 0;
+        border: none;
+        border-radius: 50%;
+        background: var(--accent);
+        color: var(--on-accent);
+        cursor: pointer;
+      }
+      .sol-play:hover {
+        background: var(--accent-hover);
+      }
+      .sol-play svg {
+        width: 1.3rem;
+        height: 1.3rem;
+      }
+      .sol-play:focus-visible,
+      .sol-speed-option:focus-visible,
+      .sol-preset:focus-visible,
+      .sol-date:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px var(--focus);
+      }
+      .sol-speed {
+        display: flex;
+        gap: 0.3rem;
+      }
+      .sol-speed-option,
+      .sol-preset {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: var(--touch);
+        padding: 0 0.85rem;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-pill);
+        background: var(--control-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: var(--fs-sm);
+        font-weight: 500;
+        cursor: pointer;
+      }
+      .sol-speed-option:hover,
+      .sol-preset:hover {
+        background: var(--control-bg-hover);
+      }
+      .sol-speed-option[aria-pressed="true"],
+      .sol-preset[aria-pressed="true"] {
+        border-color: transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-weight: 600;
+      }
+      .sol-dates {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.4rem;
+      }
+      .sol-date {
+        min-height: var(--touch);
+        padding: 0 0.8rem;
+        border: 1px solid var(--panel-border);
+        border-radius: var(--radius-pill);
+        background: var(--control-bg);
+        color: var(--text);
+        font: inherit;
+        font-size: var(--fs-sm);
+        color-scheme: dark;
+      }
+      .sol-readout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.15rem 1rem;
+        margin: 0;
+        font-size: var(--fs-sm);
+      }
+      .sol-readout > div {
+        display: flex;
+        justify-content: space-between;
+        gap: 0.4rem;
+      }
+      .sol-readout dt {
+        color: var(--text-dim);
+      }
+      .sol-readout dd {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .sol-source {
+        margin: 0;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .sol-source a {
+        color: var(--cool);
+      }
     </style>
   </head>
   <body>

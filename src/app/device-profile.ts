@@ -57,6 +57,18 @@ export function planShadows(profile: DeviceProfile): ShadowPlan {
     : { width: 608, height: 640, steps: 64 };
 }
 
+/**
+ * Coarse march used while the sun slider is dragged or the clock plays
+ * (task decision): the same ~304x320 cells and 48 steps on every
+ * device — cheap enough to recompute on input frames; a "final" update
+ * at `planShadows` resolution refines the texture on release/pause.
+ */
+export const INTERACTIVE_SHADOW_PLAN: ShadowPlan = {
+  width: 304,
+  height: 320,
+  steps: 48,
+};
+
 export interface RenderPlan {
   readonly profile: DeviceProfile;
   /** Mesh vertices for the terrain layer. */

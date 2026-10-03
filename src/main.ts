@@ -9,6 +9,7 @@ import {
 } from "vgpu";
 
 import {
+  INTERACTIVE_SHADOW_PLAN,
   planRender,
   profileOverrideFromSearch,
   selectDeviceProfile,
@@ -44,6 +45,7 @@ import { placeViewDistanceKm } from "./features/places/place-distance";
 import { clusterZoomDistanceKm } from "./features/places/places-markers";
 import { createPlacesLayer } from "./features/places/places-layer";
 import { gridToWorld, lonLatToGrid, metersPerGridCell } from "./geo";
+import { registerSolMode } from "./modes/sol/sol-mode";
 import {
   detailSurfaceElevation,
   type DetailPickPatch,
@@ -574,7 +576,11 @@ async function main(): Promise<void> {
     // stays inert — shadows off, default NW light — until the sun mode
     // (S2b) calls setSun/setShadowsEnabled; the recompute runs only when
     // the sun direction or exaggeration changes.
-    shadows: { shader: shadowShader, plan: plan.shadows },
+    shadows: {
+      shader: shadowShader,
+      plan: plan.shadows,
+      interactive: INTERACTIVE_SHADOW_PLAN,
+    },
     provinceMask: {
       grid: data.departments.grid,
       index: data.departments.index,
@@ -779,6 +785,12 @@ async function main(): Promise<void> {
       ],
     }),
   );
+
+  // Sol sheet (S2b): time slider + playback + date presets driving the
+  // real sun; shadows recompute at interactive quality while the input
+  // moves and refine on release/pause. The mode keeps the cartographic
+  // look until the user opens it (menu.onModeChange inside).
+  registerSolMode({ menu, terrain, diorama, requestFrame });
 
   // ---- Framing inside the UI-free rectangle ---------------------------
   // The scene is framed for the part of the screen the chrome does NOT
