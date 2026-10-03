@@ -8,7 +8,10 @@ import {
   formatElevation,
   formatLatitude,
   formatLongitude,
+  OUTSIDE_JUJUY,
   precisionNote,
+  regionLabel,
+  UNASSIGNED_REGION,
 } from "./pick-panel";
 
 describe("pick panel formatters", () => {
@@ -37,6 +40,25 @@ describe("pick panel formatters", () => {
     expect(
       precisionNote({ cellSizeMeters: 305.4, meanAbsErrorMeters: 7.453 }),
     ).toBe("Dato del modelo de elevación (celdas de ~305 m · ±~7 m en promedio)");
+  });
+});
+
+describe("pick panel region label", () => {
+  // Element 0 is the outside-Jujuy slot; elements 1.. map departments.
+  const names: (string | undefined)[] = [undefined, "Puna", "Quebrada"];
+
+  it("shows 'Fuera de Jujuy' only when the raster reads 0", () => {
+    expect(regionLabel(names, 0)).toBe(OUTSIDE_JUJUY);
+  });
+
+  it("shows the region name of a mapped department", () => {
+    expect(regionLabel(names, 1)).toBe("Puna");
+    expect(regionLabel(names, 2)).toBe("Quebrada");
+  });
+
+  it("never says 'Fuera de Jujuy' for an in-province cell without a region", () => {
+    expect(regionLabel(names, 3)).toBe(UNASSIGNED_REGION);
+    expect(regionLabel(names, 99)).toBe(UNASSIGNED_REGION);
   });
 });
 

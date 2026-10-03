@@ -504,10 +504,11 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
         {
           label: "terrain uniforms (approx)",
-          // Params (terrain.wgsl): mat4x4f (64 B) + 6 vec2f (6 x 8 B) +
-          // 12 f32 (12 x 4 B, regionBorders included) + the patch rect
-          // array (MAX_DETAIL_PATCHES x vec4f).
-          bytes: 64 + 6 * 8 + 12 * 4 + MAX_DETAIL_PATCHES * 16,
+          // Params (terrain.wgsl) at natural WGSL alignment: mat4x4f
+          // (64 B) + 6 vec2f (48 B) + 11 f32 (44 B) = 156 B of scalars,
+          // the patch rect array aligned at 160 B (MAX_DETAIL_PATCHES x
+          // vec4f = 128 B), then patchRectCount + tail pad → 304 B.
+          bytes: 304,
           estimate: true,
         },
       ]);

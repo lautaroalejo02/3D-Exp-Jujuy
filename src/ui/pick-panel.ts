@@ -65,6 +65,22 @@ export function precisionNote(precision: PickPanelPrecision): string {
 /** What the department row shows when the index raster reads 0. */
 export const OUTSIDE_JUJUY = "Fuera de Jujuy";
 
+/** What the region row shows for an in-province cell with no region. */
+export const UNASSIGNED_REGION = "Sin región asignada";
+
+/**
+ * Region label for a department raster value. "Fuera de Jujuy" only when
+ * the raster reads 0: an in-province index without a region means the
+ * regions data is incomplete, not that the point is outside Jujuy.
+ */
+export function regionLabel(
+  regionNames: readonly (string | undefined)[],
+  deptIndex: number,
+): string {
+  if (deptIndex === 0) return OUTSIDE_JUJUY;
+  return regionNames[deptIndex] ?? UNASSIGNED_REGION;
+}
+
 /**
  * Department raster for the "Departamento" row. `data` is the loaded
  * boundary dataset; `hitSpec` is the grid `PickHit.grid` coordinates are
@@ -116,8 +132,10 @@ export function createPickPanelLayer(
         departmentNameAt(departments.data, di, dj) ?? OUTSIDE_JUJUY;
       if (els.region && departments.regionNames) {
         const deptIndex = departmentIndexAt(departments.data, di, dj);
-        els.region.textContent =
-          departments.regionNames[deptIndex] ?? OUTSIDE_JUJUY;
+        els.region.textContent = regionLabel(
+          departments.regionNames,
+          deptIndex,
+        );
       }
     }
     els.dataRows.hidden = false;

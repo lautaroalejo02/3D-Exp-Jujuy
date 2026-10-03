@@ -138,7 +138,7 @@ describe("department → region mapping", () => {
     );
   });
 
-  it("throws when a department is assigned to two regions", () => {
+  it("throws naming the department assigned to two regions", () => {
     const duplicated = {
       ...data,
       regions: [
@@ -149,9 +149,27 @@ describe("department → region mapping", () => {
         ...data.regions.slice(1),
       ],
     };
-    expect(() => buildDepartmentToRegion(duplicated, departments)).toThrow(
-      RegionsDataError,
-    );
+    const call = (): readonly number[] =>
+      buildDepartmentToRegion(duplicated, departments);
+    expect(call).toThrow(RegionsDataError);
+    expect(call).toThrow(/Humahuaca/);
+  });
+
+  it("throws naming every department left without a region", () => {
+    const incomplete = {
+      ...data,
+      regions: data.regions.map((r) => ({
+        ...r,
+        departments: r.departments.filter(
+          (n) => n !== "Humahuaca" && n !== "Yaví",
+        ),
+      })),
+    };
+    const call = (): readonly number[] =>
+      buildDepartmentToRegion(incomplete, departments);
+    expect(call).toThrow(RegionsDataError);
+    expect(call).toThrow(/Humahuaca/);
+    expect(call).toThrow(/Yaví/);
   });
 });
 
