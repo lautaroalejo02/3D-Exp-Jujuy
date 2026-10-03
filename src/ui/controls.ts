@@ -18,6 +18,11 @@ export interface TerrainControlsOptions {
   readonly quality: TerrainQuality;
   readonly initialExaggeration: number;
   readonly onExaggeration: (value: number) => void;
+  /**
+   * True when the high quality level runs on a phone — adds a short
+   * warning that it may be slow.
+   */
+  readonly warnHighQualityOnMobile?: boolean;
 }
 
 /**
@@ -68,5 +73,12 @@ export function createTerrainControls(
   quality.href = `${url.pathname}${url.search}`;
 
   panel.append(label, quality);
+  if (opts.warnHighQualityOnMobile) {
+    const warning = doc.createElement("p");
+    warning.className = "quality-warning";
+    warning.textContent =
+      "La calidad alta puede ir lenta en celulares.";
+    panel.appendChild(warning);
+  }
   return panel;
 }

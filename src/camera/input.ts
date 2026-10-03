@@ -27,6 +27,11 @@ export interface CameraInputOptions {
   readonly camera: OrbitCamera;
   /** Tap in canvas CSS px (<8 px, <350 ms, single pointer). */
   readonly onTap?: (point: { readonly x: number; readonly y: number }) => void;
+  /**
+   * Fired after any input that produced camera deltas or a tap — the hook
+   * render-on-demand uses to schedule a frame.
+   */
+  readonly onActivity?: () => void;
 }
 
 export interface CameraInput {
@@ -73,6 +78,9 @@ export function attachCameraInput(
     if (deltas.pan) camera.pan(deltas.pan.dxKm, deltas.pan.dyKm);
     if (deltas.zoom !== undefined) camera.zoom(deltas.zoom);
     if (tap) options.onTap?.(tap);
+    if (deltas.orbit || deltas.pan || deltas.zoom !== undefined || tap) {
+      options.onActivity?.();
+    }
   };
 
   const onPointerDown = (e: PointerEvent): void => {

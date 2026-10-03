@@ -54,6 +54,8 @@ export interface TerrainLayerOptions {
    * app can keep other layers (e.g. the pick marker) in sync.
    */
   readonly onExaggeration?: (value: number) => void;
+  /** Adds the "alta puede ir lenta en celulares" note to the controls. */
+  readonly warnHighQualityOnMobile?: boolean;
 }
 
 export interface TerrainLayer extends Layer {
@@ -153,6 +155,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           quality,
           initialExaggeration: params.exaggeration,
           onExaggeration: (v) => layer.setVerticalExaggeration(v),
+          warnHighQualityOnMobile: opts.warnHighQualityOnMobile,
         });
         root.appendChild(panel);
         return () => panel.remove();

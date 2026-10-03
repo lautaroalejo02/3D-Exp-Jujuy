@@ -1,5 +1,19 @@
-import { clock, frameLoop, init, surface, type Gpu } from "vgpu";
+import {
+  clock,
+  frameLoop,
+  init,
+  surface,
+  type Frame,
+  type FrameLoopHandle,
+  type Gpu,
+} from "vgpu";
 
+import {
+  planRender,
+  profileOverrideFromSearch,
+  selectDeviceProfile,
+} from "./app/device-profile";
+import { createDirtyTracker } from "./app/dirty-tracker";
 import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
 import { overviewCamera } from "./camera/framing";
@@ -22,6 +36,7 @@ import { createTerrainLayer } from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
+import { createDebugOverlay } from "./ui/debug-overlay";
 import { createPickPanelLayer } from "./ui/pick-panel";
 
 /** Initial vertical exaggeration of the relief (adjustable with the UI slider). */
@@ -38,7 +53,12 @@ function describeFailure(result: Extract<WebGpuSupport, { supported: false }>): 
   }
 }
 
-function showWebGpuNotice(overlay: HTMLElement, reason: string, detail?: string): void {
+function showWebGpuNotice(
+  overlay: HTMLElement,
+  reason: string,
+  detail?: string,
+  reload = false,
+): void {
   const notice = document.createElement("section");
   notice.className = "webgpu-notice";
 
@@ -57,6 +77,19 @@ function showWebGpuNotice(overlay: HTMLElement, reason: string, detail?: string)
     "Probá con Chrome o Edge recientes en una PC de escritorio o en Android, o con Safari 26 o superior.";
 
   notice.append(title, what, why, browsers);
+
+  if (reload) {
+    // Mobile browsers drop the GPU state when the page goes to the
+    // background; a reload is the only reliable recovery.
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "webgpu-notice-reload";
+    button.textContent = "Recargar";
+    button.addEventListener("click", () => {
+      window.location.reload();
+    });
+    notice.appendChild(button);
+  }
 
   if (detail) {
     const detailEl = document.createElement("p");
@@ -141,7 +174,7 @@ async function main(): Promise<void> {
   const fail = (reason: string, detail?: string): void => {
     loading.remove();
     canvas.hidden = true;
-    showWebGpuNotice(overlay, reason, detail);
+    showWebGpuNotice(overlay, reason, detail, true);
   };
 
   const quality = selectedQuality(window.location.search);
@@ -167,8 +200,29 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Device profile: ?perfil=movil|escritorio wins; otherwise detect from the
+  // pointer, screen size and device memory hint. Mobile gets a smaller
+  // terrain mesh and a lower DPR cap.
+  const profile =
+    profileOverrideFromSearch(window.location.search) ??
+    selectDeviceProfile({
+      coarsePointer:
+        window.matchMedia?.("(pointer: coarse)").matches ?? false,
+      smallerSideCssPx: Math.min(
+        window.screen?.width ?? window.innerWidth,
+        window.screen?.height ?? window.innerHeight,
+      ),
+      deviceMemoryGb: (navigator as { deviceMemory?: number }).deviceMemory,
+    });
+  const plan = planRender(profile, quality, data.heightfield.spec);
+
+  const dirty = createDirtyTracker();
+  const requestFrame = (): void => {
+    dirty.request();
+  };
+
   const canvasSurface = surface(gpu, canvas, {
-    dpr: [1, 2],
+    dpr: [1, plan.dprMax],
     label: "scene",
   });
   const renderer = createSceneRenderer(gpu, {
@@ -178,6 +232,7 @@ async function main(): Promise<void> {
   });
   canvasSurface.onResize(({ width, height }) => {
     renderer.resize([width, height]);
+    requestFrame();
   });
 
   let verticalExaggeration = INITIAL_VERTICAL_EXAGGERATION;
@@ -186,10 +241,13 @@ async function main(): Promise<void> {
     satellite: data.satellite,
     shaders: { terrain: terrainShader, mipmap: mipmapShader },
     quality,
+    mesh: plan.mesh,
     verticalExaggeration,
     onExaggeration: (v) => {
       verticalExaggeration = v;
+      requestFrame();
     },
+    warnHighQualityOnMobile: plan.warnHighQuality,
   });
   // The marker re-anchors to the surface with the live exaggeration, so it
   // tracks the terrain when the slider moves.
@@ -232,6 +290,7 @@ async function main(): Promise<void> {
       // A miss (sky) dispatches undefined so layers clear pick state.
       for (const layer of layers) layer.onPick?.(hit);
     },
+    onActivity: requestFrame,
   });
   const appClock = clock(gpu);
 
@@ -243,14 +302,56 @@ async function main(): Promise<void> {
   };
   const totalBytes = memoryReport.entries.reduce((s, e) => s + e.bytes, 0);
   console.info(
-    `GPU memory (${quality}): ${formatBytes(totalBytes)} total\n` +
+    `GPU memory (${quality}, ${profile}): ${formatBytes(totalBytes)} total\n` +
       memoryReport.entries
         .map((e) => `  ${e.estimate ? "~" : " "}${e.label}: ${formatBytes(e.bytes)}`)
         .join("\n"),
   );
 
-  const loop = frameLoop(gpu, (frame) => {
+  const debugOverlay =
+    new URLSearchParams(window.location.search).get("debug") === "1"
+      ? createDebugOverlay({
+          profile,
+          quality,
+          mesh: plan.mesh,
+          canvasSize: () => canvasSurface.size,
+          dpr: () => canvasSurface.dpr,
+          memoryBytes: totalBytes,
+        })
+      : undefined;
+  if (debugOverlay) {
+    overlay.appendChild(debugOverlay.el);
+    debugOverlay.refresh();
+  }
+
+  // onError, device loss and a failed frame can all fire for the same fault;
+  // show the notice once and keep later errors in the console.
+  let failed = false;
+  let loop: FrameLoopHandle | undefined;
+  const handleFrameError = (error: unknown): void => {
+    if (failed) {
+      console.error("Additional render error after failure", error);
+      return;
+    }
+    failed = true;
+    loop?.stop();
+    loop = undefined;
+    fail(
+      "Ocurrió un error al dibujar el relieve.",
+      error instanceof Error ? error.message : String(error),
+    );
+  };
+
+  // Render on demand: only ticks with pending dirty requests encode GPU
+  // work; clean ticks call frame.cancel(), vgpu's documented way to drop a
+  // frame without presenting (nothing is encoded, nothing is submitted).
+  const tick = (frame: Frame): void => {
+    if (!dirty.isDirty()) {
+      frame.cancel();
+      return;
+    }
     try {
+      const startedAt = performance.now();
       camera.setAspect(canvasSurface.size[0] / canvasSurface.size[1]);
       const state: LayerState = {
         time: appClock.time,
@@ -259,6 +360,8 @@ async function main(): Promise<void> {
       };
       for (const layer of layers) layer.update(state, appClock.deltaTime);
       renderer.renderFrame(frame, canvasSurface, layers);
+      dirty.frameRendered();
+      debugOverlay?.frameRendered(performance.now() - startedAt);
     } catch (error) {
       // A failed frame would leave a frozen canvas otherwise.
       try {
@@ -268,23 +371,25 @@ async function main(): Promise<void> {
       }
       handleFrameError(error);
     }
-  });
-
-  // onError, device loss and a failed frame can all fire for the same fault;
-  // show the notice once and keep later errors in the console.
-  let failed = false;
-  const handleFrameError = (error: unknown): void => {
-    if (failed) {
-      console.error("Additional render error after failure", error);
-      return;
-    }
-    failed = true;
-    loop.stop();
-    fail(
-      "Ocurrió un error al dibujar el relieve.",
-      error instanceof Error ? error.message : String(error),
-    );
   };
+  const startLoop = (): void => {
+    loop = frameLoop(gpu, tick);
+  };
+  startLoop();
+  dirty.request(); // first paint once everything is initialized
+
+  // The OS can reclaim the GPU while the tab is hidden — stop scheduling
+  // frames entirely and repaint on return (device loss goes through
+  // handleFrameError, which shows the notice with a Recargar button).
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+      loop?.stop();
+      loop = undefined;
+    } else if (!failed && !loop) {
+      dirty.request();
+      startLoop();
+    }
+  });
 
   gpu.onError((error) => {
     console.error(error);

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>Maqueta 3D de Jujuy</title>
     <style>
@@ -14,6 +14,7 @@
         padding: 0;
         height: 100%;
         overflow: hidden;
+        overscroll-behavior: none;
         background: #17191d;
         color: #e8e9eb;
         font-family:
@@ -39,16 +40,34 @@
       }
       #overlay > * {
         pointer-events: auto;
+        /* no double-tap zoom on the UI; pinch zoom still works on text */
+        touch-action: manipulation;
       }
       .webgpu-notice {
         box-sizing: border-box;
         max-width: 34rem;
-        margin: 10vh auto 0;
+        margin: calc(10vh + env(safe-area-inset-top)) auto 0;
         padding: 1.25rem 1.5rem;
         border-radius: 0.75rem;
         background: #23262c;
         box-shadow: 0 0.5rem 2rem rgb(0 0 0 / 0.45);
         line-height: 1.5;
+      }
+      .webgpu-notice-reload {
+        display: block;
+        min-width: 44px;
+        min-height: 44px;
+        margin-top: 0.9rem;
+        padding: 0 1.4rem;
+        border: none;
+        border-radius: 0.5rem;
+        background: #4f7ec4;
+        color: #fff;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      .webgpu-notice-reload:hover {
+        background: #5d8cd6;
       }
       .webgpu-notice h1 {
         margin: 0 0 0.75rem;
@@ -65,8 +84,8 @@
       }
       .attributions {
         position: absolute;
-        left: 0.5rem;
-        bottom: 0.5rem;
+        left: calc(0.5rem + env(safe-area-inset-left));
+        bottom: calc(0.5rem + env(safe-area-inset-bottom));
         max-width: min(26rem, calc(100vw - 1rem));
         padding: 0.4rem 0.6rem;
         border-radius: 0.5rem;
@@ -78,6 +97,9 @@
         cursor: pointer;
         font-weight: 600;
         outline: none;
+        min-height: 44px;
+        display: flex;
+        align-items: center;
       }
       .attributions ul {
         margin: 0.35rem 0 0;
@@ -100,8 +122,8 @@
       }
       .terrain-controls {
         position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
+        top: calc(0.5rem + env(safe-area-inset-top));
+        right: calc(0.5rem + env(safe-area-inset-right));
         display: flex;
         flex-direction: column;
         gap: 0.5rem;
@@ -118,6 +140,8 @@
       }
       .terrain-controls .exaggeration input[type="range"] {
         width: 7rem;
+        /* the input box is the touch hit area for the thumb */
+        height: 44px;
       }
       .terrain-controls .exaggeration-value {
         min-width: 2.2rem;
@@ -126,12 +150,21 @@
       }
       .terrain-controls .quality-toggle {
         align-self: flex-start;
+        display: inline-flex;
+        align-items: center;
+        min-height: 44px;
         color: #8fc1ff;
+      }
+      .terrain-controls .quality-warning {
+        margin: 0;
+        max-width: 12rem;
+        font-size: 0.7rem;
+        color: #e3b567;
       }
       .pick-panel {
         position: absolute;
-        right: 0.5rem;
-        bottom: 0.5rem;
+        right: calc(0.5rem + env(safe-area-inset-right));
+        bottom: calc(0.5rem + env(safe-area-inset-bottom));
         max-width: min(16rem, calc(100vw - 1rem));
         padding: 0.55rem 0.75rem;
         border-radius: 0.5rem;
@@ -141,14 +174,16 @@
       }
       .pick-panel-close {
         position: absolute;
-        top: 0.1rem;
-        right: 0.25rem;
+        top: 0;
+        right: 0;
+        width: 44px;
+        height: 44px;
         border: none;
         background: none;
         color: #9aa3b2;
         font-size: 1rem;
         line-height: 1;
-        padding: 0.35rem;
+        padding: 0;
         cursor: pointer;
       }
       .pick-panel-close:hover {
@@ -161,7 +196,7 @@
         display: grid;
         grid-template-columns: auto 1fr;
         gap: 0.1rem 0.6rem;
-        margin: 0 1rem 0 0;
+        margin: 0 2rem 0 0;
       }
       .pick-panel-data dt {
         color: #9aa3b2;
@@ -177,9 +212,36 @@
         font-size: 0.68rem;
         color: #9aa3b2;
       }
+      .debug-overlay {
+        position: absolute;
+        top: calc(0.5rem + env(safe-area-inset-top));
+        left: calc(0.5rem + env(safe-area-inset-left));
+        padding: 0.4rem 0.6rem;
+        border-radius: 0.5rem;
+        background: rgb(23 25 29 / 0.8);
+        font-family: ui-monospace, monospace;
+        font-size: 0.66rem;
+        line-height: 1.45;
+        color: #b9bec7;
+        white-space: pre;
+        pointer-events: none;
+      }
       @media (max-width: 640px) {
         .attributions {
           font-size: 0.66rem;
+        }
+        /* Bottom sheet: anchored to the screen edge so the center of the
+           map stays visible and reachable. */
+        .pick-panel {
+          left: 0;
+          right: 0;
+          bottom: 0;
+          max-width: none;
+          border-radius: 0.75rem 0.75rem 0 0;
+          padding-bottom: calc(0.55rem + env(safe-area-inset-bottom));
+        }
+        .pick-panel-close {
+          right: calc(0.25rem + env(safe-area-inset-right));
         }
       }
     </style>

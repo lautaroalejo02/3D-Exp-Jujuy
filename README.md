@@ -26,6 +26,20 @@ Vite + TypeScript strict + vgpu 0.5 (WebGPU). Ver `AGENTS.md` y
 | Rueda del mouse | Acercar / alejar |
 | Toque o click corto | Seleccionar un punto (picking) |
 
+## Parámetros de URL y debug
+
+- `?calidad=alta` — satélite y alturas a resolución completa (default: media).
+- `?perfil=movil|escritorio` — fuerza el perfil de dispositivo (default:
+  autodetectado por puntero, pantalla, `deviceMemory` y límites del adapter).
+- `?debug=1` — overlay con FPS/ms promedio, perfil, calidad, malla, DPR,
+  tamaño del canvas y memoria GPU.
+
+El render es **a demanda**: solo se dibuja cuando algo cambia (cámara,
+exageración, picking, resize) y el loop se pausa con la pestaña oculta. En
+perfil móvil la malla baja a 304x320 vértices y el DPR se topea en 1.5
+(escritorio: 608x640, DPR ≤ 2; `?calidad=alta` en móvil usa 608x640 con un
+aviso de que puede ir lenta).
+
 ## Datos generados (`data/build/`)
 
 `npm run build:data` produce, desde `data/raw/`:
