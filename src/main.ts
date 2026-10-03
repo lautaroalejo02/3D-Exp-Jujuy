@@ -36,7 +36,7 @@ import { createTerrainLayer } from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
-import { createDebugOverlay } from "./ui/debug-overlay";
+import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
 import { createPickPanelLayer } from "./ui/pick-panel";
 
 /** Initial vertical exaggeration of the relief (adjustable with the UI slider). */
@@ -221,6 +221,9 @@ async function main(): Promise<void> {
     dirty.request();
   };
 
+  // Declared before surface.onResize subscribes: vgpu fires the callback
+  // once immediately, so the overlay must be reachable from day one.
+  let debugOverlay: DebugOverlay | undefined;
   const canvasSurface = surface(gpu, canvas, {
     dpr: [1, plan.dprMax],
     label: "scene",
@@ -232,6 +235,7 @@ async function main(): Promise<void> {
   });
   canvasSurface.onResize(({ width, height }) => {
     renderer.resize([width, height]);
+    debugOverlay?.refresh();
     requestFrame();
   });
 
@@ -308,7 +312,7 @@ async function main(): Promise<void> {
         .join("\n"),
   );
 
-  const debugOverlay =
+  debugOverlay =
     new URLSearchParams(window.location.search).get("debug") === "1"
       ? createDebugOverlay({
           profile,
@@ -346,12 +350,15 @@ async function main(): Promise<void> {
   // work; clean ticks call frame.cancel(), vgpu's documented way to drop a
   // frame without presenting (nothing is encoded, nothing is submitted).
   const tick = (frame: Frame): void => {
+    const tickStartedAt = performance.now();
     if (!dirty.isDirty()) {
       frame.cancel();
+      // Clean ticks still reach the overlay: consecutive-rendered-frame
+      // stats need to see the gap so idle time never counts as fps.
+      debugOverlay?.tick(tickStartedAt);
       return;
     }
     try {
-      const startedAt = performance.now();
       camera.setAspect(canvasSurface.size[0] / canvasSurface.size[1]);
       const state: LayerState = {
         time: appClock.time,
@@ -361,7 +368,7 @@ async function main(): Promise<void> {
       for (const layer of layers) layer.update(state, appClock.deltaTime);
       renderer.renderFrame(frame, canvasSurface, layers);
       dirty.frameRendered();
-      debugOverlay?.frameRendered(performance.now() - startedAt);
+      debugOverlay?.tick(tickStartedAt, performance.now() - tickStartedAt);
     } catch (error) {
       // A failed frame would leave a frozen canvas otherwise.
       try {

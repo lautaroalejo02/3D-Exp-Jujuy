@@ -27,8 +27,9 @@ Fuera de alcance: renderer alternativo (decisión cerrada del brief) y la forma 
 ## Checklist
 | ID | Tarea | Ruta | Estado | Evidencia |
 |---|---|---|---|---|
-| M1 | Perfil + render a demanda + debug + UI táctil + Recargar | delegada (Devin swe-2-high) | [ ] | 180 tests; capturas idénticas (MD5); GGA FAILED 1º intento: faltaba documento de tarea + rama propia; la rama de límites del adapter era código muerto |
-| M2 | Quitar el chequeo de límites del adapter: por la especificación, nunca están debajo de los defaults | delegada (Devin) | [ ] | |
+| M1 | Perfil + render a demanda + debug + UI táctil + Recargar | delegada (Devin swe-2-high) | [x] | `8f8f1fd`; 180 tests; capturas idénticas (MD5); GGA FAILED 1º intento (faltaba documento de tarea + rama propia) → PASSED |
+| M2 | Quitar el chequeo de límites del adapter: por la especificación, nunca están debajo de los defaults | delegada (Devin) | [x] | incluido en `8f8f1fd`; 178 tests |
+| M3 | FPS reales en `?debug=1` (intervalo entre frames renderizados; reposo excluido) + refresh en resize | delegada (Devin) | [x] | 188 tests; ms GPU no disponible sin la feature `timestamp-query` (riesgo de que la app no arranque en celulares) |
 
 ## Notas
 - Memoria GPU en móvil (normal, 390x844 a DPR 1,5): ~43,5 MiB. La ganancia real está en los vértices por draw: ~0,58 M contra 2,33 M.
