@@ -1,5 +1,5 @@
 // Diorama surroundings — the "maqueta" look around the terrain block. One
-// module, three entry-point pairs chosen per draw via `entry` (each draw
+// module, four entry-point pairs chosen per draw via `entry` (each draw
 // only requires the bindings its entries statically use):
 //
 // 1. vs_sky/fs_sky: fullscreen sky backdrop drawn first with no depth —
@@ -7,15 +7,23 @@
 //    dark warm backdrop below it. The gradient follows the WORLD horizon,
 //    not the screen: each pixel's view ray is pitched against the camera's
 //    up basis, so orbiting tilts the sky correctly.
-// 2. vs_wall/fs_wall: vertical walls hanging from each terrain border down
-//    to a base plane under the minimum elevation, with subtle stratified
-//    earth bands. Generated from vertex_index with the same world mapping
-//    (src/geo gridToWorld) and the same heights storage as terrain.wgsl, so
-//    the wall top follows the mesh silhouette exactly.
-// 3. vs_slab/fs_slab: a thin base slab slightly wider than the block (the
-//    plinth), with a soft contact-shadow ring under the walls.
+// 2. vs_wall/fs_wall: the context rim — a low wall hanging from the
+//    FLATTENED terrain edge (the same `sdf < 0` flattening the terrain
+//    vertex shader applies, see context-flatten.ts) down to the shared
+//    base plane. Outside Jujuy the terrain sits on the context plain, so
+//    this rim reads as a thin plinth, not a tall block wall.
+// 3. vs_cutwall/fs_wall: THE province wall — one clean face per outline
+//    segment. The outline (province-outline-*.bin, marching squares over
+//    the same SDF the shaders sample) is a positive-area ring in grid
+//    coords, so vec3(d.y, 0, -d.x) is the outward normal. The top edge is
+//    the unflattened drawn height (cutWallTopKm twin: the boundary is
+//    inside the flatten mask); the bottom edge is params.baseKm — the
+//    same plane the rim and the slab share (the diorama test pins this).
+// 4. vs_slab/fs_slab: the base slab, FLUSH with the terrain footprint
+//    (slabMargin 1.0 — the previous 1.04 lip was the visible step at the
+//    wall/slab junction), with a soft contact-shadow ring on top.
 //
-// All three draws are created once in src/terrain/diorama.ts; nothing is
+// All four draws are created once in src/terrain/diorama.ts; nothing is
 // allocated per frame.
 
 struct DioramaParams {
@@ -29,10 +37,12 @@ struct DioramaParams {
   cellScale: f32,     // global px per height-grid cell
   kmPerPx: f32,       // ground km per global pixel
   exaggeration: f32,
-  baseKm: f32,        // world Y of the wall bottom = slab top, in km
+  baseKm: f32,        // world Y of the wall bottoms = slab top, in km
   slabKm: f32,        // slab thickness in km (slab bottom = baseKm - slabKm)
   slabMargin: f32,    // slab half-extents = block half-extents * slabMargin
   shadowKm: f32,      // contact-shadow ring width in km
+  contextBaseKm: f32, // world Y of the flattened context plain
+  outsideFlatten: f32,// relief fraction kept outside the province (0.2)
   hazeStart: f32,     // distance in km where the haze starts
   hazeEnd: f32,       // distance in km where the haze saturates
   sunColor: vec3f,    // direct light tint (same uniforms as terrain.wgsl)
@@ -53,6 +63,10 @@ struct SkyParams {
 @group(0) @binding(2) var<storage, read> heights: array<f32>;
 @group(0) @binding(3) var shadowTex: texture_2d<f32>;
 @group(0) @binding(4) var linearSampler: sampler;
+@group(0) @binding(5) var provinceSdfTex: texture_2d<f32>;
+// The province outline ring in height-grid coords (converted once on
+// upload), closing point duplicated: segment s reads outline[s..s+1].
+@group(0) @binding(6) var<storage, read> outline: array<vec2f>;
 
 // Sky palette: a soft blue at the top fading to a pale warm haze at the
 // horizon, and a calm slate below it — the neutral backdrop the maqueta
@@ -81,7 +95,7 @@ fn applyHaze(col: vec3f, world: vec3f) -> vec3f {
 
 // Bilinear sample of the row-major heights buffer at fractional grid
 // coords, clamped to the borders — identical to terrain.wgsl so the wall
-// top matches the mesh edge it hangs from.
+// tops match the mesh they hang from.
 fn heightAt(i: f32, j: f32) -> f32 {
   let w = u32(params.gridSize.x);
   let h = u32(params.gridSize.y);
@@ -96,6 +110,19 @@ fn heightAt(i: f32, j: f32) -> f32 {
   let top = heights[j0 * w + i0] + (heights[j0 * w + i1] - heights[j0 * w + i0]) * fx;
   let bot = heights[j1 * w + i0] + (heights[j1 * w + i1] - heights[j1 * w + i0]) * fx;
   return top + (bot - top) * fy;
+}
+
+// The DRAWN surface height at grid coords (i, j) — the twin of the
+// terrain vertex shader's displacement: raw DEM inside the province,
+// pulled toward the context plain outside (context-flatten.ts).
+fn drawnHeightKm(gi: f32, gj: f32) -> f32 {
+  var y = heightAt(gi, gj) / 1000.0 * params.exaggeration;
+  let uv = (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize;
+  let sdf = textureSampleLevel(provinceSdfTex, linearSampler, uv, 0.0).r * 255.0 - 127.0;
+  if (sdf < 0.0) {
+    y = params.contextBaseKm + y * params.outsideFlatten;
+  }
+  return y;
 }
 
 fn worldX(gi: f32) -> f32 {
@@ -144,10 +171,15 @@ struct WallOut {
   @builtin(position) position: vec4f,
   @location(0) depthFrac: f32,
   @location(1) world: vec3f,
-  @location(2) @interpolate(flat) edge: u32,
+  @location(2) @interpolate(flat) normal: vec3f,
   @location(3) uv: vec2f,
 }
 
+// The context rim: wall quads along the four rectangular grid borders.
+// The top edge is the FLATTENED terrain height — the same drawnHeightKm
+// the terrain mesh draws at those coords — so the rim butts against the
+// context sheet with no gap and drops just ~contextLift + relief*0.2 to
+// the shared base plane (a thin plinth, not a second tall wall).
 @vertex fn vs_wall(@builtin(vertex_index) vi: u32) -> WallOut {
   // Mirrors dioramaVertexPlan() in diorama.ts: edges N, S run along X and
   // hold (meshW-1) quads each; W, E run along Z with (meshH-1) quads.
@@ -177,25 +209,61 @@ struct WallOut {
     gi = select(-0.5, params.gridSize.x - 0.5, edge == 3u);
   }
 
-  let topY = heightAt(gi, gj) / 1000.0 * params.exaggeration;
+  let topY = drawnHeightKm(gi, gj);
   let world = vec3f(worldX(gi), mix(topY, params.baseKm, f32(drop)), worldZ(gj));
+
+  var normal = vec3f(0.0, 0.0, -1.0);
+  if (edge == 1u) { normal = vec3f(0.0, 0.0, 1.0); }
+  else if (edge == 2u) { normal = vec3f(-1.0, 0.0, 0.0); }
+  else if (edge == 3u) { normal = vec3f(1.0, 0.0, 0.0); }
 
   var out: WallOut;
   out.position = params.viewProjection * vec4f(world, 1.0);
   out.depthFrac = f32(drop);
   out.world = world;
-  out.edge = edge;
+  out.normal = normal;
   // Grid UV of the wall's top edge — same mapping as terrain.wgsl's
   // satellite UV — so the fragment can sample the sun-shadow texture.
   out.uv = (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize;
   return out;
 }
 
-@fragment fn fs_wall(in: WallOut) -> @location(0) vec4f {
+// The province cut wall: one quad per outline segment. outline[s] and
+// outline[s+1] are the segment's endpoints in height-grid coords (the
+// ring is wound with positive signed area, so (d.y, 0, -d.x) is the
+// outward normal). Top edge = the unflattened terrain height at the
+// outline point (cutWallTopKm in context-flatten.ts); bottom = baseKm.
+@vertex fn vs_cutwall(@builtin(vertex_index) vi: u32) -> WallOut {
+  let seg = vi / 6u;
+  var cornerX = array<u32, 6>(0u, 1u, 0u, 0u, 1u, 1u);
+  var cornerY = array<u32, 6>(0u, 0u, 1u, 1u, 0u, 1u);
+  let corner = vi % 6u;
+  let a = outline[seg];
+  let b = outline[seg + 1u];
+  let p = select(a, b, cornerX[corner] == 1u);
+  let gi = p.x;
+  let gj = p.y;
+
+  let topY = heightAt(gi, gj) / 1000.0 * params.exaggeration;
+  let drop = cornerY[corner];
+  let world = vec3f(worldX(gi), mix(topY, params.baseKm, f32(drop)), worldZ(gj));
+
+  let d = b - a;
   var normal = vec3f(0.0, 0.0, -1.0);
-  if (in.edge == 1u) { normal = vec3f(0.0, 0.0, 1.0); }
-  else if (in.edge == 2u) { normal = vec3f(-1.0, 0.0, 0.0); }
-  else if (in.edge == 3u) { normal = vec3f(1.0, 0.0, 0.0); }
+  if (length(d) > 1e-6) {
+    normal = normalize(vec3f(d.y, 0.0, -d.x));
+  }
+
+  var out: WallOut;
+  out.position = params.viewProjection * vec4f(world, 1.0);
+  out.depthFrac = f32(drop);
+  out.world = world;
+  out.normal = normal;
+  out.uv = (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize;
+  return out;
+}
+
+@fragment fn fs_wall(in: WallOut) -> @location(0) vec4f {
   // The wall shares its edge cell's cast-shadow visibility with the
   // terrain surface it hangs from (shadowStrength fades the term like
   // in the terrain shader).
@@ -204,7 +272,7 @@ struct WallOut {
     textureSample(shadowTex, linearSampler, in.uv).r,
     params.shadowStrength,
   );
-  let diffuse = max(dot(normal, params.sunDir), 0.0);
+  let diffuse = max(dot(in.normal, params.sunDir), 0.0);
   let light = params.ambientColor + params.sunColor * diffuse * visibility;
 
   // Alternating strata: every other band carries a slightly different
@@ -227,9 +295,10 @@ struct SlabOut {
 }
 
 @vertex fn vs_slab(@builtin(vertex_index) vi: u32) -> SlabOut {
-  // The block footprint is centered on the world origin; the slab extends
-  // a few percent beyond it. 6 vertices for the top face, then one quad
-  // (6 vertices) per rim edge N, S, W, E = 30 vertices total.
+  // The block footprint is centered on the world origin; the slab edge is
+  // flush with it (slabMargin 1.0) so no lip protrudes past the rim wall.
+  // 6 vertices for the top face, then one quad (6 vertices) per rim edge
+  // N, S, W, E = 30 vertices total.
   let hx = 0.5 * params.gridSize.x * params.cellScale * params.kmPerPx;
   let hz = 0.5 * params.gridSize.y * params.cellScale * params.kmPerPx;
   let mx = hx * params.slabMargin;

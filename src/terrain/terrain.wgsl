@@ -62,6 +62,8 @@ struct Params {
   regionBorders: f32,  // 1 = thin region borders; 0 = off
   hazeStart: f32,      // km: distance where the atmospheric haze starts
   hazeEnd: f32,        // km: distance where the haze saturates
+  contextBaseKm: f32,  // world Y of the flattened context plain
+  outsideFlatten: f32, // relief fraction kept outside the province (0.2)
   // Full outer extent [i0, j0, i1, j1] of each live detail patch, in grid
   // coords; only the first patchRectCount slots are valid. Fixed literal
   // size — vgpu rejects symbolic array lengths. Must match
@@ -81,8 +83,8 @@ struct Params {
 
 // Outside-province dimming: how much color is pulled toward luminance and
 // the extra darkening applied on top, before `dimStrength` scales the mix.
-const OUTSIDE_DESATURATION = 0.6;
-const OUTSIDE_DARKEN = 0.78;
+const OUTSIDE_DESATURATION = 0.7;
+const OUTSIDE_DARKEN = 0.65;
 
 // Atmospheric perspective: a subtle far-edge softening toward the sky's
 // horizon color (the hazeStart/hazeEnd uniforms keep it off the block at
@@ -113,6 +115,11 @@ struct VertexOut {
   @location(0) uv: vec2f,
   @location(1) grid: vec2f,
   @location(2) world: vec3f,
+  // 1.0 when this vertex is on the flattened context side of the
+  // province edge, 0.0 at full relief. Strictly inside (0,1) only for
+  // fragments of boundary-crossing fins — the fragments the cut wall
+  // replaces.
+  @location(3) flatMix: f32,
 }
 
 @vertex fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOut {
@@ -130,10 +137,20 @@ struct VertexOut {
   let gj = mj * params.meshToGrid.y - 0.5;
 
   let elevation = heightAt(gi, gj);
+  var heightKm = elevation / 1000.0 * params.exaggeration;
+  // Outside the province the drawn surface is the flattened context
+  // plain (context-flatten.ts is the single source — CPU picking,
+  // markers, detail patches, walls and the shadow march all share it).
+  let sdf = textureSampleLevel(provinceSdfTex, linearSampler,
+    (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize, 0.0).r * 255.0 - 127.0;
+  let flatVertex = sdf < 0.0;
+  if (flatVertex) {
+    heightKm = params.contextBaseKm + heightKm * params.outsideFlatten;
+  }
   let px = params.originPx + (vec2f(gi, gj) + vec2f(0.5)) * params.cellScale;
   let world = vec3f(
     (px.x - params.centerPx.x) * params.kmPerPx,
-    elevation / 1000.0 * params.exaggeration,
+    heightKm,
     (px.y - params.centerPx.y) * params.kmPerPx,
   );
 
@@ -144,6 +161,7 @@ struct VertexOut {
   // The satellite image covers exactly the grid extent, so normalized UV
   // follows straight from grid coords (cell centers at +0.5).
   out.uv = (vec2f(gi, gj) + vec2f(0.5)) / params.gridSize;
+  out.flatMix = select(0.0, 1.0, flatVertex);
   return out;
 }
 
@@ -167,8 +185,36 @@ struct VertexOut {
   let cellMeters = params.cellKm * 1000.0;
   let dhx = heightAt(in.grid.x + 1.0, in.grid.y) - heightAt(in.grid.x - 1.0, in.grid.y);
   let dhz = heightAt(in.grid.x, in.grid.y + 1.0) - heightAt(in.grid.x, in.grid.y - 1.0);
-  let sx = dhx * params.exaggeration / (2.0 * cellMeters);
-  let sz = dhz * params.exaggeration / (2.0 * cellMeters);
+  // The province mask. The SDF raster shares the grid's ground extent, so
+  // the satellite UV samples it directly; bilinear sampling keeps the
+  // outline smooth at any zoom. `px` is the SDF change per physical
+  // pixel, the unit that makes the outline width resolution-independent.
+  let sdf = textureSample(provinceSdfTex, linearSampler, in.uv).r * 255.0 - 127.0;
+  let px = max(fwidth(sdf), 1e-4);
+  // 1 inside Jujuy, 0 outside, ~1 px of transition at the boundary.
+  let inside = smoothstep(-0.5 * px, 0.5 * px, sdf);
+  // Boundary fins: a mesh quad crossing the province edge spans an
+  // inside vertex at full relief and an outside vertex flattened to the
+  // context level — a tall sliver that would poke past the cut wall.
+  // flatMix is strictly between 0 and 1 only inside those quads, and a
+  // fin fragment sits between the two drawn surfaces — discard the
+  // sliver, keeping 50 m stubs at both ends so the plain toe and the
+  // terrain edge stay watertight (the shadow march treats outside as
+  // flat, so cast shadows agree).
+  if (in.flatMix > 0.001 && in.flatMix < 0.999) {
+    let rawKm = heightAt(in.grid.x, in.grid.y) / 1000.0 *
+      params.exaggeration;
+    let flatKm = params.contextBaseKm + rawKm * params.outsideFlatten;
+    if (in.world.y - flatKm > 0.05 && rawKm - in.world.y > 0.05) {
+      discard;
+    }
+  }
+  // Outside, drawn relief is outsideFlatten times the raw elevation — the
+  // slope scale matches the vertex flattening (normals are the terrain's
+  // only ambient cue on the flat context plain).
+  let reliefScale = mix(1.0, params.outsideFlatten, 1.0 - inside);
+  let sx = dhx * params.exaggeration * reliefScale / (2.0 * cellMeters);
+  let sz = dhz * params.exaggeration * reliefScale / (2.0 * cellMeters);
   let normal = normalize(vec3f(-sx, 1.0, -sz));
 
   // Cast shadows: soft visibility computed toward the sun, sampled in the
@@ -197,15 +243,6 @@ struct VertexOut {
   ));
   let overlay = textureLoad(overlayTex, deptTexel, 0);
   rgb = mix(rgb, overlay.rgb * light, overlay.a * params.overlayOpacity);
-
-  // Province mask. The SDF raster shares the grid's ground extent, so the
-  // satellite UV samples it directly; bilinear sampling keeps the outline
-  // smooth at any zoom. `px` is the SDF change per physical pixel, the
-  // unit that makes the outline width resolution-independent.
-  let sdf = textureSample(provinceSdfTex, linearSampler, in.uv).r * 255.0 - 127.0;
-  let px = max(fwidth(sdf), 1e-4);
-  // 1 inside Jujuy, 0 outside, ~1 px of transition at the boundary.
-  let inside = smoothstep(-0.5 * px, 0.5 * px, sdf);
 
   // Outside the province: partially desaturate and mildly darken so the
   // terrain's hue and relief stay recognizable — places straddling the

@@ -25,11 +25,15 @@ struct Params {
   maxKm: f32,       // max horizontal march distance in km
   penumbra: f32,    // softness: clearance/t ratio for a full-lit edge
   biasKm: f32,      // vertical bias above the surface at march start
+  contextBaseKm: f32, // world Y of the flattened context plain
+  outsideFlatten: f32, // relief fraction kept outside the province (0.2)
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
 @group(0) @binding(1) var<storage, read> heights: array<f32>;
 @group(0) @binding(2) var shadowTex: texture_storage_2d<rgba8unorm, write>;
+@group(0) @binding(3) var provinceSdfTex: texture_2d<f32>;
+@group(0) @binding(4) var linearSampler: sampler;
 
 // Bilinear sample of the row-major heights buffer at fractional grid
 // coords, clamped to the borders — identical to terrain.wgsl so the
@@ -50,6 +54,21 @@ fn heightAt(i: f32, j: f32) -> f32 {
   return top + (bot - top) * fy;
 }
 
+// The DRAWN surface height in world km — the twin of the terrain vertex
+// shader's displacement: raw DEM inside the province, pulled toward the
+// context plain outside (context-flatten.ts). Both the receiver and the
+// occluder march over this surface, so province relief casts onto the
+// flat context and the phantom full relief outside cannot.
+fn drawnHeightKm(i: f32, j: f32) -> f32 {
+  var h = heightAt(i, j) / 1000.0 * params.exaggeration;
+  let uv = (vec2f(i, j) + vec2f(0.5)) / params.gridSize;
+  let sdf = textureSampleLevel(provinceSdfTex, linearSampler, uv, 0.0).r * 255.0 - 127.0;
+  if (sdf < 0.0) {
+    h = params.contextBaseKm + h * params.outsideFlatten;
+  }
+  return h;
+}
+
 @compute @workgroup_size(8, 8)
 fn cs_main(@builtin(global_invocation_id) id: vec3u) {
   let dims = textureDimensions(shadowTex);
@@ -67,9 +86,9 @@ fn cs_main(@builtin(global_invocation_id) id: vec3u) {
   let gi = (f32(id.x) + 0.5) * params.gridSize.x / params.virtualSize.x - 0.5;
   let gj = (f32(id.y) + 0.5) * params.gridSize.y / params.virtualSize.y - 0.5;
 
-  // Drawn height in world km (elevation/1000 * exaggeration), like the
-  // terrain vertex displacement.
-  let heightKm = heightAt(gi, gj) / 1000.0 * params.exaggeration;
+  // Drawn height in world km — the flattened surface outside the
+  // province, the raw relief inside (drawnHeightKm above).
+  let heightKm = drawnHeightKm(gi, gj);
 
   let flatLen = length(params.sunDir.xz);
   var visibility = 1.0;
@@ -99,7 +118,7 @@ fn cs_main(@builtin(global_invocation_id) id: vec3u) {
       if (pi < -0.5 || pi > maxI || pj < -0.5 || pj > maxJ) {
         break;
       }
-      let h = heightAt(pi, pj) / 1000.0 * params.exaggeration;
+      let h = drawnHeightKm(pi, pj);
       let rayY = y0 + t * slope;
       vis = min(vis, params.penumbra * (rayY - h) / t);
       t += params.stepKm * (1.0 + params.growth * f32(s));

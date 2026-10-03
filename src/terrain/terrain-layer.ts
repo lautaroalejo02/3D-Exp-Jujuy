@@ -24,6 +24,7 @@ import {
   type ShadowEngine,
   type ShadowQuality,
 } from "../sun/shadow-engine";
+import { contextBaseKm, OUTSIDE_FLATTEN } from "./context-flatten";
 import { createTerrainControls } from "../ui/controls";
 import {
   MAX_DETAIL_PATCHES,
@@ -212,6 +213,12 @@ export interface TerrainLayer extends Layer {
   setShadowQuality(quality: ShadowQuality): void;
   /** The shadow visibility texture (or the 1x1 lit fallback). */
   shadowTexture(): Texture;
+  /**
+   * The province SDF texture the vertex shader samples for the context
+   * flattening (or the 1x1 inside fallback). The diorama binds the same
+   * texture on its rim wall so both flatten identically.
+   */
+  provinceSdfTexture(): Texture;
   /** Milliseconds of the last shadow recompute, if it ran. */
   shadowMs(): number | undefined;
   /** Resolves when the last shadow recompute finished on the GPU. */
@@ -250,6 +257,10 @@ interface TerrainParamsValue {
   /** Haze ramp in km from the camera (hazeRangeKm of the orbit distance). */
   hazeStart: number;
   hazeEnd: number;
+  /** World Y of the flattened context plain (context-flatten.ts). */
+  contextBaseKm: number;
+  /** Relief fraction kept outside the province (OUTSIDE_FLATTEN). */
+  outsideFlatten: number;
   /**
    * Live detail-patch discard rects [i0, j0, i1, j1] in grid coords;
    * only the first patchRectCount slots are read by the shader. Mirrors
@@ -334,12 +345,17 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     sunDir: [...CARTOGRAPHIC_SUN.direction],
     shadowStrength: 0,
     overlayOpacity: opts.showRegions ? regionTintStrength : 0,
-    dimStrength: opts.dimStrength ?? 0.55,
+    dimStrength: opts.dimStrength ?? 0.8, // hybrid format: context reads as muted backdrop (Lautaro, 2026-10-03)
     outlinePx: opts.outlineCssPx ?? 2,
     deptBorders: opts.showDepartmentBorders ? 1 : 0,
     regionBorders: opts.showRegions ? 1 : 0,
     hazeStart: 0,
     hazeEnd: 1,
+    contextBaseKm: contextBaseKm(
+      opts.heightfield.min,
+      opts.verticalExaggeration ?? DEFAULT_VERTICAL_EXAGGERATION,
+    ),
+    outsideFlatten: OUTSIDE_FLATTEN,
     // No patch is live until the app calls setDetailPatchMask: a site
     // that is merely in range but still loading keeps the base surface.
     patchRects: emptyPatchRects(),
@@ -491,6 +507,8 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           shader: opts.shadows.shader,
           plan: opts.shadows.plan,
           interactive: opts.shadows.interactive,
+          provinceSdf: provinceSdfTex,
+          minElevationMeters: opts.heightfield.min,
         });
         shadowTex = shadowEngine.texture;
       } else {
@@ -543,6 +561,11 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       // block's far corner and only grazing views pick up a soft fade.
       [params.hazeStart, params.hazeEnd] = hazeRangeKm(
         state.camera.distanceKm,
+      );
+      // The context plain tracks the exaggeration slider.
+      params.contextBaseKm = contextBaseKm(
+        opts.heightfield.min,
+        params.exaggeration,
       );
       terrainDraw.set({ params });
     },
@@ -609,6 +632,13 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         throw new Error("terrain layer used before init()");
       }
       return shadowTex;
+    },
+
+    provinceSdfTexture(): Texture {
+      if (!provinceSdfTex) {
+        throw new Error("terrain layer used before init()");
+      }
+      return provinceSdfTex;
     },
 
     shadowMs(): number | undefined {

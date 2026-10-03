@@ -78,6 +78,8 @@ struct Params {
   patchCount: f32,
   patchIndex: f32,
   splitBand: f32,   // seam geomorph width in base grid cells
+  contextBaseKm: f32,  // world Y of the flattened context plain
+  outsideFlatten: f32, // relief fraction kept outside the province (0.2)
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -91,6 +93,15 @@ struct Params {
 // at the fragment's position on the base grid — fine shadows inside the
 // patch's own DEM are a possible later improvement.
 @group(0) @binding(5) var shadowTex: texture_2d<f32>;
+// The province SDF raster aligned to the BASE grid's ground extent (same
+// uv convention): patches straddle the border, so the part of a patch
+// outside Jujuy is flattened onto the context plain exactly like the
+// base terrain vertex shader does — the geomorph target already IS the
+// flattened base surface, and flattening is affine in height, so the
+// border band stays watertight. Where a patch covers outside the
+// province the base under it is discarded, so the patch must draw the
+// flattened context surface itself, not be skipped.
+@group(0) @binding(6) var provinceSdfTex: texture_2d<f32>;
 
 // Bilinear sample of a row-major heights buffer at fractional grid
 // coords, clamped to the borders (same convention as raster.bilinearSample).
@@ -171,6 +182,24 @@ fn rectContains(r: vec4f, bi: f32, bj: f32) -> bool {
   return bi >= r.x && bi <= r.z && bj >= r.y && bj <= r.w;
 }
 
+// The province SDF at BASE grid coords — same bilinear decode the terrain
+// shader applies (positive inside, negative outside, 0 the boundary).
+fn provinceSdfAtBase(bi: f32, bj: f32) -> f32 {
+  let uv = (vec2f(bi, bj) + vec2f(0.5)) / params.baseGridSize;
+  return textureSampleLevel(provinceSdfTex, linearSampler, uv, 0.0).r * 255.0 - 127.0;
+}
+
+// The DRAWN world height for a surface elevation in meters at base grid
+// coords — twin of the terrain vertex shader's `if (sdf < 0)` flatten
+// (context-flatten.ts).
+fn drawnHeightKm(meters: f32, bi: f32, bj: f32) -> f32 {
+  var h = meters / 1000.0 * params.exaggeration;
+  if (provinceSdfAtBase(bi, bj) < 0.0) {
+    h = params.contextBaseKm + h * params.outsideFlatten;
+  }
+  return h;
+}
+
 // Signed ownership margin at base grid coords (bi, bj), in base grid
 // cells: the distance to the nearest competing drawn patch's center
 // minus the distance to this patch's own center, minimized over every
@@ -237,10 +266,14 @@ struct VertexOut {
   let gj = mj * params.meshToGrid.y - 0.5;
 
   let elevation = surfaceElevation(gi, gj);
+  let bg = vec2f(
+    (gi + 0.5) * params.patchToBaseK.x + params.patchToBaseC.x,
+    (gj + 0.5) * params.patchToBaseK.y + params.patchToBaseC.y,
+  );
   let px = params.originPx + (vec2f(gi, gj) + vec2f(0.5)) * params.cellScale;
   let world = vec3f(
     (px.x - params.centerPx.x) * params.kmPerPx,
-    elevation / 1000.0 * params.exaggeration,
+    drawnHeightKm(elevation, bg.x, bg.y),
     (px.y - params.centerPx.y) * params.kmPerPx,
   );
 
@@ -277,8 +310,12 @@ struct VertexOut {
   let cellMeters = params.cellKm * 1000.0;
   let dhx = surfaceElevation(in.grid.x + 1.0, in.grid.y) - surfaceElevation(in.grid.x - 1.0, in.grid.y);
   let dhz = surfaceElevation(in.grid.x, in.grid.y + 1.0) - surfaceElevation(in.grid.x, in.grid.y - 1.0);
-  let sx = dhx * params.exaggeration / (2.0 * cellMeters);
-  let sz = dhz * params.exaggeration / (2.0 * cellMeters);
+  // Outside the province the drawn surface is the flattened one — the
+  // slope scale matches the vertex flattening (binary like the vertex
+  // shader's `if (sdf < 0)`, so the shading crease is exactly the cut).
+  let reliefScale = select(1.0, params.outsideFlatten, provinceSdfAtBase(bg.x, bg.y) < 0.0);
+  let sx = dhx * params.exaggeration * reliefScale / (2.0 * cellMeters);
+  let sz = dhz * params.exaggeration * reliefScale / (2.0 * cellMeters);
   let normal = normalize(vec3f(-sx, 1.0, -sz));
 
   // Cast shadows at base resolution: the shadow texture is aligned to

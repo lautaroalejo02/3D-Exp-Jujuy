@@ -41,7 +41,10 @@ export interface IntersectOptions {
   /**
    * Overrides the surface the ray marches, in meters at grid coords
    * (i, j). Default: the heightfield's bilinear sample. Used to march
-   * the geomorphed surface a detail patch draws (picking/detail-pick).
+   * the geomorphed surface a detail patch draws (picking/detail-pick)
+   * or the flattened context surface outside the province
+   * (terrain/context-flatten) — note the flattened surface is VIRTUAL
+   * meters, so pair it with displayAt for a truthful elevation readout.
    */
   readonly surfaceAt?: (i: number, j: number) => number;
   /**
@@ -49,6 +52,14 @@ export interface IntersectOptions {
    * [min, max]; the clip box is widened by it. Ignored without surfaceAt.
    */
   readonly surfaceMarginMeters?: number;
+  /**
+   * The value reported as PickHit.elevationMeters (the pick panel's
+   * altitude readout). Default: the marched surface's meters — the patch
+   * geomorph blend while patches cover, the DEM elsewhere. Pass the
+   * UNFLATTENED drawn surface when surfaceAt is the flattened context:
+   * flattened values are virtual meters, not real elevations.
+   */
+  readonly displayAt?: (i: number, j: number) => number;
 }
 
 /**
@@ -240,9 +251,10 @@ export function intersectHeightfield(
     const x = ray.origin[0] + ray.direction[0] * t;
     const z = ray.origin[2] + ray.direction[2] * t;
     const [i, j] = worldToGrid(spec, x, z);
-    const elevationMeters = heightAt(i, j);
+    const surfaceMeters = heightAt(i, j);
+    const elevationMeters = (opts.displayAt ?? heightAt)(i, j);
     return {
-      world: [x, elevationToWorldY(elevationMeters, verticalExaggeration), z],
+      world: [x, elevationToWorldY(surfaceMeters, verticalExaggeration), z],
       grid: [i, j],
       lonLat: gridToLonLat(spec, i, j),
       elevationMeters,

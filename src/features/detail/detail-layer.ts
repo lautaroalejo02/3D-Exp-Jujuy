@@ -22,6 +22,10 @@ import {
 } from "../../render/gpu-memory";
 import { generateMipmaps } from "../../render/mipmap";
 import {
+  contextBaseKm,
+  OUTSIDE_FLATTEN,
+} from "../../terrain/context-flatten";
+import {
   detailPatchCenterBaseGrid,
   detailPatchRectBaseGrid,
   MAX_DETAIL_PATCHES,
@@ -120,6 +124,20 @@ export interface DetailLayerOptions {
   readonly baseSurface: {
     readonly grid: TerrainGridUniforms;
     heights(): StorageBuffer;
+    /**
+     * Province SDF texture aligned to the base grid (the terrain
+     * layer's) — patches flatten onto the context plain outside the
+     * province exactly like the base surface does. The getter runs in
+     * the async loader. Absent: a 1x1 deep-inside fallback keeps the
+     * flatten a no-op.
+     */
+    provinceSdf?(): Texture;
+    /**
+     * Minimum DEM elevation in meters (the context plain height the
+     * flattened surface sits on). Required: without it outside patches
+     * could not match the drawn base surface.
+     */
+    readonly minElevationMeters: number;
   };
   /**
    * The manifest's site entries — positions, grids and sizes only. No
@@ -228,6 +246,10 @@ interface DetailParamsValue extends TerrainGridUniforms {
   patchCount: number;
   patchIndex: number;
   splitBand: number;
+  /** Context plain height the outside surface flattens onto (km). */
+  contextBaseKm: number;
+  /** Relief fraction kept outside the province (OUTSIDE_FLATTEN). */
+  outsideFlatten: number;
 }
 
 const IDENTITY_MAT4 = [
@@ -357,6 +379,11 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         patchCount: 0,
         patchIndex: 0,
         splitBand: DETAIL_SPLIT_BAND_CELLS,
+        contextBaseKm: contextBaseKm(
+          opts.baseSurface.minElevationMeters,
+          opts.verticalExaggeration(),
+        ),
+        outsideFlatten: OUTSIDE_FLATTEN,
       },
       baseRect: detailPatchRectBaseGrid(spec, opts.baseSpec),
       baseCenter: detailPatchCenterBaseGrid(spec, opts.baseSpec),
@@ -422,6 +449,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
 
   let gpuRef: Gpu | undefined;
   let fallbackShadowTex: Texture | undefined;
+  let fallbackSdfTex: Texture | undefined;
 
   // Layer-level sun state: shared by every site draw. Written into each
   // runtime's params on setSun/setShadowsEnabled so a draw created later
@@ -489,7 +517,9 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
     // state — the params object was seeded with defaults at creation.
     applySunTo(rt);
     const shadowTex = opts.shadowTexture?.() ?? fallbackShadowTex;
-    if (!shadowTex) {
+    const provinceSdfTex =
+      opts.baseSurface.provinceSdf?.() ?? fallbackSdfTex;
+    if (!shadowTex || !provinceSdfTex) {
       throw new Error("detail layer used before init()");
     }
     return {
@@ -511,6 +541,7 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
           baseHeights: opts.baseSurface.heights(),
           satelliteTex: satellite,
           shadowTex,
+          provinceSdfTex,
           linearSampler: sampler(gpu, {
             minFilter: "linear",
             magFilter: "linear",
@@ -698,6 +729,21 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
         { bytesPerRow: 4, rowsPerImage: 1 },
         [1, 1],
       );
+      // Same SDF fallback as the terrain layer's absent-mask path: one
+      // texel at 255 decodes to +128 (deep inside), so no flattening.
+      fallbackSdfTex = texture(ctx.gpu, {
+        kind: "2d",
+        size: [1, 1],
+        format: "r8unorm",
+        usage: ["texture_binding", "copy_dst"],
+        label: "detail-sdf-fallback",
+      });
+      ctx.gpu.gpu.queue.writeTexture(
+        { texture: fallbackSdfTex.gpu },
+        new Uint8Array([255]),
+        { bytesPerRow: 1, rowsPerImage: 1 },
+        [1, 1],
+      );
     },
 
     update(state: LayerState): void {
@@ -779,10 +825,15 @@ export function createDetailLayer(opts: DetailLayerOptions): DetailLayer {
       // The covering set just settled for this frame; arbitration
       // uniforms go out with the same draw.set batch.
       refreshArbitration();
+      const contextBase = contextBaseKm(
+        opts.baseSurface.minElevationMeters,
+        exaggeration,
+      );
       for (const rt of runtimes) {
         if (!rt.visible || !rt.gpu) continue; // requested/loading/failed: base terrain shows
         rt.params.viewProjection = viewProjection;
         rt.params.exaggeration = exaggeration;
+        rt.params.contextBaseKm = contextBase;
         rt.gpu.draw.set({ params: rt.params });
       }
       // Selection edges flip the covering set even without any load —

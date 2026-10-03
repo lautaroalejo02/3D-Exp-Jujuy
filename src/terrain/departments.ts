@@ -56,6 +56,12 @@ export interface DepartmentsData {
   readonly sdf: Int8Array;
   /** Inclusive cell bounds of the province mask on `grid`. */
   readonly provinceBBoxGrid: readonly [number, number, number, number];
+  /**
+   * Province outline ring in `grid` coords — Float32 pairs [i, j], cell
+   * centers at integers, wound with positive signed area. The diorama's
+   * cut wall follows it. Absent in data built before pipeline v4.
+   */
+  readonly outline?: Float32Array;
   /** Province extent [west, south, east, north] in degrees. */
   readonly provinceBBoxLonLat: readonly [number, number, number, number];
   /**
@@ -194,9 +200,12 @@ export async function loadDepartments(
         "pipeline v3 — run npm run build:data",
     );
   }
-  const [indexBytes, sdfBytes, metaRes] = await Promise.all([
+  const [indexBytes, sdfBytes, outlineBytes, metaRes] = await Promise.all([
     fetchBytes(fetchFn, `${baseUrl}${deps.index.file}`),
     fetchBytes(fetchFn, `${baseUrl}${deps.sdf.file}`),
+    deps.outline
+      ? fetchBytes(fetchFn, `${baseUrl}${deps.outline.file}`)
+      : Promise.resolve(undefined),
     fetchFn(`${baseUrl}${bounds.file.file}`),
   ]);
   if (!metaRes.ok) {
@@ -216,11 +225,36 @@ export async function loadDepartments(
     sdfBytes.byteLength,
   );
 
+  let outline: Float32Array | undefined;
+  if (deps.outline) {
+    if (!outlineBytes) {
+      throw new DepartmentsDataError(
+        `${deps.outline.file} failed to load`,
+      );
+    }
+    const expected = deps.outline.points * 8;
+    if (
+      outlineBytes.byteLength !== deps.outline.bytes ||
+      outlineBytes.byteLength !== expected
+    ) {
+      throw new DepartmentsDataError(
+        `${deps.outline.file} is ${outlineBytes.byteLength} B, manifest ` +
+          `recorded ${deps.outline.bytes} B (${deps.outline.points} points)`,
+      );
+    }
+    outline = new Float32Array(
+      outlineBytes.buffer,
+      outlineBytes.byteOffset,
+      outlineBytes.byteLength / 4,
+    );
+  }
+
   const sorted = [...meta.departments].sort((a, b) => a.index - b.index);
   return {
     grid: deps.index.grid,
     index: indexBytes,
     sdf,
+    outline,
     provinceBBoxGrid: deps.provinceBBoxGrid,
     provinceBBoxLonLat: bounds.provinceBBoxLonLat,
     departments: sorted,

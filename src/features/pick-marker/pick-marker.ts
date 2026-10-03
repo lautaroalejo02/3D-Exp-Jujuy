@@ -21,6 +21,13 @@ export interface PickMarkerLayerOptions {
   readonly shader: string | ShaderSource;
   /** Live vertical exaggeration (the value the slider drives). */
   readonly verticalExaggeration: () => number;
+  /**
+   * Drawn-surface elevation in (virtual) meters at grid coords — what
+   * the user actually sees (detail geomorph + outside-province
+   * flattening). The ring anchors to this so it sits ON the drawn
+   * surface; falls back to the hit's DEM elevation when absent.
+   */
+  readonly drawnElevationAt?: (i: number, j: number) => number;
 }
 
 interface PickAnchor {
@@ -77,7 +84,9 @@ export function createPickMarkerLayer(opts: PickMarkerLayerOptions): PickMarkerL
     update(state: LayerState): void {
       if (!markerDraw || !anchor) return;
       const [x, y, z] = gridToWorld(opts.spec, anchor.i, anchor.j, {
-        elevationMeters: anchor.elevationMeters,
+        elevationMeters:
+          opts.drawnElevationAt?.(anchor.i, anchor.j) ??
+          anchor.elevationMeters,
         verticalExaggeration: opts.verticalExaggeration(),
       });
       params.viewProjection = state.camera.viewProjectionMatrix();

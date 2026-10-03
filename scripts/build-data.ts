@@ -56,12 +56,14 @@ import {
 } from "../src/terrain/encoding";
 import {
   DEPARTMENT_INDEX_ENCODING,
+  PROVINCE_OUTLINE_ENCODING,
   PROVINCE_SDF_ENCODING,
   TERRAIN_SCHEMA_VERSION,
   type ElevationStats,
   type ReconstructionError,
   type TerrainManifest,
 } from "../src/terrain/manifest";
+import { provinceOutlineRing } from "../src/terrain/outline";
 import {
   boxDownsample,
   boxDownsampleRgba,
@@ -104,8 +106,17 @@ const OUT_DIR = join(ROOT, "data/build");
  *
  * v3: added department index rasters, province SDFs, departments.json and
  * the province bounding boxes.
+ * v4: added the province outline rings (province-outline-*.bin) the
+ * diorama's cut wall follows.
  */
-const PIPELINE_VERSION = 3;
+const PIPELINE_VERSION = 4;
+
+/**
+ * Douglas-Peucker tolerance for the province outline ring, in the level's
+ * grid cells (~0.5 km/cell at full res): collapses marching-squares
+ * stair-steps while keeping the boundary within ~1 cell of iso 0.
+ */
+const OUTLINE_TOLERANCE_CELLS = 1.0;
 
 const OUTPUT_FILES = [
   "heights-full.bin",
@@ -116,6 +127,8 @@ const OUTPUT_FILES = [
   "departments-half.bin",
   "province-sdf-full.bin",
   "province-sdf-half.bin",
+  "province-outline-full.bin",
+  "province-outline-half.bin",
   "departments.json",
   "terrain.json",
   "debug-alignment.png",
@@ -372,6 +385,44 @@ function main(): void {
   );
   writeFileSync(join(OUT_DIR, "province-sdf-half.bin"), sdfHalf);
 
+  // Province outline rings (the diorama's cut wall, stage Bordes):
+  // marching squares over the level's own SDF at iso 0, simplified with
+  // Douglas-Peucker — the same mask the shaders sample, so the wall
+  // stands exactly on the drawn inside/outside boundary. Float32 pairs
+  // in the level grid's coords, closed ring wound positive (the shader
+  // derives outward normals from that winding).
+  const outlineFull = provinceOutlineRing(
+    sdfFull,
+    DEM_GRID.width,
+    DEM_GRID.height,
+    OUTLINE_TOLERANCE_CELLS,
+  );
+  const outlineHalf = provinceOutlineRing(
+    sdfHalf,
+    deptHalf.width,
+    deptHalf.height,
+    OUTLINE_TOLERANCE_CELLS,
+  );
+  if (!outlineFull || !outlineHalf) {
+    throw new Error("province SDF produced no closed outline ring");
+  }
+  writeFileSync(
+    join(OUT_DIR, "province-outline-full.bin"),
+    Buffer.from(
+      outlineFull.buffer,
+      outlineFull.byteOffset,
+      outlineFull.byteLength,
+    ),
+  );
+  writeFileSync(
+    join(OUT_DIR, "province-outline-half.bin"),
+    Buffer.from(
+      outlineHalf.buffer,
+      outlineHalf.byteOffset,
+      outlineHalf.byteLength,
+    ),
+  );
+
   const provinceBBoxLonLat = unionBBox(departmentPolygons);
   const provinceBBoxGridFull = nonzeroCellBounds(
     deptFull,
@@ -526,6 +577,8 @@ function main(): void {
   const deptEntry = (
     name: string,
     sdfName: string,
+    outlineName: string,
+    outlinePoints: number,
     grid: GridSpec,
     provinceBBoxGrid: readonly [number, number, number, number],
   ): NonNullable<TerrainManifest["levels"]["default"]["departments"]> => ({
@@ -537,6 +590,11 @@ function main(): void {
     sdf: {
       ...fileEntry(sdfName),
       encoding: PROVINCE_SDF_ENCODING,
+    },
+    outline: {
+      ...fileEntry(outlineName),
+      encoding: PROVINCE_OUTLINE_ENCODING,
+      points: outlinePoints,
     },
     provinceBBoxGrid,
   });
@@ -556,6 +614,8 @@ function main(): void {
         departments: deptEntry(
           "departments-half.bin",
           "province-sdf-half.bin",
+          "province-outline-half.bin",
+          outlineHalf.length / 2,
           halfSpec,
           provinceBBoxGridHalf,
         ),
@@ -570,6 +630,8 @@ function main(): void {
         departments: deptEntry(
           "departments-full.bin",
           "province-sdf-full.bin",
+          "province-outline-full.bin",
+          outlineFull.length / 2,
           DEM_GRID,
           provinceBBoxGridFull,
         ),

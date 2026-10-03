@@ -59,6 +59,11 @@ import presentShader from "./render/present.wgsl";
 import { createSceneRenderer } from "./render/scene-renderer";
 import shadowShader from "./sun/shadow.wgsl";
 import {
+  drawnMetersAt,
+  flattenMarginMeters,
+  type ContextFlatten,
+} from "./terrain/context-flatten";
+import {
   loadDepartments,
   type DepartmentsData,
 } from "./terrain/departments";
@@ -529,11 +534,31 @@ async function main(): Promise<void> {
     return covering;
   };
   /**
-   * How far the geomorphed surface may exceed the base heightfield's
-   * [min, max] — the clip-box margin for ray marches over it.
+   * The outside-province context flattening (terrain/context-flatten.ts)
+   * as CPU data: the same SDF the shaders sample, the same constants —
+   * picking, marker anchoring and camera targets land on the drawn
+   * surface instead of the raw DEM.
+   */
+  const flattenCtx: ContextFlatten = {
+    sdf: data.departments.sdf,
+    sdfWidth: data.departments.grid.width,
+    sdfHeight: data.departments.grid.height,
+    gridWidth: data.heightfield.spec.width,
+    gridHeight: data.heightfield.spec.height,
+    minElevationMeters: data.heightfield.min,
+    verticalExaggeration: () => verticalExaggeration,
+  };
+  /**
+   * How far the drawn surface may exceed the base heightfield's
+   * [min, max] — the clip-box margin for ray marches over it. The
+   * flattened context dips BELOW heightfield.min in virtual meters
+   * (flattenMarginMeters), so it applies even with no patch covering.
    */
   const drawnSurfaceMarginMeters = (): number => {
-    let margin = 0;
+    let margin = flattenMarginMeters(
+      data.heightfield.min,
+      verticalExaggeration,
+    );
     for (const patch of coveringPickPatches()) {
       // mix(base, patch) stays inside [min(baseMin, patchMin),
       // max(baseMax, patchMax)] — that is all the clip box must grow.
@@ -546,11 +571,11 @@ async function main(): Promise<void> {
     return Math.max(0, margin);
   };
   /**
-   * Elevation of the surface the user sees, in meters at base grid
-   * coords: the geomorphed blend inside covering patches, the plain DEM
-   * bilinear sample elsewhere.
+   * The unflattened drawn surface in meters at base grid coords — the
+   * geomorphed blend inside covering patches, the plain DEM bilinear
+   * sample elsewhere. This is the REAL elevation the pick panel shows.
    */
-  const drawnElevationAt = (i: number, j: number): number =>
+  const surfaceElevationAt = (i: number, j: number): number =>
     detailSurfaceElevation(
       {
         heightfield: data.heightfield,
@@ -561,6 +586,13 @@ async function main(): Promise<void> {
       j,
       DETAIL_SPLIT_BAND_CELLS,
     );
+  /**
+   * The surface the user SEES, in meters at base grid coords: the
+   * unflattened surface inside the province, the flattened context
+   * outside (virtual meters — never display this value as an elevation).
+   */
+  const drawnElevationAt = (i: number, j: number): number =>
+    drawnMetersAt(flattenCtx, surfaceElevationAt(i, j), i, j);
 
   const terrain = createTerrainLayer({
     heightfield: data.heightfield,
@@ -598,6 +630,9 @@ async function main(): Promise<void> {
     spec: data.heightfield.spec,
     shader: markerShader,
     verticalExaggeration: () => verticalExaggeration,
+    // The ring anchors to the drawn surface: flattened context outside
+    // the province, patch geomorph where patches cover.
+    drawnElevationAt,
   });
   const pickPanel = createPickPanelLayer(
     {
@@ -622,6 +657,11 @@ async function main(): Promise<void> {
     baseSurface: {
       grid: terrain.gridUniforms,
       heights: () => terrain.baseHeightsStorage(),
+      // The terrain's SDF texture, shared: the patch surface flattens
+      // onto the context plain outside the province exactly like the
+      // base mesh does.
+      provinceSdf: () => terrain.provinceSdfTexture(),
+      minElevationMeters: data.heightfield.min,
     },
     sites: detailSites,
     // Payloads are fetched lazily per site — only while the camera
@@ -721,6 +761,17 @@ async function main(): Promise<void> {
   const diorama = createDioramaLayer({
     grid: terrain.gridUniforms,
     heights: () => terrain.baseHeightsStorage(),
+    // The terrain's SDF texture, shared: the rim wall flattens its top
+    // edge onto the context plain with the same sample the terrain
+    // vertex shader takes. Bound lazily like `heights`.
+    provinceSdfTexture: () => terrain.provinceSdfTexture(),
+    outline: data.departments.outline
+      ? {
+          points: data.departments.outline,
+          gridWidth: data.departments.grid.width,
+          gridHeight: data.departments.grid.height,
+        }
+      : undefined,
     minElevationMeters: data.heightfield.min,
     verticalExaggeration: () => verticalExaggeration,
     shader: dioramaShader,
@@ -937,23 +988,24 @@ async function main(): Promise<void> {
 
   /**
    * CPU terrain pick at a canvas-relative CSS px point: the ray marches
-   * the geomorphed surface while patches cover, at ~patch-cell
-   * resolution (patch cells are ~1/8 of a base cell, so the default
-   * 0.5-cell step could skip narrow ridges). Shared by the tap handler
-   * and the Perfil mode's handle dragging.
+   * the DRAWN surface — the context flattening applies always, the patch
+   * geomorph whenever patches cover (at ~patch-cell resolution then,
+   * since patch cells are ~1/8 of a base cell and the default 0.5-cell
+   * step could skip narrow ridges). displayAt is the unflattened surface
+   * so the panel still shows a real elevation for a context pick.
+   * Shared by the tap handler and the Perfil mode's handle dragging.
    */
   const pickTerrainAt = (x: number, y: number): PickHit | undefined =>
     intersectHeightfield(
       screenToRay(camera, x, y, canvas.clientWidth, canvas.clientHeight),
       data.heightfield,
       verticalExaggeration,
-      coveringPickPatches().length === 0
-        ? {}
-        : {
-            stepCells: 0.1,
-            surfaceMarginMeters: drawnSurfaceMarginMeters(),
-            surfaceAt: drawnElevationAt,
-          },
+      {
+        stepCells: coveringPickPatches().length === 0 ? 0.5 : 0.1,
+        surfaceMarginMeters: drawnSurfaceMarginMeters(),
+        surfaceAt: drawnElevationAt,
+        displayAt: surfaceElevationAt,
+      },
     );
 
   // Perfil mode (S3): A/B transect handles + the elevation chart inside

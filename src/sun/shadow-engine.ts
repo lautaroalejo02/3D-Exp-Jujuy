@@ -1,5 +1,6 @@
 import {
   compute,
+  sampler,
   texture,
   type Compute,
   type Gpu,
@@ -9,6 +10,10 @@ import {
 } from "vgpu";
 
 import type { ShadowPlan } from "../app/device-profile";
+import {
+  contextBaseKm,
+  OUTSIDE_FLATTEN,
+} from "../terrain/context-flatten";
 import type { TerrainGridUniforms } from "../terrain/terrain-uniforms";
 import { angularDistanceDeg } from "./solar";
 
@@ -73,6 +78,8 @@ interface ShadowParamsValue {
   maxKm: number;
   penumbra: number;
   biasKm: number;
+  contextBaseKm: number;
+  outsideFlatten: number;
 }
 
 export interface ShadowEngineOptions {
@@ -87,6 +94,15 @@ export interface ShadowEngineOptions {
    * update dispatches at `plan`.
    */
   readonly interactive?: ShadowPlan;
+  /**
+   * Province SDF texture the march samples so the occluder is the DRAWN
+   * (flattened) surface, not the raw DEM — otherwise the invisible full
+   * relief outside the province would still cast shadows on it. Absent:
+   * a 1x1 deep-inside fallback keeps the march on the raw surface.
+   */
+  readonly provinceSdf?: Texture;
+  /** Minimum DEM elevation (heightfield.min); the context plain height. */
+  readonly minElevationMeters?: number;
 }
 
 export interface ShadowEngine {
@@ -125,7 +141,29 @@ export function createShadowEngine(
     maxKm: MAX_MARCH_KM,
     penumbra: PENUMBRA,
     biasKm: BIAS_KM,
+    contextBaseKm: contextBaseKm(opts.minElevationMeters ?? 0, 1),
+    outsideFlatten: OUTSIDE_FLATTEN,
   };
+
+  // SDF fallback: one texel at 255 decodes to +128 (deep inside), so the
+  // march sees the unflattened surface — the pre-Bordes behavior.
+  const provinceSdfTex =
+    opts.provinceSdf ??
+    texture(gpu, {
+      kind: "2d",
+      size: [1, 1],
+      format: "r8unorm",
+      usage: ["texture_binding", "copy_dst"],
+      label: "shadow-sdf-fallback",
+    });
+  if (!opts.provinceSdf) {
+    gpu.gpu.queue.writeTexture(
+      { texture: provinceSdfTex.gpu },
+      new Uint8Array([255]),
+      { bytesPerRow: 1, rowsPerImage: 1 },
+      [1, 1],
+    );
+  }
 
   const shadowTex = texture(gpu, {
     kind: "2d",
@@ -143,6 +181,11 @@ export function createShadowEngine(
       params,
       heights,
       shadowTex,
+      provinceSdfTex,
+      linearSampler: sampler(gpu, {
+        minFilter: "linear",
+        magFilter: "linear",
+      }),
     },
   });
 
@@ -183,6 +226,10 @@ export function createShadowEngine(
       params.exaggeration = exaggeration;
       params.virtualSize = [res.width, res.height];
       params.steps = res.steps;
+      params.contextBaseKm = contextBaseKm(
+        opts.minElevationMeters ?? 0,
+        exaggeration,
+      );
       march.set({ params });
       const startedAt = performance.now();
       march.dispatch(Math.ceil(res.width / 8), Math.ceil(res.height / 8));

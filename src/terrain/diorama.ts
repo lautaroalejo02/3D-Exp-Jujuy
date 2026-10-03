@@ -1,6 +1,7 @@
 import {
   draw,
   sampler,
+  storage,
   texture,
   type Draw,
   type FramePass,
@@ -11,36 +12,52 @@ import {
 } from "vgpu";
 
 import type { Layer, LayerContext, LayerState } from "../app/layers";
+import {
+  contextBaseKm,
+  OUTSIDE_FLATTEN,
+  SHADOW_KM,
+  SLAB_KM,
+  SLAB_MARGIN,
+  basePlaneKm,
+} from "./context-flatten";
 import { CARTOGRAPHIC_SUN } from "./terrain-layer";
 import { hazeRangeKm, type TerrainGridUniforms } from "./terrain-uniforms";
 
 /**
  * Diorama surroundings — the "maqueta" look behind and under the terrain:
- * a sky gradient backdrop, earthy side walls hanging from each terrain
- * border down to a base plane under the minimum elevation, and a thin base
- * slab (plinth) with a soft contact-shadow ring.
+ * a sky gradient backdrop, a thin context rim on the rectangular grid
+ * border (the outside terrain is flattened toward a low plain, and this
+ * plinth drops from that flattened edge to the base plane), ONE cut wall
+ * following the province outline from the full relief down to the same
+ * base plane, and a flush base slab (plinth) under it all.
  *
- * Implemented as one Layer whose draw() encodes three draws from
- * diorama.wgsl (entry points vs_sky/fs_sky, vs_wall/fs_wall, vs_slab/
- * fs_slab — vgpu reflects bindings per entry, so each draw only binds what
- * it uses). GPU resources are created once in init; update() only rewrites
- * the two uniform structs, so it costs nothing while the app idles.
+ * Implemented as one Layer whose draw() encodes four draws from
+ * diorama.wgsl (entry points vs_sky/fs_sky, vs_wall/fs_wall,
+ * vs_cutwall/fs_wall, vs_slab/fs_slab — vgpu reflects bindings per entry,
+ * so each draw only binds what it uses). GPU resources are created once
+ * in init; update() only rewrites the two uniform structs, so it costs
+ * nothing while the app idles.
  *
  * The layer must precede the terrain in the layers array: the sky is an
  * opaque fullscreen draw with depth disabled and relies on everything else
- * overdrawing it. The heights buffer belongs to the terrain layer, which
- * inits after this one — the walls bind it lazily on the first update(),
- * the same deferred pattern the detail layer uses for site resources.
+ * overdrawing it. The heights buffer and the province SDF texture belong
+ * to the terrain layer, which inits after this one — the walls bind them
+ * lazily on the first update(), the same deferred pattern the detail
+ * layer uses for site resources.
  */
 
-/** Depth of the block below the exaggerated minimum elevation, in km. */
-const SKIRT_KM = 10;
-/** Thickness of the plinth slab under the walls, in km. */
-const SLAB_KM = 2.2;
-/** Slab half-extents = block half-extents * SLAB_MARGIN (the plinth lip). */
-const SLAB_MARGIN = 1.04;
-/** Width of the soft contact-shadow ring on the slab, in km. */
-const SHADOW_KM = 14;
+export interface ProvinceOutline {
+  /**
+   * Flat [i0,j0, i1,j1, ...] ring in the departments raster's grid
+   * coords (cell centers at integers), wound with positive signed area
+   * — the shader derives outward normals from that winding. Produced by
+   * provinceOutlineRing at build time (province-outline-*.bin).
+   */
+  readonly points: Float32Array;
+  /** Size of the grid the outline coords live in. */
+  readonly gridWidth: number;
+  readonly gridHeight: number;
+}
 
 export interface DioramaLayerOptions {
   /**
@@ -55,6 +72,20 @@ export interface DioramaLayerOptions {
    * the sky must be first) and binds it lazily on the first update().
    */
   readonly heights: () => StorageBuffer;
+  /**
+   * The province SDF texture the terrain layer owns — the same deferred
+   * getter pattern as `heights`. The rim wall samples it to flatten the
+   * context edge exactly like the terrain vertex shader does. Absent:
+   * the rim keeps the unflattened edge heights (the pre-Bordes look).
+   */
+  readonly provinceSdfTexture?: () => Texture;
+  /**
+   * Province outline ring for the cut wall (build-data output). The
+   * layer converts it into height-grid coords once at init and uploads
+   * it as a storage buffer with the closing point duplicated. Absent:
+   * no cut wall is drawn.
+   */
+  readonly outline?: ProvinceOutline;
   /** Minimum DEM elevation in meters (heightfield.min). */
   readonly minElevationMeters: number;
   /** Live vertical exaggeration (the value the slider drives). */
@@ -65,7 +96,7 @@ export interface DioramaLayerOptions {
   readonly lightStrength?: number;
   /**
    * Sun-shadow visibility texture (the terrain layer's engine output),
-   * bound on the wall draw. Absent: a 1x1 fully-lit fallback is bound.
+   * bound on the wall draws. Absent: a 1x1 fully-lit fallback is bound.
    */
   readonly shadowTexture?: () => Texture;
 }
@@ -98,6 +129,8 @@ interface DioramaParamsValue {
   slabKm: number;
   slabMargin: number;
   shadowKm: number;
+  contextBaseKm: number;
+  outsideFlatten: number;
   hazeStart: number;
   hazeEnd: number;
   sunColor: number[];
@@ -118,13 +151,19 @@ const IDENTITY_MAT4 = [
 ];
 
 /**
- * Vertex layout of the wall draw, mirrored by vs_wall in diorama.wgsl.
- * Edges N and S run along X (meshW-1 quads each); W and E run along Z
- * (meshH-1 quads). Returns the total non-indexed vertex count.
+ * Vertex layout of the diorama draws, mirrored by vs_wall / vs_cutwall /
+ * vs_slab in diorama.wgsl. The rim edges N and S run along X (meshW-1
+ * quads each); W and E run along Z (meshH-1 quads). The cut wall emits 6
+ * vertices per outline segment. Returns the non-indexed vertex counts.
  */
 export function dioramaVertexPlan(
   meshSize: readonly [number, number],
-): { readonly vertexCount: number; readonly slabVertexCount: number } {
+  outlinePoints = 0,
+): {
+  readonly vertexCount: number;
+  readonly slabVertexCount: number;
+  readonly cutWallVertexCount: number;
+} {
   if (meshSize[0] < 2 || meshSize[1] < 2) {
     throw new Error(
       `diorama walls need at least 2x2 mesh vertices, got ${meshSize[0]}x${meshSize[1]}`,
@@ -132,13 +171,32 @@ export function dioramaVertexPlan(
   }
   const wallVertices = 12 * (meshSize[0] - 1) + 12 * (meshSize[1] - 1);
   // Slab: one quad for the top face + one rim quad per edge (N, S, W, E).
-  return { vertexCount: wallVertices, slabVertexCount: 30 };
+  return {
+    vertexCount: wallVertices,
+    slabVertexCount: 30,
+    cutWallVertexCount: outlinePoints * 6,
+  };
 }
 
 export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
-  const { vertexCount: wallVertices, slabVertexCount } = dioramaVertexPlan(
-    opts.grid.meshSize,
-  );
+  // Outline ring re-expressed in height-grid coords (the two grids share
+  // the ground extent; this is the pure cell-center rescale) with the
+  // closing point duplicated so segment s reads points[s..s+1].
+  let outlineVertices: Float32Array | undefined;
+  if (opts.outline && opts.outline.points.length >= 6) {
+    const src = opts.outline.points;
+    const n = src.length / 2;
+    const kx = opts.grid.gridSize[0] / opts.outline.gridWidth;
+    const ky = opts.grid.gridSize[1] / opts.outline.gridHeight;
+    outlineVertices = new Float32Array((n + 1) * 2);
+    for (let k = 0; k <= n; k++) {
+      const s = (k % n) * 2;
+      outlineVertices[k * 2] = (src[s]! + 0.5) * kx - 0.5;
+      outlineVertices[k * 2 + 1] = (src[s + 1]! + 0.5) * ky - 0.5;
+    }
+  }
+  const { vertexCount: wallVertices, slabVertexCount, cutWallVertexCount } =
+    dioramaVertexPlan(opts.grid.meshSize, outlineVertices ? outlineVertices.length / 2 - 1 : 0);
 
   const ambient = opts.ambient ?? CARTOGRAPHIC_SUN.ambient[0];
   const lightStrength = opts.lightStrength ?? CARTOGRAPHIC_SUN.color[0];
@@ -157,6 +215,8 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
     slabKm: SLAB_KM,
     slabMargin: SLAB_MARGIN,
     shadowKm: SHADOW_KM,
+    contextBaseKm: 0,
+    outsideFlatten: OUTSIDE_FLATTEN,
     hazeStart: 0,
     hazeEnd: 1,
     // Same default light as the terrain: NW 45 deg sun, grey direct and
@@ -175,6 +235,7 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
 
   let skyDraw: Draw | undefined;
   let wallDraw: Draw | undefined;
+  let cutWallDraw: Draw | undefined;
   let slabDraw: Draw | undefined;
   let heightsBound = false;
 
@@ -193,7 +254,7 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
         depth: false,
         set: { sky },
       });
-      // Shadow texture for the wall draw: the terrain's engine output.
+      // Shadow texture for the wall draws: the terrain's engine output.
       // The terrain layer inits after this one (draw order = init order:
       // the sky must be first), so the getter runs lazily on the first
       // update — the same deferred-bind pattern as `heights` — and this
@@ -211,6 +272,22 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
         { bytesPerRow: 4, rowsPerImage: 1 },
         [1, 1],
       );
+      // SDF fallback while the terrain's texture is not bound yet: one
+      // texel at 255 decodes to +128 (deep inside) so the rim wall keeps
+      // unflattened edge heights until the real raster arrives.
+      const fallbackSdfTex = texture(gpu, {
+        kind: "2d",
+        size: [1, 1],
+        format: "r8unorm",
+        usage: ["texture_binding", "copy_dst"],
+        label: "diorama-sdf-fallback",
+      });
+      gpu.gpu.queue.writeTexture(
+        { texture: fallbackSdfTex.gpu },
+        new Uint8Array([255]),
+        { bytesPerRow: 1, rowsPerImage: 1 },
+        [1, 1],
+      );
       wallDraw = draw(gpu, {
         shader: opts.shader,
         entry: { vertex: "vs_wall", fragment: "fs_wall" },
@@ -221,12 +298,38 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
         set: {
           params,
           shadowTex: fallbackShadowTex,
+          provinceSdfTex: fallbackSdfTex,
           linearSampler: sampler(gpu, {
             minFilter: "linear",
             magFilter: "linear",
           }),
         },
       });
+      if (outlineVertices) {
+        const outlineBuffer = storage(
+          gpu,
+          outlineVertices.byteLength,
+          "read",
+        );
+        outlineBuffer.write(outlineVertices as Float32Array<ArrayBuffer>);
+        cutWallDraw = draw(gpu, {
+          shader: opts.shader,
+          entry: { vertex: "vs_cutwall", fragment: "fs_wall" },
+          label: "diorama-cutwall",
+          vertices: cutWallVertexCount,
+          cull: "none",
+          depth: { compare: "greater", write: true }, // reversed-Z
+          set: {
+            params,
+            outline: outlineBuffer,
+            shadowTex: fallbackShadowTex,
+            linearSampler: sampler(gpu, {
+              minFilter: "linear",
+              magFilter: "linear",
+            }),
+          },
+        });
+      }
       slabDraw = draw(gpu, {
         shader: opts.shader,
         entry: { vertex: "vs_slab", fragment: "fs_slab" },
@@ -241,21 +344,33 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
     update(state: LayerState): void {
       if (!wallDraw || !slabDraw || !skyDraw) return;
       if (!heightsBound) {
-        // Deferred binds: the terrain layer owns the buffer (and the
-        // shadow texture) and inits after this layer — the sky must draw
-        // first. Binding a vgpu resource is not GPU allocation — the
-        // draw itself was created once in init().
-        wallDraw.set({ heights: opts.heights() });
+        // Deferred binds: the terrain layer owns the buffers (and the
+        // shadow + SDF textures) and inits after this layer — the sky
+        // must draw first. Binding a vgpu resource is not GPU allocation
+        // — the draws themselves were created once in init().
+        const heights = opts.heights();
+        wallDraw.set({ heights });
+        const sdfTex = opts.provinceSdfTexture?.();
+        if (sdfTex) wallDraw.set({ provinceSdfTex: sdfTex });
+        if (cutWallDraw) cutWallDraw.set({ heights });
         const shadowTex = opts.shadowTexture?.();
-        if (shadowTex) wallDraw.set({ shadowTex });
+        if (shadowTex) {
+          wallDraw.set({ shadowTex });
+          cutWallDraw?.set({ shadowTex });
+        }
         heightsBound = true;
       }
       const exaggeration = opts.verticalExaggeration();
       params.viewProjection = state.camera.viewProjectionMatrix();
       params.cameraPos = [...state.camera.eye()];
       params.exaggeration = exaggeration;
-      params.baseKm =
-        (opts.minElevationMeters / 1000) * exaggeration - SKIRT_KM;
+      // One shared base plane: both wall bottoms and the slab top use it
+      // (context-flatten.ts is the single source — the unit test pins it).
+      params.baseKm = basePlaneKm(opts.minElevationMeters, exaggeration);
+      params.contextBaseKm = contextBaseKm(
+        opts.minElevationMeters,
+        exaggeration,
+      );
       // The haze ramp scales with the orbit distance: at the default
       // framing it starts beyond the block's far corner, so only grazing
       // views show a subtle far-edge fade (hazeRangeKm).
@@ -270,6 +385,7 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
       sky.tanHalfFov = Math.tan((state.camera.fovDeg * Math.PI) / 360);
       sky.aspect = state.camera.aspect;
       wallDraw.set({ params });
+      cutWallDraw?.set({ params });
       slabDraw.set({ params });
       skyDraw.set({ sky });
     },
@@ -280,6 +396,7 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
       if (skyDraw) pass.draw(skyDraw);
       if (slabDraw) pass.draw(slabDraw);
       if (wallDraw) pass.draw(wallDraw);
+      if (cutWallDraw) pass.draw(cutWallDraw);
     },
 
     setSun(direction, color, ambient): void {
@@ -292,12 +409,14 @@ export function createDioramaLayer(opts: DioramaLayerOptions): DioramaLayer {
         ambientColor: params.ambientColor,
       };
       wallDraw?.set({ params: partial });
+      cutWallDraw?.set({ params: partial });
       slabDraw?.set({ params: partial });
     },
 
     setShadowsEnabled(enabled: boolean): void {
       params.shadowStrength = enabled ? 1 : 0;
       wallDraw?.set({ params: { shadowStrength: params.shadowStrength } });
+      cutWallDraw?.set({ params: { shadowStrength: params.shadowStrength } });
     },
 
     setSkyTint(tint): void {

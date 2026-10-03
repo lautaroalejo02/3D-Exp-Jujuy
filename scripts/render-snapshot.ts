@@ -6,6 +6,10 @@
  *
  * - overview.png           the app's initial view (province framed, from the south-east)
  * - overview-portrait.png  phone framing: 390x844 CSS px @ DPR 2, mobile mesh
+ * - susques-wall.png       close-up of the province cut wall near Susques
+ *                          (stage Bordes): the outline ring's vertex
+ *                          nearest the town, seen from outside along the
+ *                          ring's outward normal at mid wall height
  * - quebrada.png           Humahuaca (see HUMAHUACA) from ~60 km, looking north
  * - quebrada-marker.png    same framing with the pick marker at Humahuaca
  * - salinas.png            Salinas Grandes (see SALINAS_GRANDES), the salt
@@ -103,6 +107,7 @@ import {
   type FetchResponseLike,
 } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
+import { basePlaneKm } from "../src/terrain/context-flatten";
 import { loadPlaces, type PlacesDoc } from "../src/terrain/places-manifest";
 import { createDioramaLayer, type DioramaLayer } from "../src/terrain/diorama";
 import { argentinaLocalToUtc, sunLook } from "../src/sun/solar";
@@ -233,6 +238,17 @@ async function main(): Promise<void> {
     ),
     sdf: new Int8Array(readFileSync(join(BUILD_DIR, deptLevel.sdf.file))),
   };
+  // Province outline ring (pipeline v4+): Float32 pairs in the
+  // departments grid's coords — the diorama's cut wall follows it, and
+  // it picks the wall close-up's target vertex. The Uint8Array copy
+  // detaches the Buffer pool backing before viewing it as f32.
+  const provinceOutline = deptLevel.outline
+    ? new Float32Array(
+        new Uint8Array(
+          readFileSync(join(BUILD_DIR, deptLevel.outline.file)),
+        ).buffer,
+      )
+    : undefined;
   const jpg = decodeJpeg(readFileSync(join(BUILD_DIR, level.satellite.file)), {
     formatAsRGBA: true,
     useTArray: true,
@@ -386,6 +402,8 @@ async function main(): Promise<void> {
       baseSurface: {
         grid: terrain.gridUniforms,
         heights: () => terrain.baseHeightsStorage(),
+        provinceSdf: () => terrain.provinceSdfTexture(),
+        minElevationMeters: heightfield.min,
       },
       sites: detailSites,
       loadSite: loadSiteData,
@@ -456,6 +474,14 @@ async function main(): Promise<void> {
     createDioramaLayer({
       grid: t.gridUniforms,
       heights: () => t.baseHeightsStorage(),
+      provinceSdfTexture: () => t.provinceSdfTexture(),
+      outline: provinceOutline
+        ? {
+            points: provinceOutline,
+            gridWidth: deptLevel.index.grid.width,
+            gridHeight: deptLevel.index.grid.height,
+          }
+        : undefined,
       minElevationMeters: heightfield.min,
       verticalExaggeration: () => EXAGGERATION,
       shader: dioramaWgsl,
@@ -664,6 +690,81 @@ async function main(): Promise<void> {
     });
   };
 
+  /**
+   * Province-wall close-up (stage Bordes): the outline ring vertex
+   * nearest to Susques (its coordinate comes from the built places.json,
+   * Wikidata Q1495796 — the town sits just inside the border, so its
+   * nearest ring point is the west wall the stage wants to inspect).
+   * The camera sits on the ring's outward normal — (dy, -dx) per
+   * segment, positive winding, same convention diorama.wgsl uses — at
+   * the wall's mid height, so the cut face and the flattened context
+   * both read.
+   */
+  const susques = placesDoc?.places.find((p) => p.id === "Q1495796");
+  const susquesWallCamera = (): OrbitCamera => {
+    if (!provinceOutline || !susques) {
+      throw new Error(
+        "province outline ring or places.json Susques entry missing — " +
+          "run npm run build:data && npm run build:places",
+      );
+    }
+    const [si, sj] = lonLatToGrid(
+      deptLevel.index.grid,
+      susques.lon,
+      susques.lat,
+    );
+    const n = provinceOutline.length / 2;
+    let nearest = 0;
+    let nearestD = Infinity;
+    for (let k = 0; k < n; k++) {
+      const di = provinceOutline[k * 2]! - si;
+      const dj = provinceOutline[k * 2 + 1]! - sj;
+      const d = di * di + dj * dj;
+      if (d < nearestD) {
+        nearestD = d;
+        nearest = k;
+      }
+    }
+    // Ring coords are on the departments grid; rescale into the height
+    // grid (same ground extent, cell centers at integers).
+    const kx = heightfield.spec.width / deptLevel.index.grid.width;
+    const ky = heightfield.spec.height / deptLevel.index.grid.height;
+    const gi = (provinceOutline[nearest * 2]! + 0.5) * kx - 0.5;
+    const gj = (provinceOutline[nearest * 2 + 1]! + 0.5) * ky - 0.5;
+    const [x, , z] = gridToWorld(heightfield.spec, gi, gj);
+    const segDir = (a: number, b: number): readonly [number, number] => {
+      const dx = provinceOutline[b * 2]! - provinceOutline[a * 2]!;
+      const dy = provinceOutline[b * 2 + 1]! - provinceOutline[a * 2 + 1]!;
+      const len = Math.hypot(dx, dy) || 1;
+      return [dx / len, dy / len];
+    };
+    const [ax, ay] = segDir((nearest - 1 + n) % n, nearest);
+    const [bx, by] = segDir(nearest, (nearest + 1) % n);
+    const nlen = Math.hypot(ay + by, ax + bx) || 1;
+    // (i,j) -> world (x,z): outward = (dy, -dx) per segment.
+    const ox = (ay + by) / nlen;
+    const oz = -(ax + bx) / nlen;
+    const topKm =
+      (heightfield.heightAtGrid(gi, gj) / 1000) * EXAGGERATION;
+    const targetY =
+      (topKm + basePlaneKm(heightfield.min, EXAGGERATION)) / 2;
+    return new OrbitCamera({
+      target: [x, targetY, z],
+      // The wall is ~20 km tall (terrain edge down to the base plane), so
+      // it fills the frame closer in — 55 km keeps the cut edge, the
+      // wall face and the context plain in one shot.
+      distanceKm: 55,
+      // Camera offset (sin az, cos az) in (x, z): place the eye along the
+      // outward normal so the wall is seen face-on from outside.
+      azimuthDeg: (Math.atan2(ox, oz) * 180) / Math.PI,
+      elevationDeg: 18,
+      fovDeg: 45,
+      aspect: WIDTH / HEIGHT,
+      nearKm: 0.2,
+      minDistanceKm: 5,
+    });
+  };
+
   const shots: {
     name: string;
     camera: OrbitCamera;
@@ -697,6 +798,14 @@ async function main(): Promise<void> {
       scene: portraitRenderer,
       output: portraitOutput,
       size: portraitSize,
+    },
+    {
+      name: "susques-wall",
+      camera: susquesWallCamera(),
+      layers: [diorama, terrain],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
     },
     {
       name: "quebrada",

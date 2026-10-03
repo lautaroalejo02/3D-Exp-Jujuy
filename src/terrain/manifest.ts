@@ -65,6 +65,23 @@ export const PROVINCE_SDF_ENCODING = {
 } as const;
 export type ProvinceSdfEncoding = typeof PROVINCE_SDF_ENCODING;
 
+/**
+ * Province outline ring: Float32 little-endian pairs [i, j] in the
+ * level's grid coords (cell centers at integers), the iso-0 contour of
+ * the level's province SDF, simplified with Douglas-Peucker and wound
+ * with positive signed area — the diorama's cut wall follows it.
+ * Present since pipeline v4.
+ */
+export const PROVINCE_OUTLINE_ENCODING = {
+  format: "float32",
+  endianness: "little",
+  layout: "pairs",
+  semantics: "closed-ring",
+  units: "grid-cells",
+  winding: "positive-area",
+} as const;
+export type ProvinceOutlineEncoding = typeof PROVINCE_OUTLINE_ENCODING;
+
 /** Department index raster + province SDF for one quality level. */
 export interface DepartmentsLevel {
   readonly index: TerrainFileEntry & {
@@ -73,6 +90,15 @@ export interface DepartmentsLevel {
   };
   readonly sdf: TerrainFileEntry & {
     readonly encoding: ProvinceSdfEncoding;
+  };
+  /**
+   * Province outline ring (pipeline v4+); absent in manifests built
+   * before it — the diorama then draws no cut wall.
+   */
+  readonly outline?: TerrainFileEntry & {
+    readonly encoding: ProvinceOutlineEncoding;
+    /** Vertices in the ring (= bytes / 8). */
+    readonly points: number;
   };
   /**
    * Inclusive cell bounds [minI, minJ, maxI, maxJ] of the province mask on
