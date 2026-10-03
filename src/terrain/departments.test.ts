@@ -3,8 +3,10 @@ import { describe, expect, it } from "vitest";
 import type { GridSpec } from "../geo/grid";
 import {
   DEPARTMENT_COUNT,
+  departmentNameAt,
   DepartmentsDataError,
   loadDepartments,
+  type DepartmentsData,
 } from "./departments";
 import {
   TerrainHttpError,
@@ -246,5 +248,48 @@ describe("loadDepartments", () => {
         fetchFrom({ ...goodFiles(), "departments.json": dup }),
       ),
     ).rejects.toBeInstanceOf(DepartmentsDataError);
+  });
+});
+
+describe("departmentNameAt", () => {
+  const data: DepartmentsData = {
+    grid: SPEC,
+    // 4x2 raster: outside(0) around an inside block.
+    index: new Uint8Array([0, 1, 2, 0, 0, 16, 3, 0]),
+    sdf: new Int8Array(CELLS),
+    provinceBBoxGrid: [1, 0, 2, 1],
+    provinceBBoxLonLat: [-67, -25, -64, -21],
+    departments: [
+      { index: 1, name: "Cochinoca" },
+      { index: 2, name: "Dr. Manuel Belgrano" },
+      { index: 3, name: "El Carmen" },
+      { index: 16, name: "Yaví" },
+    ],
+    attribution: "test",
+  };
+
+  it("returns the source name at a cell center", () => {
+    expect(departmentNameAt(data, 1, 0)).toBe("Cochinoca");
+    expect(departmentNameAt(data, 2, 0)).toBe("Dr. Manuel Belgrano");
+    expect(departmentNameAt(data, 1, 1)).toBe("Yaví");
+    expect(departmentNameAt(data, 2, 1)).toBe("El Carmen");
+  });
+
+  it("treats fractional coords inside the cell as that cell", () => {
+    // Cell (1, 0) covers i in [0.5, 1.5), j in [-0.5, 0.5).
+    expect(departmentNameAt(data, 1.49, 0.49)).toBe("Cochinoca");
+    expect(departmentNameAt(data, 0.51, -0.49)).toBe("Cochinoca");
+  });
+
+  it("returns undefined where the index is 0 (outside Jujuy)", () => {
+    expect(departmentNameAt(data, 0, 0)).toBeUndefined();
+    expect(departmentNameAt(data, 3, 1)).toBeUndefined();
+  });
+
+  it("returns undefined outside the raster", () => {
+    expect(departmentNameAt(data, -1, 0)).toBeUndefined();
+    expect(departmentNameAt(data, 0, -1)).toBeUndefined();
+    expect(departmentNameAt(data, 4, 0)).toBeUndefined();
+    expect(departmentNameAt(data, 0, 2)).toBeUndefined();
   });
 });

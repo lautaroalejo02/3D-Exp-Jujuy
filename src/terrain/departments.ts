@@ -147,6 +147,31 @@ function expectCells(
 }
 
 /**
+ * Department name at fractional grid coordinates (cell centers at integer
+ * coords, the src/geo convention). Returns the name verbatim from the
+ * source data, or undefined where the raster reads 0 — outside the
+ * province — or the coords fall off the raster entirely.
+ */
+export function departmentNameAt(
+  data: Pick<DepartmentsData, "grid" | "index" | "departments">,
+  i: number,
+  j: number,
+): string | undefined {
+  const ci = Math.round(i);
+  const cj = Math.round(j);
+  if (
+    ci < 0 ||
+    cj < 0 ||
+    ci >= data.grid.width ||
+    cj >= data.grid.height
+  ) {
+    return undefined;
+  }
+  const v = data.index[cj * data.grid.width + ci] ?? 0;
+  return data.departments.find((d) => d.index === v)?.name;
+}
+
+/**
  * Fetch and decode the department index raster, the province SDF and the
  * department metadata for a quality level. `baseUrl` prefixes the
  * manifest-relative file names, like loadHeightfield.

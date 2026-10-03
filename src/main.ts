@@ -16,7 +16,7 @@ import {
 import { createDirtyTracker } from "./app/dirty-tracker";
 import type { Layer, LayerState } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
-import { overviewCamera } from "./camera/framing";
+import { bboxOnGrid, overviewCamera } from "./camera/framing";
 import { attachCameraInput } from "./camera/input";
 import { createPickMarkerLayer } from "./features/pick-marker/pick-marker";
 import markerShader from "./features/pick-marker/pick-marker.wgsl";
@@ -27,11 +27,16 @@ import mipmapShader from "./render/mipmap.wgsl";
 import presentShader from "./render/present.wgsl";
 import { createSceneRenderer } from "./render/scene-renderer";
 import {
+  loadDepartments,
+  type DepartmentsData,
+} from "./terrain/departments";
+import {
   loadHeightfield,
   loadTerrainManifest,
   type TerrainQuality,
 } from "./terrain/heightfield";
 import type { SatelliteImage } from "./terrain/satellite";
+import { assertSameGroundExtent } from "./terrain/validate";
 import { createTerrainLayer } from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
@@ -110,6 +115,7 @@ function mountAttributions(overlay: HTMLElement): void {
 interface TerrainData {
   readonly heightfield: Awaited<ReturnType<typeof loadHeightfield>>;
   readonly satellite: SatelliteImage;
+  readonly departments: DepartmentsData;
   /**
    * Mean reconstruction error of the downsampled level, meters. Only the
    * default quality reports one; shown in the pick panel's precision note.
@@ -119,7 +125,13 @@ interface TerrainData {
 
 async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
   const manifest = await loadTerrainManifest((url) => fetch(url));
-  const heightfield = await loadHeightfield(manifest, quality);
+  const [heightfield, departments] = await Promise.all([
+    loadHeightfield(manifest, quality),
+    loadDepartments(manifest, quality),
+  ]);
+  // The mask rasters are sampled through the height grid's UV; same ground
+  // extent is what makes that valid.
+  assertSameGroundExtent(departments.grid, heightfield.spec);
   const level = manifest.levels[quality];
   const res = await fetch(level.satellite.file);
   if (!res.ok) {
@@ -136,6 +148,7 @@ async function fetchTerrainData(quality: TerrainQuality): Promise<TerrainData> {
   }
   return {
     heightfield,
+    departments,
     satellite: {
       kind: "bitmap",
       bitmap,
@@ -247,10 +260,18 @@ async function main(): Promise<void> {
     quality,
     mesh: plan.mesh,
     verticalExaggeration,
+    provinceMask: {
+      grid: data.departments.grid,
+      index: data.departments.index,
+      sdf: data.departments.sdf,
+    },
+    highlightJujuy: true,
+    pixelRatio: () => canvasSurface.dpr,
     onExaggeration: (v) => {
       verticalExaggeration = v;
       requestFrame();
     },
+    onHighlightJujuy: requestFrame,
     warnHighQualityOnMobile: plan.warnHighQuality,
   });
   // The marker re-anchors to the surface with the live exaggeration, so it
@@ -260,10 +281,13 @@ async function main(): Promise<void> {
     shader: markerShader,
     verticalExaggeration: () => verticalExaggeration,
   });
-  const pickPanel = createPickPanelLayer({
-    cellSizeMeters: metersPerGridCell(data.heightfield.spec),
-    meanAbsErrorMeters: data.meanAbsErrorMeters,
-  });
+  const pickPanel = createPickPanelLayer(
+    {
+      cellSizeMeters: metersPerGridCell(data.heightfield.spec),
+      meanAbsErrorMeters: data.meanAbsErrorMeters,
+    },
+    { data: data.departments, hitSpec: data.heightfield.spec },
+  );
   const layers: readonly Layer[] = [terrain, pickMarker, pickPanel];
   for (const layer of layers) layer.init({ gpu });
   for (const layer of layers) layer.ui?.mount(overlay);
@@ -274,6 +298,18 @@ async function main(): Promise<void> {
     {
       maxElevationMeters: data.heightfield.max,
       verticalExaggeration: INITIAL_VERTICAL_EXAGGERATION,
+    },
+    {
+      // Frame the province, not the whole mosaic: the pipeline records the
+      // mask's inclusive cell bounds per level in terrain.json (on the
+      // departments raster's grid).
+      region: {
+        bboxGrid: bboxOnGrid(
+          data.heightfield.spec,
+          data.departments.grid,
+          data.departments.provinceBBoxGrid,
+        ),
+      },
     },
   );
   attachCameraInput(canvas, {

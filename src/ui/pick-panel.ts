@@ -1,4 +1,13 @@
 import type { Layer, PickHit } from "../app/layers";
+import {
+  globalPixelToGrid,
+  gridToGlobalPixel,
+  type GridSpec,
+} from "../geo/grid";
+import {
+  departmentNameAt,
+  type DepartmentsData,
+} from "../terrain/departments";
 
 /**
  * Pick info panel: shows the latitude, longitude and DEM elevation of the
@@ -52,14 +61,32 @@ export function precisionNote(precision: PickPanelPrecision): string {
   return `Dato del modelo de elevación (${parts.join(" · ")})`;
 }
 
+/** What the department row shows when the index raster reads 0. */
+export const OUTSIDE_JUJUY = "Fuera de Jujuy";
+
+/**
+ * Department raster for the "Departamento" row. `data` is the loaded
+ * boundary dataset; `hitSpec` is the grid `PickHit.grid` coordinates are
+ * expressed in (the height grid) — the raster covers the same ground
+ * extent, so the conversion is a pixel-space round trip.
+ */
+export interface PickPanelDepartments {
+  readonly data: DepartmentsData;
+  readonly hitSpec: GridSpec;
+}
+
 const MISS_HINT = "Tocá o hacé clic sobre el relieve";
 
-export function createPickPanelLayer(precision: PickPanelPrecision): Layer {
+export function createPickPanelLayer(
+  precision: PickPanelPrecision,
+  departments?: PickPanelDepartments,
+): Layer {
   interface PanelEls {
     readonly panel: HTMLElement;
     readonly lat: HTMLElement;
     readonly lon: HTMLElement;
     readonly alt: HTMLElement;
+    readonly dept: HTMLElement | undefined;
     readonly dataRows: HTMLElement;
     readonly note: HTMLElement;
     readonly hint: HTMLElement;
@@ -71,6 +98,16 @@ export function createPickPanelLayer(precision: PickPanelPrecision): Layer {
     els.lat.textContent = formatLatitude(hit.lonLat[1]);
     els.lon.textContent = formatLongitude(hit.lonLat[0]);
     els.alt.textContent = formatElevation(hit.elevationMeters);
+    if (els.dept && departments) {
+      const [px, py] = gridToGlobalPixel(
+        departments.hitSpec,
+        hit.grid[0],
+        hit.grid[1],
+      );
+      const [di, dj] = globalPixelToGrid(departments.data.grid, px, py);
+      els.dept.textContent =
+        departmentNameAt(departments.data, di, dj) ?? OUTSIDE_JUJUY;
+    }
     els.dataRows.hidden = false;
     els.note.hidden = false;
     els.hint.hidden = true;
@@ -120,6 +157,7 @@ export function createPickPanelLayer(precision: PickPanelPrecision): Layer {
         const lat = row("Latitud");
         const lon = row("Longitud");
         const alt = row("Altura");
+        const dept = departments ? row("Departamento") : undefined;
 
         const note = doc.createElement("p");
         note.className = "pick-panel-note";
@@ -136,7 +174,7 @@ export function createPickPanelLayer(precision: PickPanelPrecision): Layer {
 
         panel.append(close, dataRows, note, hint);
         root.appendChild(panel);
-        els = { panel, lat, lon, alt, dataRows, note, hint };
+        els = { panel, lat, lon, alt, dept, dataRows, note, hint };
         return () => {
           els = undefined;
           panel.remove();

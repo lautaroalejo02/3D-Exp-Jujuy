@@ -40,7 +40,7 @@ Lautaro (2026-10-03), al ver la v1 en el celular: "pensé que iba a ver algo com
 | ID | Tarea | Ruta | Estado | Evidencia |
 |---|---|---|---|---|
 | P1 | Datos de límites + rasterizado + SDF | delegada (Devin, worktree aparte) | [x] | `88212e3` (rama feat/maqueta-base-t11a, mergeada); 196 tests; verify:boundaries OK (sha256 y 16/16 idénticos); GGA PASSED al 3º intento (nombres a mano → shapeName; script que escribía en data/raw → verify-only; atribución visible) |
-| P2 | Render del contorno + encuadre + UI | delegada (Devin) | [ ] | |
+| P2 | Render del contorno + encuadre + UI | delegada (Devin) | [x] | 240 tests; capturas desktop y vertical (390x844 a DPR 2) con la provincia resaltada; framing exacto por 8 esquinas |
 
 ## Próximo paso
 Integrar P1 sobre `feat/maqueta-provincia` cuando M1/M2 estén commiteadas; después, P2.

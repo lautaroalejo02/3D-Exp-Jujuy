@@ -23,6 +23,25 @@ export interface TerrainControlsOptions {
    * warning that it may be slow.
    */
   readonly warnHighQualityOnMobile?: boolean;
+  /**
+   * Initial state of the "Resaltar Jujuy" checkbox and its change
+   * callback. When absent, the checkbox is not rendered (e.g. the
+   * boundary data failed to load and there is nothing to highlight).
+   */
+  readonly highlightJujuy?: {
+    readonly checked: boolean;
+    readonly onChange: (on: boolean) => void;
+  };
+}
+
+/**
+ * Unambiguous quality toggle label: the current state and what the link
+ * switches to ("Calidad: normal · Cambiar a alta").
+ */
+export function qualityToggleLabel(quality: TerrainQuality): string {
+  const current = quality === "high" ? "alta" : "normal";
+  const next = quality === "high" ? "normal" : "alta";
+  return `Calidad: ${current} · Cambiar a ${next}`;
 }
 
 /**
@@ -66,13 +85,25 @@ export function createTerrainControls(
   const quality = doc.createElement("a");
   quality.className = "quality-toggle";
   const isHigh = opts.quality === "high";
-  quality.textContent = `Calidad: ${isHigh ? "alta" : "normal"}`;
+  quality.textContent = qualityToggleLabel(opts.quality);
   const url = new URL(doc.defaultView?.location.href ?? "http://localhost/");
   if (isHigh) url.searchParams.delete("calidad");
   else url.searchParams.set("calidad", "alta");
   quality.href = `${url.pathname}${url.search}`;
 
   panel.append(label, quality);
+  if (opts.highlightJujuy) {
+    const highlight = doc.createElement("label");
+    highlight.className = "highlight-toggle";
+    const box = doc.createElement("input");
+    box.type = "checkbox";
+    box.checked = opts.highlightJujuy.checked;
+    box.addEventListener("change", () => {
+      opts.highlightJujuy?.onChange(box.checked);
+    });
+    highlight.append(box, doc.createTextNode("Resaltar Jujuy"));
+    panel.appendChild(highlight);
+  }
   if (opts.warnHighQualityOnMobile) {
     const warning = doc.createElement("p");
     warning.className = "quality-warning";

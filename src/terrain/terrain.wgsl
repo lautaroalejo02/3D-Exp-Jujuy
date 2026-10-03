@@ -9,6 +9,14 @@
 // binding is a 1x1 transparent texture; fragments do
 // `mix(lit, overlay.rgb * light, overlay.a * overlayOpacity)` so an
 // overlay can recolor terrain without changing this shader's structure.
+//
+// PROVINCE MASK: `deptIndexTex` holds the department index per raster cell
+// (0 = outside Jujuy, 1..16 = departments — it is what future regions map
+// to) and `provinceSdfTex` holds the signed distance to the province
+// boundary in cells (positive inside), both as r8unorm: the index is the
+// raw byte (decode *255) and the SDF is biased by 127 (decode *255 - 127).
+// The SDF drives the "outside Jujuy" dimming and a screen-space outline
+// whose width stays ~constant in pixels via fwidth().
 
 struct Params {
   viewProjection: mat4x4f,
@@ -17,6 +25,7 @@ struct Params {
   gridSize: vec2f,   // height grid size in cells
   meshSize: vec2f,   // mesh size in vertices
   meshToGrid: vec2f, // gridCoord = meshVertex * meshToGrid - 0.5
+  deptGridSize: vec2f, // department index / SDF raster size in cells
   kmPerPx: f32,      // ground km per global pixel
   cellScale: f32,    // global px per height-grid cell
   cellKm: f32,       // ground km per height-grid cell
@@ -24,6 +33,10 @@ struct Params {
   ambient: f32,
   lightStrength: f32,
   overlayOpacity: f32,
+  highlightJujuy: f32, // 1 = dim outside + draw outline; 0 = off
+  dimStrength: f32,    // 0..1: how strongly outside terrain is dimmed
+  outlinePx: f32,      // province outline width in physical pixels
+  deptBorders: f32,    // 1 = thin department borders; 0 = off
 }
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -31,6 +44,8 @@ struct Params {
 @group(0) @binding(2) var satelliteTex: texture_2d<f32>;
 @group(0) @binding(3) var linearSampler: sampler;
 @group(0) @binding(4) var overlayTex: texture_2d<f32>;
+@group(0) @binding(5) var deptIndexTex: texture_2d<f32>;
+@group(0) @binding(6) var provinceSdfTex: texture_2d<f32>;
 
 // Sun direction TO the sun in world space (X east, Y up, Z south).
 // Cartographic convention: azimuth 315 deg (north-west), elevation 45 deg.
@@ -111,5 +126,49 @@ struct VertexOut {
   // Overlay slot: tints the terrain while keeping the relief shading.
   let overlay = textureSample(overlayTex, linearSampler, in.uv);
   rgb = mix(rgb, overlay.rgb * light, overlay.a * params.overlayOpacity);
+
+  // Province mask. The SDF raster shares the grid's ground extent, so the
+  // satellite UV samples it directly; bilinear sampling keeps the outline
+  // smooth at any zoom. `px` is the SDF change per physical pixel, the
+  // unit that makes the outline width resolution-independent.
+  let sdf = textureSample(provinceSdfTex, linearSampler, in.uv).r * 255.0 - 127.0;
+  let px = max(fwidth(sdf), 1e-4);
+  // 1 inside Jujuy, 0 outside, ~1 px of transition at the boundary.
+  let inside = smoothstep(-0.5 * px, 0.5 * px, sdf);
+
+  // Outside the province: pull toward luminance and darken (strong but
+  // the relief stays readable). A no-op when highlightJujuy is 0.
+  let luma = dot(rgb, vec3f(0.2126, 0.7152, 0.0722));
+  let outside = (1.0 - inside) * params.highlightJujuy;
+  rgb = mix(rgb, vec3f(luma) * 0.55, params.dimStrength * outside);
+
+  // Department borders (off by default): the index raster changes value
+  // across a departmental boundary. Limited to inside the province so the
+  // outside edge stays owned by the outline.
+  if (params.deptBorders > 0.001) {
+    let texel = vec2i(clamp(
+      floor(in.uv * params.deptGridSize),
+      vec2f(0.0),
+      params.deptGridSize - 1.0,
+    ));
+    let c = textureLoad(deptIndexTex, texel, 0).r;
+    let border = c != textureLoad(deptIndexTex, texel + vec2i(1, 0), 0).r ||
+      c != textureLoad(deptIndexTex, texel - vec2i(1, 0), 0).r ||
+      c != textureLoad(deptIndexTex, texel + vec2i(0, 1), 0).r ||
+      c != textureLoad(deptIndexTex, texel - vec2i(0, 1), 0).r;
+    if (border) {
+      rgb = mix(rgb, vec3f(1.0), 0.45 * inside);
+    }
+  }
+
+  // Province outline: ~outlinePx physical pixels wide, anti-aliased over
+  // ~1 px, on top of the dimming so it reads crisply at any zoom.
+  let halfLine = params.outlinePx * 0.5 * px;
+  let outline = 1.0 - smoothstep(
+    halfLine - 0.5 * px,
+    halfLine + 0.5 * px,
+    abs(sdf),
+  );
+  rgb = mix(rgb, vec3f(0.95, 0.95, 0.9), outline * params.highlightJujuy);
   return vec4f(rgb, 1.0);
 }
