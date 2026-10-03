@@ -9,7 +9,7 @@ import {
   metersPerGridCell,
 } from "../geo/world";
 import { Heightfield } from "../terrain/heightfield";
-import { intersectHeightfield, screenToRay } from "./ray";
+import { intersectHeightfield, intersectPlaneY, screenToRay } from "./ray";
 
 /**
  * Synthetic grids that exercise the real lat/lon <-> grid <-> world mapping
@@ -325,5 +325,64 @@ describe("intersectHeightfield", () => {
     );
     expect(hit).toBeDefined();
     expect(hit!.grid[0]).toBeLessThan(41);
+  });
+});
+
+describe("intersectPlaneY", () => {
+  it("returns the XZ point where the ray crosses the plane", () => {
+    // Straight-down ray from (3, 10, -7) hits the y=2 plane at (3, -7).
+    const hit = intersectPlaneY(
+      { origin: [3, 10, -7], direction: [0, -1, 0] },
+      2,
+    );
+    expect(hit).toBeDefined();
+    expect(hit![0]).toBeCloseTo(3, 12);
+    expect(hit![1]).toBeCloseTo(-7, 12);
+  });
+
+  it("misses when the ray points up or runs parallel", () => {
+    expect(
+      intersectPlaneY(
+        { origin: [0, 5, 0], direction: [0, 1, 0] },
+        0,
+      ),
+    ).toBeUndefined();
+    expect(
+      intersectPlaneY(
+        { origin: [0, 5, 0], direction: [1, 0, 0] },
+        0,
+      ),
+    ).toBeUndefined();
+  });
+
+  it("keeps a screen point anchored: zoomTowardsPoint fixes the ground under the pixel", () => {
+    const w = 1280;
+    const h = 800;
+    const camera = new OrbitCamera({
+      target: [4, 3, -9],
+      distanceKm: 150,
+      azimuthDeg: 25,
+      elevationDeg: 40,
+      aspect: w / h,
+    });
+    // Ground point under an off-center pixel on the target's plane.
+    const ray = screenToRay(camera, 900, 600, w, h);
+    const anchor = intersectPlaneY(ray, camera.target[1]);
+    expect(anchor).toBeDefined();
+    const ndcBefore = transformPoint(camera.viewProjectionMatrix(), [
+      anchor![0],
+      camera.target[1],
+      anchor![1],
+    ]);
+    camera.zoomTowardsPoint(2.5, anchor![0], anchor![1]);
+    const ndcAfter = transformPoint(camera.viewProjectionMatrix(), [
+      anchor![0],
+      camera.target[1],
+      anchor![1],
+    ]);
+    expect(camera.distanceKm).toBeCloseTo(60, 9);
+    // The anchored ground point stays under the same pixel.
+    expect(ndcAfter[0]).toBeCloseTo(ndcBefore[0], 9);
+    expect(ndcAfter[1]).toBeCloseTo(ndcBefore[1], 9);
   });
 });

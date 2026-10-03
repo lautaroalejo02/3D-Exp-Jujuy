@@ -54,11 +54,11 @@ export function bboxOnGrid(
  * elevation) plus the relief must fit the vertical FOV.
  *
  * Default view direction depends on the aspect: in landscape the camera
- * sits south-east (azimuth 45°) for an oblique 3D read; in portrait it
- * sits due south looking north (azimuth 0°) at a higher elevation, so the
- * province — taller than wide — spends its long axis along the tall axis
- * of the screen and reads like a map. The elevation stays below 90° so the
- * relief keeps its 3D shape.
+ * sits south-east (azimuth 45°, elevation 45°) for an oblique 3D read; in
+ * portrait it sits due south looking north (azimuth 0°) at a lower 40°
+ * elevation, so the province — taller than wide — spends its long axis
+ * along the tall axis of the screen and the relief reads in 3D from the
+ * start.
  */
 export function overviewCamera(
   spec: GridSpec,
@@ -80,7 +80,7 @@ export function overviewCamera(
   const margin = options.margin ?? 1.1;
   const portrait = aspect < 1;
   const azimuthDeg = options.azimuthDeg ?? (portrait ? 0 : 45);
-  const elevationDeg = options.elevationDeg ?? (portrait ? 60 : 45);
+  const elevationDeg = options.elevationDeg ?? (portrait ? 40 : 45);
   const az = (azimuthDeg * Math.PI) / 180;
   const el = (elevationDeg * Math.PI) / 180;
 

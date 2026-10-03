@@ -37,7 +37,7 @@ describe("OrbitCamera orbit state", () => {
 });
 
 describe("OrbitCamera controls", () => {
-  it("clamps elevation to [10, 89]", () => {
+  it("clamps elevation to [5, 89]", () => {
     const cam = new OrbitCamera({ elevationDeg: 45 });
     cam.orbit(0, 1000);
     expect(cam.elevationDeg).toBe(MAX_ELEVATION_DEG);

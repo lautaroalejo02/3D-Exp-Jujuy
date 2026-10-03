@@ -37,15 +37,15 @@ import {
 } from "./terrain/heightfield";
 import type { SatelliteImage } from "./terrain/satellite";
 import { assertSameGroundExtent } from "./terrain/validate";
-import { createTerrainLayer } from "./terrain/terrain-layer";
+import {
+  createTerrainLayer,
+  DEFAULT_VERTICAL_EXAGGERATION,
+} from "./terrain/terrain-layer";
 import terrainShader from "./terrain/terrain.wgsl";
 import { createAttributionPanel } from "./ui/attributions";
 import { createLoadingMessage } from "./ui/controls";
 import { createDebugOverlay, type DebugOverlay } from "./ui/debug-overlay";
 import { createPickPanelLayer } from "./ui/pick-panel";
-
-/** Initial vertical exaggeration of the relief (adjustable with the UI slider). */
-const INITIAL_VERTICAL_EXAGGERATION = 2.5;
 
 function describeFailure(result: Extract<WebGpuSupport, { supported: false }>): string {
   switch (result.reason) {
@@ -252,7 +252,7 @@ async function main(): Promise<void> {
     requestFrame();
   });
 
-  let verticalExaggeration = INITIAL_VERTICAL_EXAGGERATION;
+  let verticalExaggeration = DEFAULT_VERTICAL_EXAGGERATION;
   const terrain = createTerrainLayer({
     heightfield: data.heightfield,
     satellite: data.satellite,
@@ -265,13 +265,11 @@ async function main(): Promise<void> {
       index: data.departments.index,
       sdf: data.departments.sdf,
     },
-    highlightJujuy: true,
     pixelRatio: () => canvasSurface.dpr,
     onExaggeration: (v) => {
       verticalExaggeration = v;
       requestFrame();
     },
-    onHighlightJujuy: requestFrame,
     warnHighQualityOnMobile: plan.warnHighQuality,
   });
   // The marker re-anchors to the surface with the live exaggeration, so it
@@ -297,7 +295,7 @@ async function main(): Promise<void> {
     canvasSurface.size[0] / canvasSurface.size[1],
     {
       maxElevationMeters: data.heightfield.max,
-      verticalExaggeration: INITIAL_VERTICAL_EXAGGERATION,
+      verticalExaggeration: DEFAULT_VERTICAL_EXAGGERATION,
     },
     {
       // Frame the province, not the whole mosaic: the pipeline records the

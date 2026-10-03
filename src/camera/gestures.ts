@@ -6,17 +6,25 @@
  * `deltaMode` into pixels, and applies the emitted deltas to the
  * `OrbitCamera`.
  *
+ * Screen-space deltas: `pan` carries the pointer path (CSS px) the ground
+ * point should follow, and `zoom` carries a factor plus the anchor pixel —
+ * the adapter turns both into world-space camera moves with ray/plane
+ * picking, so the reducer stays free of camera internals.
+ *
  * Conventions (the camera follows the pointer):
  * - Single-pointer orbit: drag right increases azimuth, drag up raises
  *   elevation (the view tilts towards top-down when dragging up).
- * - Single-pointer pan and two-finger centroid pan move the target on the
- *   ground plane so the ground under the pointer roughly follows it:
- *   screen-right maps to -camera-right, screen-down maps to +camera-forward
- *   (the camera advances, so ground content slides down-screen).
- * - Pinch zoom is the new/old finger distance ratio (>1 = zoom in).
- * - Twist rotates azimuth by the finger angle change; elevation untouched.
- * - A tap is a non-pan pointer that goes down and up with < TAP_MAX_PX of
- *   movement and < TAP_MAX_MS elapsed, with no other pointer involved.
+ * - Single-pointer pan (touch, or mouse pan buttons/modifiers): the
+ *   ground point under the pointer follows it.
+ * - Two fingers share one move: pinch (finger-distance ratio >1 = zoom
+ *   in) towards the centroid, twist (segment angle change) rotates the
+ *   azimuth, and the centroid path pans.
+ * - Two-finger parallel vertical drag tilts (elevation) instead: it is
+ *   told apart from pinch/twist because both fingers move in the same
+ *   vertical direction while the separation and angle barely change.
+ * - A tap is a pointer eligible for taps that goes down and up with
+ *   < TAP_MAX_PX of movement and < TAP_MAX_MS elapsed, with no other
+ *   pointer involved.
  * - Pointers beyond MAX_POINTERS are ignored until they lift: they never
  *   enter `state.pointers`, so all their inputs are no-ops.
  */
@@ -31,8 +39,17 @@ export type GestureInput =
   | {
       readonly type: "down";
       readonly pointer: PointerInfo;
-      /** Pan drag (right/middle button, Shift/Ctrl+left); false = orbit. */
+      /**
+       * Drag intent locked at pointerdown: true = the drag pans (touch,
+       * right/middle button, Shift/Ctrl+left); false = it orbits.
+       */
       readonly pan: boolean;
+      /**
+       * Whether this pointer may still emit a tap on release. Plain
+       * taps only: pan drags (mouse right/middle, modified left) never
+       * tap, but touch pans do.
+       */
+      readonly tap: boolean;
       readonly timeMs: number;
     }
   | { readonly type: "move"; readonly pointer: PointerInfo }
@@ -46,24 +63,35 @@ export type GestureInput =
       readonly type: "wheel";
       /** Scroll amount already normalized to CSS px (deltaMode applied). */
       readonly deltaPx: number;
+      /** Cursor position in canvas CSS px — the zoom anchor. */
+      readonly x: number;
+      readonly y: number;
     };
-
-export interface GestureView {
-  /** Viewport height in CSS px (same unit space as pointer coordinates). */
-  readonly viewportHeightPx: number;
-  readonly distanceKm: number;
-  readonly fovDeg: number;
-  readonly elevationDeg: number;
-}
 
 export interface CameraDeltas {
   readonly orbit?: {
     readonly dAzimuthDeg: number;
     readonly dElevationDeg: number;
   };
-  readonly pan?: { readonly dxKm: number; readonly dyKm: number };
-  /** Zoom factor: >1 zooms in, <1 zooms out (OrbitCamera.zoom argument). */
-  readonly zoom?: number;
+  /**
+   * Pan in screen space: the ground point under `from` must end up under
+   * `to` (canvas CSS px). The adapter converts it with ray/plane picking.
+   */
+  readonly pan?: {
+    readonly fromX: number;
+    readonly fromY: number;
+    readonly toX: number;
+    readonly toY: number;
+  };
+  /**
+   * Zoom factor (>1 zooms in) around an anchor pixel in canvas CSS px —
+   * the wheel cursor or the pinch centroid.
+   */
+  readonly zoom?: {
+    readonly factor: number;
+    readonly x: number;
+    readonly y: number;
+  };
 }
 
 export interface GestureResult {
@@ -74,6 +102,18 @@ export interface GestureResult {
 
 export interface GestureState {
   readonly pointers: readonly TrackedPointer[];
+  /**
+   * Finger positions when the pair formed (second finger down), aligned
+   * with `pointers[0]`/`pointers[1]`. Pointer events move one finger at
+   * a time, so tilt detection needs each finger's motion accumulated
+   * from this anchor to tell a parallel drag from a pinch.
+   */
+  readonly pairAnchor?: readonly [PointerXY, PointerXY];
+}
+
+interface PointerXY {
+  readonly x: number;
+  readonly y: number;
 }
 
 export interface TrackedPointer {
@@ -85,9 +125,10 @@ export interface TrackedPointer {
   readonly downTimeMs: number;
   readonly pan: boolean;
   /**
-   * Still eligible to emit a tap on release. Starts true (except for pan
-   * pointers and pointers joining an active gesture) and goes false forever
-   * once the pointer leaves the slop radius or another pointer joins.
+   * Still eligible to emit a tap on release. Starts from the `tap` flag
+   * of the down input (and only when the pointer is alone) and goes false
+   * forever once the pointer leaves the slop radius or another pointer
+   * joins.
    */
   readonly tapCandidate: boolean;
 }
@@ -100,6 +141,11 @@ export const WHEEL_LINE_PX = 16;
 export const TAP_MAX_PX = 8;
 export const TAP_MAX_MS = 350;
 export const MAX_POINTERS = 2;
+/**
+ * Two-finger drag counts as tilt when the shared vertical motion is at
+ * least this many times larger than the separation and angle changes.
+ */
+export const TILT_DOMINANCE = 2;
 
 const DEG_PER_RAD = 180 / Math.PI;
 const TAU = 2 * Math.PI;
@@ -116,20 +162,6 @@ function wrapPi(rad: number): number {
 
 export function createGestureState(): GestureState {
   return { pointers: [] };
-}
-
-/**
- * Ground-plane km per CSS px of pointer motion at the target. `kx` uses the
- * viewport height subtended at the target distance; `ky` divides by
- * sin(elevation) because the ground plane is tilted relative to the view
- * ray — the ground under the pointer roughly follows it.
- */
-function kmPerPx(view: GestureView): { kx: number; ky: number } {
-  if (view.viewportHeightPx <= 0) return { kx: 0, ky: 0 };
-  const kx =
-    (2 * view.distanceKm * Math.tan((view.fovDeg * Math.PI) / 360)) /
-    view.viewportHeightPx;
-  return { kx, ky: kx / Math.sin((view.elevationDeg * Math.PI) / 180) };
 }
 
 interface PairGeometry {
@@ -171,20 +203,28 @@ function applyDown(
     downY: input.pointer.y,
     downTimeMs: input.timeMs,
     pan: input.pan,
-    tapCandidate: !input.pan && state.pointers.length === 0,
+    tapCandidate: input.tap && state.pointers.length === 0,
   };
   const pointers = [
     // Another pointer is now involved: existing pointers can no longer tap.
     ...state.pointers.map((p) => ({ ...p, tapCandidate: false })),
     pointer,
   ];
-  return { state: { pointers }, deltas: {} };
+  // The pair forms now: anchor both fingers where they are so tilt
+  // detection measures accumulated motion from this point.
+  const pairAnchor =
+    pointers.length === 2
+      ? ([
+          { x: pointers[0]!.x, y: pointers[0]!.y },
+          { x: pointer.x, y: pointer.y },
+        ] as const)
+      : undefined;
+  return { state: { pointers, pairAnchor }, deltas: {} };
 }
 
 function applyMove(
   state: GestureState,
   input: Extract<GestureInput, { type: "move" }>,
-  view: GestureView,
 ): GestureResult {
   const index = state.pointers.findIndex((p) => p.id === input.pointer.id);
   if (index === -1) return { state, deltas: {} };
@@ -211,8 +251,15 @@ function applyMove(
     const dx = curr.x - prev.x;
     const dy = curr.y - prev.y;
     if (curr.pan) {
-      const { kx, ky } = kmPerPx(view);
-      deltas.pan = { dxKm: -dx * kx, dyKm: dy * ky };
+      // The ground point under the finger follows it: the adapter
+      // intersects both pointer positions with the ground plane and
+      // moves the target by the difference.
+      deltas.pan = {
+        fromX: prev.x,
+        fromY: prev.y,
+        toX: curr.x,
+        toY: curr.y,
+      };
     } else {
       deltas.orbit = {
         dAzimuthDeg: dx * ORBIT_DEGREES_PER_PX,
@@ -223,21 +270,74 @@ function applyMove(
     // Pair deltas are measured between the stored geometry (all moves seen
     // so far) and the new geometry — every move re-anchors implicitly, so
     // adding or lifting a finger can never produce a jump.
-    const prev = pairGeometry(state.pointers[0]!, state.pointers[1]!);
-    const next = pairGeometry(pointers[0]!, pointers[1]!);
-    const { kx, ky } = kmPerPx(view);
-    deltas.pan = {
-      dxKm: -(next.centroidX - prev.centroidX) * kx,
-      dyKm: (next.centroidY - prev.centroidY) * ky,
-    };
-    deltas.zoom = prev.distancePx > 0 ? next.distancePx / prev.distancePx : 1;
-    deltas.orbit = {
-      dAzimuthDeg: wrapPi(next.angleRad - prev.angleRad) * DEG_PER_RAD,
-      dElevationDeg: 0,
-    };
+    const prevA = state.pointers[0]!;
+    const prevB = state.pointers[1]!;
+    const currA = pointers[0]!;
+    const currB = pointers[1]!;
+    const prev = pairGeometry(prevA, prevB);
+    const next = pairGeometry(currA, currB);
+    const dDist = next.distancePx - prev.distancePx;
+    const dAngle = wrapPi(next.angleRad - prev.angleRad);
+    const dAy = currA.y - prevA.y;
+    const dBy = currB.y - prevB.y;
+
+    // Tilt or pinch+twist? Events move one finger at a time, so classify
+    // on the motion accumulated since the pair formed: a parallel
+    // vertical drag has both fingers' accumulated dy pointing the same
+    // way and dominating the shared horizontal motion (a pan), the
+    // vertical difference (a vertical pinch), the separation change (a
+    // pinch) and the angle change (a twist).
+    const anchor = state.pairAnchor;
+    const anchorGeom = anchor
+      ? {
+          distancePx: Math.hypot(
+            anchor[1].x - anchor[0].x,
+            anchor[1].y - anchor[0].y,
+          ),
+          angleRad: Math.atan2(
+            anchor[1].y - anchor[0].y,
+            anchor[1].x - anchor[0].x,
+          ),
+        }
+      : prev;
+    const aDy = currA.y - (anchor?.[0].y ?? prevA.y);
+    const bDy = currB.y - (anchor?.[1].y ?? prevB.y);
+    const aDx = currA.x - (anchor?.[0].x ?? prevA.x);
+    const bDx = currB.x - (anchor?.[1].x ?? prevB.x);
+    const sumDy = Math.abs(aDy + bDy);
+    const tiltBeat =
+      Math.abs(aDx + bDx) +
+      Math.abs(bDy - aDy) +
+      Math.abs(next.distancePx - anchorGeom.distancePx) +
+      Math.abs(wrapPi(next.angleRad - anchorGeom.angleRad)) *
+        anchorGeom.distancePx;
+    if (sumDy > 0 && sumDy >= TILT_DOMINANCE * tiltBeat) {
+      deltas.orbit = {
+        dAzimuthDeg: 0,
+        dElevationDeg: -((dAy + dBy) / 2) * ORBIT_DEGREES_PER_PX,
+      };
+    } else {
+      // The centroid path pans, the distance ratio pinches towards the
+      // centroid, and the angle change twists the azimuth.
+      deltas.pan = {
+        fromX: prev.centroidX,
+        fromY: prev.centroidY,
+        toX: next.centroidX,
+        toY: next.centroidY,
+      };
+      deltas.zoom = {
+        factor: prev.distancePx > 0 ? next.distancePx / prev.distancePx : 1,
+        x: next.centroidX,
+        y: next.centroidY,
+      };
+      deltas.orbit = {
+        dAzimuthDeg: dAngle * DEG_PER_RAD,
+        dElevationDeg: 0,
+      };
+    }
   }
 
-  return { state: { pointers }, deltas };
+  return { state: { pointers, pairAnchor: state.pairAnchor }, deltas };
 }
 
 function applyUp(
@@ -248,6 +348,8 @@ function applyUp(
   if (!pointer) return { state, deltas: {} };
   const next: GestureState = {
     pointers: state.pointers.filter((p) => p.id !== input.pointer.id),
+    // The pair broke: the next pair (if any) anchors fresh.
+    pairAnchor: undefined,
   };
   const tap =
     pointer.tapCandidate &&
@@ -267,7 +369,10 @@ function applyCancel(
     return { state, deltas: {} };
   }
   return {
-    state: { pointers: state.pointers.filter((p) => p.id !== input.id) },
+    state: {
+      pointers: state.pointers.filter((p) => p.id !== input.id),
+      pairAnchor: undefined,
+    },
     deltas: {},
   };
 }
@@ -275,23 +380,29 @@ function applyCancel(
 export function reduceGesture(
   state: GestureState,
   input: GestureInput,
-  view: GestureView,
 ): GestureResult {
   switch (input.type) {
     case "down":
       return applyDown(state, input);
     case "move":
-      return applyMove(state, input, view);
+      return applyMove(state, input);
     case "up":
       return applyUp(state, input);
     case "cancel":
       return applyCancel(state, input);
     case "wheel":
       // Exponential mapping: zoom is smooth and proportional to the scroll
-      // amount (deltaPx is already normalized by the DOM adapter).
+      // amount (deltaPx is already normalized by the DOM adapter). The
+      // cursor pixel anchors the zoom.
       return {
         state,
-        deltas: { zoom: Math.exp(-input.deltaPx * WHEEL_ZOOM_PER_PX) },
+        deltas: {
+          zoom: {
+            factor: Math.exp(-input.deltaPx * WHEEL_ZOOM_PER_PX),
+            x: input.x,
+            y: input.y,
+          },
+        },
       };
   }
 }

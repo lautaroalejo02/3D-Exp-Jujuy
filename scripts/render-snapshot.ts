@@ -8,6 +8,9 @@
  * - overview-portrait.png  phone framing: 390x844 CSS px @ DPR 2, mobile mesh
  * - quebrada.png           Humahuaca (see HUMAHUACA) from ~60 km, looking north
  * - quebrada-marker.png    same framing with the pick marker at Humahuaca
+ * - salinas.png            Salinas Grandes (see SALINAS_GRANDES), the salt
+ *                          flat straddling the Salta border — checks the
+ *                          outside dimming keeps it readable in color
  *
  * Data is read from data/build (run `npm run build:data` first). The JPEG is
  * decoded with jpeg-js (the browser uses createImageBitmap instead); .wgsl
@@ -35,6 +38,7 @@ import { Heightfield } from "../src/terrain/heightfield";
 import type { TerrainManifest } from "../src/terrain/manifest";
 import {
   createTerrainLayer,
+  DEFAULT_VERTICAL_EXAGGERATION,
   type MeshSize,
   type ProvinceMask,
 } from "../src/terrain/terrain-layer";
@@ -48,7 +52,7 @@ const HEIGHT = 800;
 /** Phone screenshot: 390x844 CSS px rendered at DPR 2. */
 const PORTRAIT_CSS = [390, 844] as const;
 const PORTRAIT_DPR = 2;
-const EXAGGERATION = 2.5;
+const EXAGGERATION = DEFAULT_VERTICAL_EXAGGERATION;
 
 /**
  * Camera framing target for the debug snapshot only (not educational data).
@@ -56,6 +60,15 @@ const EXAGGERATION = 2.5;
  * https://www.wikidata.org/wiki/Q1026833
  */
 const HUMAHUACA = { lon: -65.35048, lat: -23.20544 } as const;
+
+/**
+ * Camera target for the Salinas Grandes snapshot (the salt flat straddles
+ * the Jujuy/Salta border, so half of it sits in the dimmed outside).
+ * Source: Wikidata Q2893104 "Salinas Grandes" (salt flats in the provinces
+ * of Jujuy and Salta), property P625 (coordinate location),
+ * https://www.wikidata.org/wiki/Q2893104
+ */
+const SALINAS_GRANDES = { lon: -65.894441666667, lat: -23.63325 } as const;
 
 async function resolveWgsl(file: string): Promise<string> {
   const resolved = await resolveShader({
@@ -267,6 +280,38 @@ async function main(): Promise<void> {
       name: "quebrada-marker",
       camera: quebradaCamera(),
       layers: [terrain, pickMarker],
+      scene: renderer,
+      output,
+      size: [WIDTH, HEIGHT],
+    },
+    {
+      name: "salinas",
+      camera: (() => {
+        const elevationMeters =
+          heightfield.heightAtLonLat(
+            SALINAS_GRANDES.lon,
+            SALINAS_GRANDES.lat,
+          ) ?? 0;
+        const target3 = lonLatToWorld(
+          heightfield.spec,
+          SALINAS_GRANDES.lon,
+          SALINAS_GRANDES.lat,
+          { elevationMeters, verticalExaggeration: EXAGGERATION },
+        );
+        // From the north-west looking south-east, so the boundary outline
+        // crosses the salt flat inside the frame.
+        return new OrbitCamera({
+          target: target3,
+          distanceKm: 70,
+          azimuthDeg: 310,
+          elevationDeg: 50,
+          fovDeg: 45,
+          aspect: WIDTH / HEIGHT,
+          nearKm: 0.2,
+          minDistanceKm: 5,
+        });
+      })(),
+      layers: [terrain],
       scene: renderer,
       output,
       size: [WIDTH, HEIGHT],

@@ -33,7 +33,6 @@ struct Params {
   ambient: f32,
   lightStrength: f32,
   overlayOpacity: f32,
-  highlightJujuy: f32, // 1 = dim outside + draw outline; 0 = off
   dimStrength: f32,    // 0..1: how strongly outside terrain is dimmed
   outlinePx: f32,      // province outline width in physical pixels
   deptBorders: f32,    // 1 = thin department borders; 0 = off
@@ -51,6 +50,11 @@ struct Params {
 // Cartographic convention: azimuth 315 deg (north-west), elevation 45 deg.
 // east = sin(az)*cos(el) = -0.5, up = sin(el) ~= 0.7071, south = -cos(az)*cos(el) = -0.5.
 const SUN_DIR = vec3f(-0.5, 0.70710678, -0.5);
+
+// Outside-province dimming: how much color is pulled toward luminance and
+// the extra darkening applied on top, before `dimStrength` scales the mix.
+const OUTSIDE_DESATURATION = 0.6;
+const OUTSIDE_DARKEN = 0.78;
 
 // Bilinear sample of the row-major heights buffer at fractional grid
 // coords, clamped to the borders (same convention as raster.bilinearSample).
@@ -136,11 +140,13 @@ struct VertexOut {
   // 1 inside Jujuy, 0 outside, ~1 px of transition at the boundary.
   let inside = smoothstep(-0.5 * px, 0.5 * px, sdf);
 
-  // Outside the province: pull toward luminance and darken (strong but
-  // the relief stays readable). A no-op when highlightJujuy is 0.
+  // Outside the province: partially desaturate and mildly darken so the
+  // terrain's hue and relief stay recognizable — places straddling the
+  // boundary (Salinas Grandes) must still read in color.
   let luma = dot(rgb, vec3f(0.2126, 0.7152, 0.0722));
-  let outside = (1.0 - inside) * params.highlightJujuy;
-  rgb = mix(rgb, vec3f(luma) * 0.55, params.dimStrength * outside);
+  let outside = 1.0 - inside;
+  let muted = mix(rgb, vec3f(luma), OUTSIDE_DESATURATION) * OUTSIDE_DARKEN;
+  rgb = mix(rgb, muted, params.dimStrength * outside);
 
   // Department borders (off by default): the index raster changes value
   // across a departmental boundary. Limited to inside the province so the
@@ -169,6 +175,6 @@ struct VertexOut {
     halfLine + 0.5 * px,
     abs(sdf),
   );
-  rgb = mix(rgb, vec3f(0.95, 0.95, 0.9), outline * params.highlightJujuy);
+  rgb = mix(rgb, vec3f(0.95, 0.95, 0.9), outline);
   return vec4f(rgb, 1.0);
 }

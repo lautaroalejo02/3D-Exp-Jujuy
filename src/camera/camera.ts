@@ -24,7 +24,7 @@ export type Vec3 = readonly [number, number, number];
 
 const DEG = Math.PI / 180;
 
-export const MIN_ELEVATION_DEG = 10;
+export const MIN_ELEVATION_DEG = 5;
 export const MAX_ELEVATION_DEG = 89;
 
 export interface OrbitCameraOptions {
@@ -34,7 +34,7 @@ export interface OrbitCameraOptions {
   readonly distanceKm?: number;
   /** Degrees, clockwise from north, direction target -> camera. */
   readonly azimuthDeg?: number;
-  /** Degrees above the horizon, clamped to [10, 89]. */
+  /** Degrees above the horizon, clamped to [5, 89]. */
   readonly elevationDeg?: number;
   /** Vertical field of view in degrees. */
   readonly fovDeg?: number;
@@ -143,7 +143,7 @@ export class OrbitCamera {
     ];
   }
 
-  /** Rotate around the target. Elevation stays within [10°, 89°]. */
+  /** Rotate around the target. Elevation stays within [5°, 89°]. */
   orbit(dAzimuthDeg: number, dElevationDeg: number): void {
     this.azimuthDeg = this.azimuthDeg + dAzimuthDeg;
     this.elevationDeg = clamp(
@@ -178,6 +178,32 @@ export class OrbitCamera {
       this.minDistanceKm,
       this.maxDistanceKm,
     );
+  }
+
+  /**
+   * Zoom keeping a ground point fixed under its screen pixel (cursor wheel
+   * or pinch centroid). `groundX`/`groundZ` are the world km coords where
+   * the anchor pixel's ray crosses the horizontal plane through the
+   * target; the target slides toward/away from that point by the same
+   * ratio the distance changed, so the point stays anchored. Falls back
+   * to a plain zoom when the anchor is not finite.
+   */
+  zoomTowardsPoint(factor: number, groundX: number, groundZ: number): void {
+    if (
+      !Number.isFinite(groundX) ||
+      !Number.isFinite(groundZ)
+    ) {
+      this.zoom(factor);
+      return;
+    }
+    const before = this.distanceKm;
+    this.zoom(factor);
+    const ratio = before > 0 ? this.distanceKm / before : 1;
+    this.target = [
+      groundX + (this.target[0] - groundX) * ratio,
+      this.target[1],
+      groundZ + (this.target[2] - groundZ) * ratio,
+    ];
   }
 
   setAspect(aspect: number): void {

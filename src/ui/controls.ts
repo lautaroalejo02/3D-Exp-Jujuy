@@ -23,15 +23,6 @@ export interface TerrainControlsOptions {
    * warning that it may be slow.
    */
   readonly warnHighQualityOnMobile?: boolean;
-  /**
-   * Initial state of the "Resaltar Jujuy" checkbox and its change
-   * callback. When absent, the checkbox is not rendered (e.g. the
-   * boundary data failed to load and there is nothing to highlight).
-   */
-  readonly highlightJujuy?: {
-    readonly checked: boolean;
-    readonly onChange: (on: boolean) => void;
-  };
 }
 
 /**
@@ -92,18 +83,6 @@ export function createTerrainControls(
   quality.href = `${url.pathname}${url.search}`;
 
   panel.append(label, quality);
-  if (opts.highlightJujuy) {
-    const highlight = doc.createElement("label");
-    highlight.className = "highlight-toggle";
-    const box = doc.createElement("input");
-    box.type = "checkbox";
-    box.checked = opts.highlightJujuy.checked;
-    box.addEventListener("change", () => {
-      opts.highlightJujuy?.onChange(box.checked);
-    });
-    highlight.append(box, doc.createTextNode("Resaltar Jujuy"));
-    panel.appendChild(highlight);
-  }
   if (opts.warnHighQualityOnMobile) {
     const warning = doc.createElement("p");
     warning.className = "quality-warning";

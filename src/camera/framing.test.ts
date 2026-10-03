@@ -63,6 +63,7 @@ describe("overviewCamera", () => {
     const camera = overviewCamera(SPEC, aspect, RELIEF, {
       region: { bboxGrid: PROVINCE_BBOX },
     });
+    expect(camera.elevationDeg).toBe(45);
     const reliefKm = (RELIEF.maxElevationMeters / 1000) * RELIEF.verticalExaggeration;
     for (const corner of regionCorners(PROVINCE_BBOX, reliefKm)) {
       const [x, y, z] = projectedToNdc(camera, corner);
@@ -80,6 +81,9 @@ describe("overviewCamera", () => {
       region: { bboxGrid: PROVINCE_BBOX },
     });
     expect(camera.azimuthDeg).toBe(0);
+    // Portrait framing sits lower (40°) than landscape (45°): the relief
+    // reads in 3D from the start instead of a near top-down view.
+    expect(camera.elevationDeg).toBe(40);
     const reliefKm = (RELIEF.maxElevationMeters / 1000) * RELIEF.verticalExaggeration;
     for (const corner of regionCorners(PROVINCE_BBOX, reliefKm)) {
       const [x, y, z] = projectedToNdc(camera, corner);

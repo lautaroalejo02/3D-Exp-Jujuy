@@ -22,6 +22,12 @@ import type { Heightfield, TerrainQuality } from "./heightfield";
 import type { SatelliteImage } from "./satellite";
 import { buildTerrainGridUniforms } from "./terrain-uniforms";
 
+/**
+ * Vertical exaggeration of the relief at startup. Shared by the app and
+ * the headless snapshot renderer so captures match the shipped view.
+ */
+export const DEFAULT_VERTICAL_EXAGGERATION = 3;
+
 /** Mesh resolution in vertices, independent from the height grid. */
 export interface MeshSize {
   readonly width: number;
@@ -70,9 +76,7 @@ export interface TerrainLayerOptions {
    * terms are no-ops.
    */
   readonly provinceMask?: ProvinceMask;
-  /** "Resaltar Jujuy" initial state; default on. */
-  readonly highlightJujuy?: boolean;
-  /** How much terrain outside the province is dimmed (0..1, default .85). */
+  /** How much terrain outside the province is dimmed (0..1, default .9). */
   readonly dimStrength?: number;
   /** Thin department borders inside the province; default off. */
   readonly showDepartmentBorders?: boolean;
@@ -88,11 +92,6 @@ export interface TerrainLayerOptions {
    * app can keep other layers (e.g. the pick marker) in sync.
    */
   readonly onExaggeration?: (value: number) => void;
-  /**
-   * Called whenever the "Resaltar Jujuy" toggle flips, so the app can
-   * request a repaint through the dirty tracker.
-   */
-  readonly onHighlightJujuy?: (on: boolean) => void;
   /** Adds the "alta puede ir lenta en celulares" note to the controls. */
   readonly warnHighQualityOnMobile?: boolean;
 }
@@ -100,8 +99,6 @@ export interface TerrainLayerOptions {
 export interface TerrainLayer extends Layer {
   /** Update the vertical exaggeration uniform (slider callback). */
   setVerticalExaggeration(value: number): void;
-  /** Update the "Resaltar Jujuy" uniform (checkbox callback). */
-  setHighlightJujuy(on: boolean): void;
   /** Vertex count of the generated mesh draw call. */
   readonly vertexCount: number;
   readonly meshSize: MeshSize;
@@ -125,7 +122,6 @@ interface TerrainParamsValue {
   ambient: number;
   lightStrength: number;
   overlayOpacity: number;
-  highlightJujuy: number;
   dimStrength: number;
   outlinePx: number;
   deptBorders: number;
@@ -180,12 +176,11 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
     deptGridSize: opts.provinceMask
       ? [opts.provinceMask.grid.width, opts.provinceMask.grid.height]
       : [1, 1],
-    exaggeration: opts.verticalExaggeration ?? 2.5,
+    exaggeration: opts.verticalExaggeration ?? DEFAULT_VERTICAL_EXAGGERATION,
     ambient: opts.ambient ?? 0.42,
     lightStrength: opts.lightStrength ?? 0.85,
     overlayOpacity: 1,
-    highlightJujuy: opts.highlightJujuy === false ? 0 : 1,
-    dimStrength: opts.dimStrength ?? 0.85,
+    dimStrength: opts.dimStrength ?? 0.55,
     outlinePx: opts.outlineCssPx ?? 2,
     deptBorders: opts.showDepartmentBorders ? 1 : 0,
   };
@@ -211,12 +206,6 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
           initialExaggeration: params.exaggeration,
           onExaggeration: (v) => layer.setVerticalExaggeration(v),
           warnHighQualityOnMobile: opts.warnHighQualityOnMobile,
-          highlightJujuy: opts.provinceMask
-            ? {
-                checked: params.highlightJujuy > 0.5,
-                onChange: (on) => layer.setHighlightJujuy(on),
-              }
-            : undefined,
         });
         root.appendChild(panel);
         return () => panel.remove();
@@ -361,12 +350,6 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
       opts.onExaggeration?.(value);
     },
 
-    setHighlightJujuy(on: boolean): void {
-      params.highlightJujuy = on ? 1 : 0;
-      terrainDraw?.set({ params: { highlightJujuy: params.highlightJujuy } });
-      opts.onHighlightJujuy?.(on);
-    },
-
     getGpuMemoryReport(): GpuMemoryReport {
       const sat = opts.satellite;
       const maskCells = opts.provinceMask
@@ -392,7 +375,7 @@ export function createTerrainLayer(opts: TerrainLayerOptions): TerrainLayer {
         },
         {
           label: "terrain uniforms (approx)",
-          bytes: 64 + 6 * 8 + 12 * 4,
+          bytes: 64 + 6 * 8 + 11 * 4,
           estimate: true,
         },
       ]);

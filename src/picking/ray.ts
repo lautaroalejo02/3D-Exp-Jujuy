@@ -122,6 +122,23 @@ export function screenToRay(
   };
 }
 
+/**
+ * XZ point where a ray crosses the horizontal plane `y = planeY`, or
+ * `undefined` when the ray is parallel to the plane or crosses it behind
+ * the camera. Camera input uses this to keep the ground point under the
+ * pointer anchored during pan and zoom-toward-cursor gestures.
+ */
+export function intersectPlaneY(
+  ray: Ray,
+  planeY: number,
+): readonly [number, number] | undefined {
+  const dy = ray.direction[1];
+  if (Math.abs(dy) < 1e-9) return undefined;
+  const t = (planeY - ray.origin[1]) / dy;
+  if (!(t > 0) || !Number.isFinite(t)) return undefined;
+  return [ray.origin[0] + ray.direction[0] * t, ray.origin[2] + ray.direction[2] * t];
+}
+
 /** Entry/exit distances where a ray crosses an axis-aligned box; undefined on miss. */
 function clipRayToBox(
   ray: Ray,
