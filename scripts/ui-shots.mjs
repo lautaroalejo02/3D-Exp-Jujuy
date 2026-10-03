@@ -281,6 +281,39 @@ async function main() {
         });
         await page.close();
       }
+
+      // Perfil mode: the deep link opens the sheet and stages a long
+      // Puna -> Yungas transect (Susques -> San Pedro de Jujuy).
+      const perfilUrl = (b) =>
+        `${b}/?modo=perfil&tramo=-66.366,-23.409,-64.866,-24.231`;
+      {
+        const { page } = await openApp(mobile, perfilUrl(base));
+        await page.waitForSelector("#sheet-mode[data-snap='half']");
+        await page.waitForSelector(".perfil-chart-line", {
+          state: "visible",
+        });
+        await sleep(600); // let the draped line + handles render
+        await page.screenshot({
+          path: join(OUT_DIR, "mobile-perfil.png"),
+        });
+
+        // Scrub the chart ~60% along: the crosshair + readout appear in
+        // the sheet and the cursor dot lands on the map line.
+        const chart = page.locator(".perfil-chart");
+        const box = await chart.boundingBox();
+        if (!box) throw new Error("perfil chart not measurable");
+        await page.mouse.move(box.x + box.width * 0.6, box.y + box.height / 2);
+        await page.mouse.down();
+        await page.mouse.move(box.x + box.width * 0.62, box.y + box.height / 2, {
+          steps: 4,
+        });
+        await sleep(400);
+        await page.screenshot({
+          path: join(OUT_DIR, "mobile-perfil-scrub.png"),
+        });
+        await page.mouse.up();
+        await page.close();
+      }
       await mobile.close();
 
       // ---- Desktop: 1440x900, left side panel ----
@@ -331,6 +364,18 @@ async function main() {
         await sleep(900);
         await page.screenshot({
           path: join(OUT_DIR, "desktop-sol.png"),
+        });
+        await page.close();
+      }
+      {
+        // Same seeded transect in the desktop side-panel layout.
+        const { page } = await openApp(desktop, perfilUrl(base));
+        await page.waitForSelector(".perfil-chart-line", {
+          state: "visible",
+        });
+        await sleep(600);
+        await page.screenshot({
+          path: join(OUT_DIR, "desktop-perfil.png"),
         });
         await page.close();
       }

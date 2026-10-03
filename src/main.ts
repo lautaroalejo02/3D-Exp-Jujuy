@@ -15,7 +15,7 @@ import {
   selectDeviceProfile,
 } from "./app/device-profile";
 import { createDirtyTracker } from "./app/dirty-tracker";
-import type { Layer, LayerState } from "./app/layers";
+import type { Layer, LayerState, PickHit } from "./app/layers";
 import { checkWebGpuSupport, type WebGpuSupport } from "./app/webgpu-support";
 import {
   bboxOnGrid,
@@ -45,6 +45,7 @@ import { placeViewDistanceKm } from "./features/places/place-distance";
 import { clusterZoomDistanceKm } from "./features/places/places-markers";
 import { createPlacesLayer } from "./features/places/places-layer";
 import { gridToWorld, lonLatToGrid, metersPerGridCell } from "./geo";
+import { createPerfilMode } from "./modes/perfil/perfil-mode";
 import { registerSolMode } from "./modes/sol/sol-mode";
 import {
   detailSurfaceElevation,
@@ -517,6 +518,9 @@ async function main(): Promise<void> {
     });
   }
   let coveringPatchIds: ReadonlySet<string> = new Set();
+  // Bump counter the Perfil mode watches: when the covering set changes
+  // under an existing transect the profile recomputes.
+  let coveringVersion = 0;
 
   /**
    * The pick patches currently covering the base surface — shared by the
@@ -642,6 +646,7 @@ async function main(): Promise<void> {
     // detail layer draws.
     onCoveringChange: (ids) => {
       coveringPatchIds = new Set(ids);
+      coveringVersion += 1;
       terrain.setDetailPatchMask(coveringPatchIds);
       requestFrame();
     },
@@ -701,7 +706,7 @@ async function main(): Promise<void> {
     // update() — the diorama inits before the terrain owns the texture.
     shadowTexture: () => terrain.shadowTexture(),
   });
-  const layers: readonly Layer[] = [
+  const layers: Layer[] = [
     diorama,
     terrain,
     detail,
@@ -908,6 +913,56 @@ async function main(): Promise<void> {
     }),
   );
 
+  /**
+   * CPU terrain pick at a canvas-relative CSS px point: the ray marches
+   * the geomorphed surface while patches cover, at ~patch-cell
+   * resolution (patch cells are ~1/8 of a base cell, so the default
+   * 0.5-cell step could skip narrow ridges). Shared by the tap handler
+   * and the Perfil mode's handle dragging.
+   */
+  const pickTerrainAt = (x: number, y: number): PickHit | undefined =>
+    intersectHeightfield(
+      screenToRay(camera, x, y, canvas.clientWidth, canvas.clientHeight),
+      data.heightfield,
+      verticalExaggeration,
+      coveringPickPatches().length === 0
+        ? {}
+        : {
+            stepCells: 0.1,
+            surfaceMarginMeters: drawnSurfaceMarginMeters(),
+            surfaceAt: drawnElevationAt,
+          },
+    );
+
+  // Perfil mode (S3): A/B transect handles + the elevation chart inside
+  // the mode sheet. The layer is DOM-only — pushing it into `layers`
+  // makes its update() run on every rendered frame like the rest.
+  const perfil = createPerfilMode({
+    heightfield: data.heightfield,
+    drawnElevationAt,
+    pickTerrainAt,
+    canvas,
+    sheetHost: menu.modeHosts.perfil,
+    verticalExaggeration: () => verticalExaggeration,
+    pixelRatio: () => canvasSurface.dpr,
+    coveringVersion: () => coveringVersion,
+    requestFrame,
+  });
+  perfil.layer.init({ gpu });
+  perfil.layer.ui?.mount(overlay);
+  layers.push(perfil.layer);
+
+  // Deep-link for the UI shots / QA: ?modo=perfil opens the Perfil sheet
+  // and &tramo=lonA,latA,lonB,latB stages a deterministic transect.
+  {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("modo") === "perfil") menu.setMode("perfil");
+    const tramo = params.get("tramo")?.split(",").map(Number);
+    if (tramo?.length === 4 && tramo.every(Number.isFinite)) {
+      perfil.seed([tramo[0]!, tramo[1]!], [tramo[2]!, tramo[3]!]);
+    }
+  }
+
   attachCameraInput(canvas, {
     camera,
     onTap: (point) => {
@@ -916,29 +971,10 @@ async function main(): Promise<void> {
       // projected positions the layer draws. A marker hit opens its card
       // and the terrain pick does not run.
       if (places.pickAt(point.x, point.y)) return;
-      const ray = screenToRay(
-        camera,
-        point.x,
-        point.y,
-        canvas.clientWidth,
-        canvas.clientHeight,
-      );
-      // While patches cover, march the geomorphed surface the user sees —
-      // and at ~patch-cell resolution: patch cells are ~1/8 of a base
-      // cell, so the default 0.5-cell step could skip narrow ridges.
-      const covering = coveringPickPatches();
-      const hit = intersectHeightfield(
-        ray,
-        data.heightfield,
-        verticalExaggeration,
-        covering.length === 0
-          ? {}
-          : {
-              stepCells: 0.1,
-              surfaceMarginMeters: drawnSurfaceMarginMeters(),
-              surfaceAt: drawnElevationAt,
-            },
-      );
+      const hit = pickTerrainAt(point.x, point.y);
+      // In Perfil mode taps place/move the transect points instead of
+      // showing the pick panel.
+      if (perfil.onTap(point, hit)) return;
       // A miss (sky) dispatches undefined so layers clear pick state.
       for (const layer of layers) layer.onPick?.(hit);
     },

@@ -113,9 +113,15 @@
          that keeps pointer events swallows every map touch, and iOS
          Safari then pinch-zooms the page instead of the camera. */
       #overlay > .places-layer,
+      #overlay > .perfil-overlay,
       #overlay > .debug-overlay,
       #overlay > .loading-message {
         pointer-events: none;
+        touch-action: none;
+      }
+      /* The perfil handles DO take pointer input (they are draggable)
+         but must not let the browser pan the page mid-drag. */
+      #overlay > .perfil-handle {
         touch-action: none;
       }
 
@@ -152,6 +158,7 @@
       /* Pill buttons: one shape for every action control. */
       .quality-toggle,
       .regions-legend-reopen,
+      .perfil-button,
       .webgpu-notice-reload {
         display: inline-flex;
         align-items: center;
@@ -171,16 +178,19 @@
       }
       .quality-toggle:hover,
       .regions-legend-reopen:hover,
+      .perfil-button:hover,
       .webgpu-notice-reload:hover {
         background: var(--control-bg-hover);
       }
       .quality-toggle:active,
       .regions-legend-reopen:active,
+      .perfil-button:active,
       .webgpu-notice-reload:active {
         background: var(--control-bg-active);
       }
       .quality-toggle:focus-visible,
       .regions-legend-reopen:focus-visible,
+      .perfil-button:focus-visible,
       .webgpu-notice-reload:focus-visible,
       .pick-panel-close:focus-visible,
       .region-card-close:focus-visible,
@@ -932,6 +942,166 @@
       }
       .region-card-close {
         right: -0.35rem;
+      }
+      /* Perfil mode: the transect SVG overlay (line + cursor) and the
+         draggable A/B handles live on the map; the chart and stats live
+         inside the Perfil sheet. The overlay is click-through like the
+         places layer (see the #overlay > opt-out above); the handles
+         take pointer input but keep touch-action: none so a drag never
+         becomes a page pan. */
+      .perfil-overlay {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: var(--z-places);
+      }
+      .perfil-line-halo {
+        fill: none;
+        stroke: rgb(10 12 16 / 0.72);
+        stroke-width: 5;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .perfil-line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 2.4;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .perfil-map-cursor .outer {
+        fill: rgb(10 12 16 / 0.8);
+        stroke: #f8f9fb;
+        stroke-width: 1.5;
+      }
+      .perfil-map-cursor .inner {
+        fill: var(--cool);
+      }
+      /* 44px hit area around a 26px labeled dot; the JS centers the box
+         on the projected surface point with a transform. */
+      .perfil-handle {
+        position: absolute;
+        top: 0;
+        left: 0;
+        z-index: var(--z-places);
+        width: var(--touch);
+        height: var(--touch);
+        cursor: grab;
+      }
+      .perfil-handle:active {
+        cursor: grabbing;
+      }
+      .perfil-handle span {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2px solid #f8f9fb;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-size: 0.78rem;
+        font-weight: 700;
+        line-height: 1;
+        box-shadow: 0 1px 6px rgb(0 0 0 / 0.5);
+        pointer-events: none;
+      }
+      .perfil-handle--b span {
+        background: var(--cool);
+        color: #16202b;
+      }
+      /* Sheet content. */
+      .perfil {
+        display: flex;
+        flex-direction: column;
+        gap: 0.55rem;
+      }
+      .perfil-hint {
+        margin: 0.3rem 0.2rem;
+        font-size: var(--fs-sm);
+      }
+      .perfil-tip {
+        margin: 0;
+        padding: 0 0.2rem;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .perfil-chart-wrap {
+        width: 100%;
+      }
+      .perfil-chart {
+        display: block;
+        width: 100%;
+        height: 168px;
+        /* Scrubbing the chart must not scroll the sheet. */
+        touch-action: none;
+      }
+      .perfil-chart-area {
+        fill: rgb(221 150 99 / 0.22);
+      }
+      .perfil-chart-line {
+        fill: none;
+        stroke: var(--accent);
+        stroke-width: 1.8;
+        stroke-linejoin: round;
+      }
+      .perfil-chart-gridline {
+        stroke: rgb(255 255 255 / 0.11);
+        stroke-width: 1;
+      }
+      .perfil-chart-labels text {
+        fill: var(--text-dim);
+        font-size: 9.5px;
+      }
+      .perfil-chart-extremum {
+        fill: var(--accent);
+      }
+      .perfil-chart-extremum-label {
+        fill: var(--text);
+        font-size: 10px;
+        font-weight: 600;
+      }
+      .perfil-chart-cursor line {
+        stroke: var(--cool);
+        stroke-width: 1.2;
+      }
+      .perfil-chart-cursor circle {
+        fill: var(--cool);
+        stroke: #101216;
+        stroke-width: 1;
+      }
+      .perfil-readout {
+        margin: 0;
+        padding: 0 0.2rem;
+        min-height: 1.15em;
+        font-size: var(--fs-sm);
+        font-variant-numeric: tabular-nums;
+      }
+      .perfil-stats {
+        margin: 0;
+      }
+      .perfil-actions {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .perfil-button:disabled {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .perfil-source {
+        margin: 0;
+        padding: 0 0.2rem;
+        font-size: var(--fs-xs);
+        color: var(--text-dim);
+      }
+      .perfil-source a {
+        color: var(--cool);
       }
       .debug-overlay {
         position: absolute;
