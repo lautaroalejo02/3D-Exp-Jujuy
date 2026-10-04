@@ -42,6 +42,12 @@
  * - hd-la-quiaca.png       La Quiaca patch drawn (task H1, sources-3)
  * - hd-pozuelos.png       Laguna de los Pozuelos patch drawn (task H1)
  * - hd-calilegua.png      Calilegua national park patch drawn (task H1)
+ * - hd-vilama-wall.png    Laguna de Vilama patch at the province's NW
+ *                          edge, seen from outside the boundary: the
+ *                          patch's outside part must draw flattened on
+ *                          the context plain with no fin floating over
+ *                          it or poking through the cut wall (hybrid
+ *                          format on a boundary-crossing patch)
  *
  * The run also prints the sun-shadow recompute time (submit → GPU done)
  * for both shadow-quality plans, desktop and mobile, plus the detail
@@ -991,6 +997,20 @@ async function main(): Promise<void> {
           {
             name: "hd-calilegua",
             camera: detailCamera("parque-nacional-calilegua", 100, 45),
+            layers: [diorama, terrain, detailLayer],
+            scene: renderer,
+            output,
+            size: [WIDTH, HEIGHT] as const,
+          },
+          // Hybrid format on a boundary patch (Bordes on HD): Vilama
+          // straddles the province's NW edge, so the shot frames it from
+          // outside the boundary — the outside part of the patch must
+          // sit flattened on the context plain, with the flatMix fin
+          // discard leaving no sliver over the plain or through the cut
+          // wall. Azimuth ~245 puts the eye WNW of the site looking SE.
+          {
+            name: "hd-vilama-wall",
+            camera: detailCamera("laguna-de-vilama", 245, 38, 3.0),
             layers: [diorama, terrain, detailLayer],
             scene: renderer,
             output,

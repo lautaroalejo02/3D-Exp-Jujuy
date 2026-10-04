@@ -7,10 +7,14 @@
 // 2^(patchZoom - baseZoom)). World mapping is otherwise unchanged: X east,
 // Z south, Y up, km of ground distance, Y = elevation/1000*exaggeration.
 //
-// NO OUTSIDE-PROVINCE DIMMING: unlike the base shader, patches do not
-// sample the province SDF — a patch can straddle the Jujuy/Salta border
-// (Salinas Grandes does), so dimming the "outside" half would erase detail
-// the patch exists to show.
+// NO OUTSIDE-PROVINCE DIMMING: unlike the base shader, patches keep the
+// outside half in full color — a patch can straddle the Jujuy/Salta
+// border (Salinas Grandes does), so dimming would erase detail the patch
+// exists to show. Patches DO sample the province SDF for the hybrid
+// format though: outside vertices flatten onto the context plain like
+// the base terrain does, and boundary-crossing quads get the same
+// flatMix fin discard so no sliver floats over the flattened context or
+// pokes through the cut wall.
 //
 // SEAM (height geomorphing, no lift, no dome): the base terrain discards
 // its fragments inside this patch's FULL outer rect (terrain.wgsl
@@ -249,6 +253,11 @@ struct VertexOut {
   @builtin(position) position: vec4f,
   @location(0) uv: vec2f,
   @location(1) grid: vec2f,
+  @location(2) world: vec3f,
+  // 1.0 on the flattened context side of the province edge, 0.0 at full
+  // relief. Strictly inside (0,1) only for fragments of
+  // boundary-crossing quads — the fins the cut wall replaces.
+  @location(3) flatMix: f32,
 }
 
 @vertex fn vs_main(@builtin(vertex_index) vi: u32) -> VertexOut {
@@ -270,6 +279,10 @@ struct VertexOut {
     (gi + 0.5) * params.patchToBaseK.x + params.patchToBaseC.x,
     (gj + 0.5) * params.patchToBaseK.y + params.patchToBaseC.y,
   );
+  // The sdf<0 test drawnHeightKm flattens on (the same rule the terrain
+  // vertex shader applies): the flag interpolates to flatMix for the
+  // boundary-fin discard in the fragment stage.
+  let flatVertex = provinceSdfAtBase(bg.x, bg.y) < 0.0;
   let px = params.originPx + (vec2f(gi, gj) + vec2f(0.5)) * params.cellScale;
   let world = vec3f(
     (px.x - params.centerPx.x) * params.kmPerPx,
@@ -284,6 +297,8 @@ struct VertexOut {
   // border line where both surfaces coincide. Scaled by w it is a
   // constant NDC offset.
   out.position.z += params.biasNdc * out.position.w;
+  out.world = world;
+  out.flatMix = select(0.0, 1.0, flatVertex);
   out.grid = vec2f(gi, gj);
   out.uv = patchUv(gi, gj);
   return out;
@@ -299,6 +314,22 @@ struct VertexOut {
   );
   if (splitMargin(bg.x, bg.y) < 0.0) {
     discard;
+  }
+
+  // Boundary fins, same rule as terrain.wgsl: a patch quad crossing the
+  // province edge spans an inside vertex at full relief and an outside
+  // vertex flattened to the context plain — a tall sliver that would
+  // float over the flattened context or poke through the cut wall.
+  // flatMix is strictly between 0 and 1 only inside those quads; discard
+  // the middle of the fin, keeping 50 m stubs at both ends so the plain
+  // toe and the patch edge stay watertight.
+  if (in.flatMix > 0.001 && in.flatMix < 0.999) {
+    let rawKm = surfaceElevation(in.grid.x, in.grid.y) / 1000.0 *
+      params.exaggeration;
+    let flatKm = params.contextBaseKm + rawKm * params.outsideFlatten;
+    if (in.world.y - flatKm > 0.05 && rawKm - in.world.y > 0.05) {
+      discard;
+    }
   }
 
   // Normal from central finite differences of the DRAWN (geomorphed)
